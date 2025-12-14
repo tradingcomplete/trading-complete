@@ -84,7 +84,7 @@ body.light-mode {
 
 body.light-mode .section {
     background: #fafafa;
-    border: 2px solid #999999;
+    border: 1px solid #999999;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -1641,9 +1641,9 @@ body.light-mode .closing-section h4 {
 /* 収支管理サブタブ共通セクション */
 body.light-mode .expense-section {
     background: #fafafa !important;
-    border: 2px solid #888888 !important;
+    border: 1px solid #888888 !important;
     border-radius: 8px;
-    padding: 10px !important;
+    padding: 5px !important;
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
 }
