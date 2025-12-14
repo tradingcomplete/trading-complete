@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Complete</title>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー（目標表示追加） -->
+        <div class="header">
+            <div class="header-content">
+                <div class="user-icon" onclick="changeUserIcon()" style="cursor: pointer;">
+                    <img id="userIcon" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23333'/%3E%3Ctext x='40' y='45' text-anchor='middle' fill='%23fff' font-size='20' font-family='Arial'%3E📊%3C/text%3E%3C/svg%3E" alt="ユーザーアイコン">
+                </div>
+                <div class="header-info">
+                    <div class="header-title" id="headerTitle" onclick="editTitle()" style="cursor: pointer;">Trading Complete</div>
+                    <div class="header-subtitle" id="headerSubtitle" onclick="editSubtitle()" style="cursor: pointer;">すべてのトレードを、この一つで</div>
+                </div>
+                <!-- 目標表示エリア（新規追加） -->
+                <div class="goals-display" id="goalsDisplay">
+                    <div class="goal-item" data-goal="1" onclick="toggleGoalAchieved(1)" style="cursor: pointer;">
+                        <span class="goal-text">目標を設定</span>
+                        <span class="goal-check">◯</span>
+                    </div>
+                    <div class="goal-item" data-goal="2" onclick="toggleGoalAchieved(2)" style="cursor: pointer;">
+                        <span class="goal-text">目標を設定</span>
+                        <span class="goal-check">◯</span>
+                    </div>
+                    <div class="goal-item" data-goal="3" onclick="toggleGoalAchieved(3)" style="cursor: pointer;">
+                        <span class="goal-text">目標を設定</span>
+                        <span class="goal-check">◯</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- タブナビゲーション -->
+        <div class="tab-nav tab-grid">
+            <!-- 上段：使用頻度高 -->
+            <button class="tab-btn active" data-tab="new-entry" onclick="switchTab('new-entry', event)">➕ 新規エントリー</button>
+            <button class="tab-btn" data-tab="records" onclick="switchTab('records', event)">📝 トレード記録</button>
+            <button class="tab-btn" data-tab="notes" onclick="switchTab('notes', event)">📖 相場ノート</button>
+            
+            <!-- 下段：使用頻度中〜低 -->
+            <button class="tab-btn" data-tab="analysis" onclick="switchTab('analysis', event)">📊 分析</button>
+            <button class="tab-btn" data-tab="tax" onclick="switchTab('tax', event)">💰 収支管理</button>
+            <button class="tab-btn" data-tab="settings" onclick="switchTab('settings', event)">&#9881;&#65039; 設定</button>
+        </div>
+
+        <!-- 新規エントリー（元のデザインに戻す） -->
+        <div id="new-entry" class="tab-content active">
+            <!-- クイック統計 -->
+            <div class="quick-stats">
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-number" id="monthlyPipsValue">+0</span>
+                        <span class="stat-label">今月のPips</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number" id="monthlyWinLoss">0勝0敗</span>
+                        <span class="stat-label">今月の勝敗</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number" id="winRateValue">0.0%</span>
+                        <span class="stat-label">勝率</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number" id="avgRRValue">-</span>
+                        <span class="stat-label">平均R:R</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>新規トレード記録</h2>
+                
+                <div class="responsive-grid">
+                    <div>
+                        <div class="input-grid">
+                            <!-- 行1: 通貨ペア、売買方向 -->
+                            <div class="input-group pair-input-container">
+                                <label>通貨ペア / 商品</label>
+                                <div class="pair-input-wrapper">
+                                    <input type="text" id="pair" placeholder="例: USD/JPY" autocomplete="off">
+                                    <button type="button" class="favorite-select-btn" id="favoritePairSelectBtn" onclick="toggleFavoritePairDropdown()" title="お気に入りから選択">
+                                        ⭐
+                                    </button>
+                                    <!-- お気に入りドロップダウン -->
+                                    <div class="favorite-pair-dropdown" id="favoritePairDropdown" style="display: none;">
+                                        <div class="favorite-dropdown-header">⭐ お気に入り</div>
+                                        <div class="favorite-dropdown-list" id="favoritePairDropdownList">
+                                            <!-- JavaScriptで動的に生成 -->
+                                        </div>
+                                    </div>
+                                    <!-- オートコンプリートドロップダウン -->
+                                    <div class="pair-autocomplete-dropdown" id="pairAutocompleteDropdown" style="display: none;">
+                                        <!-- JavaScriptで動的に生成 -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>売買方向</label>
+                                <select id="direction" onchange="updateRiskReward()">
+                                    <option value="long">ロング（買い）</option>
+                                    <option value="short">ショート（売り）</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 行2: ブローカー、エントリー日時 -->
+                            <div class="input-group broker-input-container">
+                                <label>ブローカー</label>
+                                <div class="broker-input-wrapper">
+                                    <select id="broker" class="broker-select" onchange="onBrokerSelected()">
+                                        <option value="">ブローカーを選択</option>
+                                        <!-- JavaScriptで動的に生成 -->
+                                    </select>
+                                    <div class="lot-unit-display" id="lotUnitDisplay" style="display: none;">
+                                        <span class="lot-unit-label">1ロット = </span>
+                                        <span class="lot-unit-value" id="lotUnitValue">-</span>
+                                        <span class="lot-unit-suffix">通貨</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>エントリー日時</label>
+                                <input type="datetime-local" id="entryTime" step="900">
+                            </div>
+                            
+                            <!-- 行3: エントリー価格、ロットサイズ -->
+                            <div class="input-group">
+                                <label>エントリー価格</label>
+                                <input type="number" id="entryPrice" step="0.00001" placeholder="例: 150.25" oninput="updateRiskReward()">
+                            </div>
+                            <div class="input-group lot-input-container">
+                                <label>ロットサイズ <span class="default-lot-hint" id="defaultLotHint" style="display: none;"></span></label>
+                                <input type="number" id="lotSize" step="0.1" min="0.1" placeholder="例: 1.0" value="1.0">
+                            </div>
+                            
+                            <!-- 行4: 損切り価格、利確目標価格 -->
+                            <div class="input-group">
+                                <label>損切り価格</label>
+                                <input type="number" id="stopLoss" step="0.00001" placeholder="例: 149.50" oninput="updateRiskReward()">
+                            </div>
+                            <div class="input-group">
+                                <label>利確目標価格</label>
+                                <input type="number" id="takeProfit" step="0.00001" placeholder="例: 151.50" oninput="updateRiskReward()">
+                            </div>
+                        </div>
+
+                        <div class="risk-reward-display" id="riskRewardDisplay">
+                            <div>
+                                <div>
+                                    <div style="color: #ff4444; font-size: 0.9rem;">リスク</div>
+                                    <div id="riskPips" style="font-size: 1.2rem; font-weight: bold;">- Pips</div>
+                                </div>
+                                <div>
+                                    <div style="color: #00ff88; font-size: 0.9rem;">リワード</div>
+                                    <div id="rewardPips" style="font-size: 1.2rem; font-weight: bold;">- Pips</div>
+                                </div>
+                                <div>
+                                    <div style="color: #ffd700; font-size: 0.9rem;">R:R比率</div>
+                                    <div id="rrRatio" style="font-size: 1.2rem; font-weight: bold;">-:-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>チェックリスト（3つ必須）</h3>
+                        <div class="entry-conditions">
+                            <div class="input-group">
+                                <label>エントリー価格の根拠</label>
+                                <textarea id="reason1" rows="3" style="resize: vertical; width: 100%;" placeholder="例:レンジのブレイク / 例:移動平均線からの反発" oninput="updateConditionStatus()"></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>損切り価格の根拠</label>
+                                <textarea id="reason2" rows="3" style="resize: vertical; width: 100%;" placeholder="例:直近の安値・高値 / 例:総資金の2%" oninput="updateConditionStatus()"></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>利確目標価格の根拠</label>
+                                <textarea id="reason3" rows="3" style="resize: vertical; width: 100%;" placeholder="例:リスクリワード比率1：2 / 例:直近の安値・高値" oninput="updateConditionStatus()"></textarea>
+                            </div>
+                            <div class="condition-status not-ready" id="conditionStatus">
+                                チェックリスト：0/3
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="margin-top: 20px;">
+                            <label>トレードシナリオ</label>
+                            <textarea id="scenario" placeholder="どのような狙いでエントリーしたか記入" rows="4"></textarea>
+                        </div>
+
+                        <div class="input-group">
+                            <label>エントリー時の感情・心理状態</label>
+                            <textarea id="entryEmotion" placeholder="例: 冷静に分析できていた / 少し焦りがあった / 確信を持ってエントリー など" rows="4"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 30px 0 15px;">チャート画像（最大3枚）</h3>
+                <div class="chart-images-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="image-upload-area" id="tradeChartImageUpload1" onclick="showImageUploadOptions('tradeChart1')" style="position: relative;">
+                        <div id="tradeChartImagePreview1"></div>
+                        <p>画像1</p>
+                        <button id="clearTradeChart1Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(1, event)">×</button>
+                    </div>
+                    <div class="image-upload-area" id="tradeChartImageUpload2" onclick="showImageUploadOptions('tradeChart2')" style="position: relative;">
+                        <div id="tradeChartImagePreview2"></div>
+                        <p>画像2</p>
+                        <button id="clearTradeChart2Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(2, event)">×</button>
+                    </div>
+                    <div class="image-upload-area" id="tradeChartImageUpload3" onclick="showImageUploadOptions('tradeChart3')" style="position: relative;">
+                        <div id="tradeChartImagePreview3"></div>
+                        <p>画像3</p>
+                        <button id="clearTradeChart3Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(3, event)">×</button>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="saveTradeBtn" onclick="saveTradeRecord()">エントリー記録を保存</button>
+                    <button class="btn btn-secondary" id="clearFormBtn" onclick="clearForm()">クリア</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- トレード記録一覧 -->
+        <div id="records" class="tab-content">
+            <div class="section">
+                <h2>全トレード記録</h2>
+                
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label>表示期間</label>
+                            <select id="periodFilter" onchange="filterTrades()">
+                                <option value="all">全期間</option>
+                                <option value="year">年別</option>
+                                <option value="month">月別</option>
+                                <option value="week">週別</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>年</label>
+                            <select id="yearFilter" onchange="filterTrades()">
+                                <option value="">全て</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>月</label>
+                            <select id="monthFilter" onchange="filterTrades()">
+                                <option value="">全て</option>
+                                <option value="1">1月</option>
+                                <option value="2">2月</option>
+                                <option value="3">3月</option>
+                                <option value="4">4月</option>
+                                <option value="5">5月</option>
+                                <option value="6">6月</option>
+                                <option value="7">7月</option>
+                                <option value="8">8月</option>
+                                <option value="9">9月</option>
+                                <option value="10">10月</option>
+                                <option value="11">11月</option>
+                                <option value="12">12月</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>通貨ペア</label>
+                            <select id="pairFilter" onchange="filterTrades()">
+                                <option value="">全て</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>状態</label>
+                            <select id="statusFilter" onchange="filterTrades()">
+                                <option value="">全て</option>
+                                <option value="active">保有中</option>
+                                <option value="closed">決済済み</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" onclick="filterTrades()">適用</button>
+                    </div>
+                </div>
+
+                <div id="tradeRecordsList" class="trade-records-list">
+                    <!-- 動的に生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 相場ノート（改善版） -->
+        <div id="notes" class="tab-content">
+            <div class="section">
+                <h2>📖 相場ノート</h2>
+                
+                <!-- 日付選択部（検索ボタン追加） -->
+                <div class="date-selector">
+                    <button class="btn btn-small btn-secondary note-search-btn" onclick="openNoteSearchModal()" title="ノート検索">
+                        🔍 <span class="search-btn-text">検索</span>
+                    </button>
+                    <div class="date-input-group">
+                        <button class="date-nav-btn" onclick="changeDate(-1)">◀</button>
+                        <input type="date" id="noteDate" value="" onchange="selectNoteDate(this.value); updateMonthlyMemoDisplay();">
+                        <button class="date-nav-btn" onclick="changeDate(1)">▶</button>
+                        <button class="btn btn-small btn-secondary" onclick="setToday()">今日</button>
+                    </div>
+                </div>
+
+                <!-- 月メモ表示エリア（新規追加） -->
+                <div class="monthly-memo-container" id="monthlyMemoContainer">
+                    <div class="monthly-memo-header">
+                        <span class="monthly-memo-title" id="monthlyMemoTitle">📅 11月のメモ</span>
+                    </div>
+                    
+                    <!-- アノマリー（毎年共通） -->
+                    <div class="monthly-memo-section" id="anomalySection">
+                        <div class="monthly-memo-section-header" onclick="toggleMonthlyMemoSection('anomaly')">
+                            <span class="collapse-icon" id="anomalyCollapseIcon">▲</span>
+                            <span class="section-icon">🔄</span>
+                            <span class="section-label">アノマリー（毎年共通）</span>
+                            <button class="btn btn-small btn-secondary memo-edit-btn" onclick="event.stopPropagation(); openMonthlyMemoEditModal('anomaly')">編集</button>
+                        </div>
+                        <div class="monthly-memo-section-content" id="anomalyContent">
+                            <div class="memo-placeholder" onclick="openMonthlyMemoEditModal('anomaly')">📝 メモを追加...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 月次メモ（年月別） -->
+                    <div class="monthly-memo-section" id="monthlySection">
+                        <div class="monthly-memo-section-header" onclick="toggleMonthlyMemoSection('monthly')">
+                            <span class="collapse-icon" id="monthlyCollapseIcon">▲</span>
+                            <span class="section-icon">📝</span>
+                            <span class="section-label" id="monthlySectionLabel">2025年11月</span>
+                            <button class="btn btn-small btn-secondary memo-edit-btn" onclick="event.stopPropagation(); openMonthlyMemoEditModal('monthly')">編集</button>
+                        </div>
+                        <div class="monthly-memo-section-content" id="monthlyContent">
+                            <div class="memo-placeholder" onclick="openMonthlyMemoEditModal('monthly')">📝 メモを追加...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 編集インジケーター -->
+                <div id="editingIndicator" class="editing-indicator" style="display: none;">
+                    <span class="editing-badge">✏️ 編集中</span>
+                    <span id="editingDate"></span>
+                    <button class="btn btn-small btn-secondary" onclick="cancelEdit()">キャンセル</button>
+                </div>
+
+                <!-- ノート入力部 -->
+                <div class="note-input-area">
+                    <div class="form-group">
+                        <label>メモ</label>
+                        <div class="editor-toolbar">
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'bold')" title="太字">
+                                <b>B</b>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'underline')" title="下線">
+                                <u>U</u>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'red')" title="赤文字">
+                                <span style="color: red">赤</span>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'blue')" title="青文字">
+                                <span style="color: blue">青</span>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'highlight')" title="黄色マーカー">
+                                <span style="background: yellow">黄</span>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'default')" title="デフォルト色">
+                                <span style="color: inherit">元</span>
+                            </button>
+                        </div>
+                        <div id="noteMemo" contenteditable="true" class="note-editor textarea-style" data-placeholder="経済指標、要人発言、その他イベント（複数行入力可能）" style="min-height: 120px; resize: vertical; overflow: auto;"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>今日の相場観</label>
+                        <div class="editor-toolbar">
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'bold')" title="太字">
+                                <b>B</b>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'underline')" title="下線">
+                                <u>U</u>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'red')" title="赤文字">
+                                <span style="color: red">赤</span>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'blue')" title="青文字">
+                                <span style="color: blue">青</span>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'highlight')" title="黄色マーカー">
+                                <span style="background: yellow">黄</span>
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'default')" title="デフォルト色">
+                                <span style="color: inherit">元</span>
+                            </button>
+                        </div>
+                        <div id="noteMarketView" contenteditable="true" class="note-editor textarea-style" data-placeholder="今日の相場の動き、出来事、気づいたことなど（複数行入力可能）" style="min-height: 400px; resize: vertical; overflow: auto;"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>画像（最大3枚）</label>
+                        <div id="noteImages" class="note-images-container">
+                            <div class="note-image-item empty" data-index="1" onclick="window.NoteManagerModule.addNoteImageAt(1)">
+                                <span class="note-image-placeholder">画像1</span>
+                            </div>
+                            <div class="note-image-item empty" data-index="2" onclick="window.NoteManagerModule.addNoteImageAt(2)">
+                                <span class="note-image-placeholder">画像2</span>
+                            </div>
+                            <div class="note-image-item empty" data-index="3" onclick="window.NoteManagerModule.addNoteImageAt(3)">
+                                <span class="note-image-placeholder">画像3</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="saveNoteBtn" class="btn btn-primary" onclick="saveOrUpdateNote()">ノートを保存</button>
+                        <button class="btn btn-secondary" onclick="clearNoteForm()">クリア</button>
+                    </div>
+                </div>
+
+                <!-- 週間プレビューと詳細表示（2カラムレイアウト） -->
+                <div class="note-display-container">
+                    <!-- 左側：週間プレビュー -->
+                    <div class="weekly-preview">
+                        <h3>📅 週間プレビュー</h3>
+                        <div class="week-navigation">
+                            <button onclick="changeWeek(-1)">◀ 前週</button>
+                            <button class="btn btn-small btn-secondary" onclick="showWeekCalendar()">📅 カレンダー</button>
+                            <span id="currentWeekRange">-</span>
+                            <button onclick="changeWeek(1)">翌週 ▶</button>
+                        </div>
+                        <div class="week-days" id="weekDays">
+                            <!-- 月曜〜日曜のプレビュー（空白） -->
+                            <div class="day-preview">
+                                <div class="day-preview-header">
+                                    <span class="day-preview-date">-/-</span>
+                                    <span class="day-preview-weekday">月曜日</span>
+                                </div>
+                                <div class="day-preview-content">
+                                    <div class="day-preview-empty">未記入</div>
+                                </div>
+                            </div>
+                            <div class="day-preview">
+                                <div class="day-preview-header">
+                                    <span class="day-preview-date">-/-</span>
+                                    <span class="day-preview-weekday">火曜日</span>
+                                </div>
+                                <div class="day-preview-content">
+                                    <div class="day-preview-empty">未記入</div>
+                                </div>
+                            </div>
+                            <div class="day-preview">
+                                <div class="day-preview-header">
+                                    <span class="day-preview-date">-/-</span>
+                                    <span class="day-preview-weekday">水曜日</span>
+                                </div>
+                                <div class="day-preview-content">
+                                    <div class="day-preview-empty">未記入</div>
+                                </div>
+                            </div>
+                            <div class="day-preview">
+                                <div class="day-preview-header">
+                                    <span class="day-preview-date">-/-</span>
+                                    <span class="day-preview-weekday">木曜日</span>
+                                </div>
+                                <div class="day-preview-content">
+                                    <div class="day-preview-empty">未記入</div>
+                                </div>
+                            </div>
+                            <div class="day-preview">
+                                <div class="day-preview-header">
+                                    <span class="day-preview-date">-/-</span>
+                                    <span class="day-preview-weekday">金曜日</span>
+                                </div>
+                                <div class="day-preview-content">
+                                    <div class="day-preview-empty">未記入</div>
+                                </div>
+                            </div>
+                            <div class="day-preview">
+                                <div class="day-preview-header">
+                                    <span class="day-preview-date">-/-</span>
+                                    <span class="day-preview-weekday">土曜日</span>
+                                </div>
+                                <div class="day-preview-content">
+                                    <div class="day-preview-empty">未記入</div>
+                                </div>
+                            </div>
+                            <div class="day-preview">
+                                <div class="day-preview-header">
+                                    <span class="day-preview-date">-/-</span>
+                                    <span class="day-preview-weekday">日曜日</span>
+                                </div>
+                                <div class="day-preview-content">
+                                    <div class="day-preview-empty">未記入</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右側：詳細表示 -->
+                    <div class="note-detail" id="noteDetail">
+                        <div class="detail-placeholder">
+                            <p>📝 日付を選択してノートを表示</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- 分析（ログ＋統計） -->
+        <div id="analysis" class="tab-content">
+            <div class="section">
+                <h2>📊 分析・レポート</h2>
+                
+                <!-- ==========================================
+                     全期間統計18項目（上部固定・グレー背景）
+                     レイアウト: 6列×3段
+                     ========================================== -->
+                
+                <div class="overall-stats-container" style="
+                    background: rgba(128, 128, 128, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;">
+                    
+                    <h3 style="color: #c0c0c0; margin-top: 0; margin-bottom: 15px; font-size: 1.1em;">
+                        📈 2025年 総合統計
+                    </h3>
+                    
+                    <!-- 全期間統計18項目グリッド（6列×3段） -->
+                    <div class="overall-stats-grid" style="
+                        display: grid;
+                        grid-template-columns: repeat(6, 1fr);
+                        gap: 10px;
+                        background: rgba(0, 0, 0, 0.2);
+                        padding: 15px;
+                        border-radius: 8px;">
+                        
+                        <!-- 1段目 -->
+                        <div class="overall-stat-item">
+                            <span class="stat-label">総トレード数</span>
+                            <span class="stat-value" id="totalTradesCount">0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">勝敗</span>
+                            <span class="stat-value" id="overallWinLoss">0勝0敗</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">勝率（純損益）</span>
+                            <span class="stat-value" id="overallWinRate">0.0%</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">最大連勝</span>
+                            <span class="stat-value" id="maxWinStreak">0回</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">最大連敗</span>
+                            <span class="stat-value" id="maxLoseStreak">0回</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">利益額（円）</span>
+                            <span class="stat-value" id="overallProfit">¥0</span>
+                        </div>
+                        
+                        <!-- 2段目 -->
+                        <div class="overall-stat-item">
+                            <span class="stat-label">利益率（%）</span>
+                            <span class="stat-value" id="profitRate">--%</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">平均利益（円）</span>
+                            <span class="stat-value" id="avgProfitYen">¥0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">平均損失（円）</span>
+                            <span class="stat-value" id="avgLossYen">¥0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">最大DD（円）</span>
+                            <span class="stat-value" id="maxDrawdown">¥0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">最大獲得（pips）</span>
+                            <span class="stat-value" id="maxWinPips">0.0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">最大損失（pips）</span>
+                            <span class="stat-value" id="maxLosePips">0.0</span>
+                        </div>
+                        
+                        <!-- 3段目 -->
+                        <div class="overall-stat-item">
+                            <span class="stat-label">総獲得（pips）</span>
+                            <span class="stat-value" id="totalPipsEarned">0.0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">平均利益（pips）</span>
+                            <span class="stat-value" id="avgProfitPips">0.0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">平均損失（pips）</span>
+                            <span class="stat-value" id="avgLossPips">0.0</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">R:R（Pips）</span>
+                            <span class="stat-value" id="riskRewardPips">0.00</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">PF（円）</span>
+                            <span class="stat-value" id="profitFactorYen">0.00</span>
+                        </div>
+                        <div class="overall-stat-item">
+                            <span class="stat-label">期待値（円）</span>
+                            <span class="stat-value" id="expectedValueYen">¥0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <style>
+                /* 全期間統計スタイル */
+                .overall-stats-grid {
+                    background: rgba(0, 0, 0, 0.2);
+                    padding: 15px;
+                    border-radius: 8px;
+                }
+                
+                .overall-stat-item {
+                    background: rgba(255, 255, 255, 0.05);
+                    padding: 12px;
+                    border-radius: 6px;
+                    text-align: center;
+                    min-height: 70px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                }
+                
+                .overall-stat-item .stat-label {
+                    display: block;
+                    font-size: 0.75rem;
+                    color: rgba(255, 255, 255, 0.6);
+                    margin-bottom: 6px;
+                    line-height: 1.2;
+                }
+                
+                .overall-stat-item .stat-value {
+                    display: block;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    color: #fff;
+                }
+                </style>
+                
+                <!-- ==========================================
+                     期間選択UI（週次・月次・四半期・年次）
+                     ========================================== -->
+                
+                <div class="period-selection-container" style="
+                    background: rgba(255, 255, 255, 0.03);
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;">
+                    
+                    <h3 style="color: #ffffff; margin-top: 0; margin-bottom: 15px; font-size: 1.1em;">
+                        📅 期間選択
+                    </h3>
+                    
+                    <!-- 期間タイプボタン -->
+                    <div class="period-type-buttons" style="
+                        display: flex;
+                        gap: 10px;
+                        margin-bottom: 15px;
+                        flex-wrap: wrap;">
+                        
+                        <button class="period-type-btn" 
+                                data-period-type="weekly"
+                                onclick="switchPeriodType('weekly')"
+                                style="
+                                    flex: 1;
+                                    min-width: 100px;
+                                    padding: 10px 20px;
+                                    background: rgba(255, 255, 255, 0.1);
+                                    color: rgb(136, 136, 136);
+                                    border: 1.33333px solid rgba(255, 255, 255, 0.2);
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    font-weight: bold;
+                                    transition: all 0.2s ease;">
+                            📊 週次
+                        </button>
+                        
+                        <button class="period-type-btn active" 
+                                data-period-type="monthly"
+                                onclick="switchPeriodType('monthly')"
+                                style="
+                                    flex: 1;
+                                    min-width: 100px;
+                                    padding: 10px 20px;
+                                    background: rgb(0, 255, 136);
+                                    color: rgb(0, 0, 0);
+                                    border: 1.33333px solid rgb(0, 255, 136);
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    font-weight: bold;
+                                    transition: all 0.2s ease;">
+                            📅 月次
+                        </button>
+                        
+                        <button class="period-type-btn" 
+                                data-period-type="quarterly"
+                                onclick="switchPeriodType('quarterly')"
+                                style="
+                                    flex: 1;
+                                    min-width: 100px;
+                                    padding: 10px 20px;
+                                    background: rgba(255, 255, 255, 0.1);
+                                    color: rgb(136, 136, 136);
+                                    border: 1.33333px solid rgba(255, 255, 255, 0.2);
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    font-weight: bold;
+                                    transition: all 0.2s ease;">
+                            📈 四半期
+                        </button>
+                        
+                        <button class="period-type-btn" 
+                                data-period-type="yearly"
+                                onclick="switchPeriodType('yearly')"
+                                style="
+                                    flex: 1;
+                                    min-width: 100px;
+                                    padding: 10px 20px;
+                                    background: rgba(255, 255, 255, 0.1);
+                                    color: rgb(136, 136, 136);
+                                    border: 1.33333px solid rgba(255, 255, 255, 0.2);
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    font-weight: bold;
+                                    transition: all 0.2s ease;">
+                            📆 年次
+                        </button>
+                    </div>
+                    
+                    <!-- 期間選択プルダウン＋変更ボタン -->
+                    <div class="period-selector" style="
+                        display: flex;
+                        gap: 10px;
+                        align-items: center;
+                        flex-wrap: wrap;">
+                        
+                        <!-- 年度選択（週次・月次・四半期のみ表示） -->
+                        <div id="yearSelectContainer" style="
+                            display: flex;
+                            gap: 10px;
+                            align-items: center;">
+                            
+                            <label style="color: #ffffff; font-weight: normal; white-space: nowrap;">
+                                年度:
+                            </label>
+                            
+                            <select id="yearSelect" 
+                                    onchange="updatePeriodOptions()"
+                                    style="
+                                        padding: 10px;
+                                        border-radius: 4px;
+                                        border: 1.33333px solid rgba(255, 255, 255, 0.2);
+                                        background: rgba(255, 255, 255, 0.1);
+                                        color: rgb(136, 136, 136);
+                                        cursor: pointer;
+                                        font-size: 1em;
+                                        min-width: 120px;">
+                                <!-- JavaScriptで動的に生成 -->
+                            </select>
+                        </div>
+                        
+                        <label style="color: #ffffff; font-weight: normal; white-space: nowrap;">
+                            対象期間:
+                        </label>
+                        
+                        <select id="periodSelect" 
+                                style="
+                                    flex: 1;
+                                    min-width: 200px;
+                                    padding: 10px;
+                                    border-radius: 4px;
+                                    border: 1.33333px solid rgba(255, 255, 255, 0.2);
+                                    background: rgba(255, 255, 255, 0.1);
+                                    color: rgb(136, 136, 136);
+                                    cursor: pointer;
+                                    font-size: 1em;">
+                            <!-- JavaScriptで動的に生成 -->
+                        </select>
+                        
+                        <button id="changePeriodBtn" 
+                                onclick="changePeriod()"
+                                style="
+                                    padding: 10px 20px;
+                                    background: rgb(0, 123, 255);
+                                    color: rgb(255, 255, 255);
+                                    border: 0px none;
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    font-weight: bold;
+                                    white-space: nowrap;
+                                    transition: all 0.2s ease;">
+                            期間を変更
+                        </button>
+                    </div>
+                    
+                    <!-- 現在の選択期間表示 -->
+                    <div id="currentPeriodDisplay" style="
+                        margin-top: 15px;
+                        padding: 10px;
+                        background: rgba(255, 255, 255, 0.05);
+                        border-radius: 4px;
+                        color: rgb(255, 255, 255);
+                        font-size: 0.9em;
+                        text-align: center;">
+                        現在の期間: <span id="currentPeriodText" style="font-weight: bold; color: rgb(0, 255, 136);">2025年10月</span>
+                    </div>
+                </div>
+                
+                <style>
+                /* selectのoption要素のスタイル - 白背景・黒文字に統一 */
+                #periodSelect option,
+                #yearSelect option {
+                    background: rgb(255, 255, 255);
+                    color: rgb(0, 0, 0);
+                }
+                
+                /* 期間タイプボタンのホバーエフェクト */
+                .period-type-btn:hover {
+                    opacity: 0.8;
+                }
+                
+                .period-type-btn.active {
+                    background: rgb(0, 255, 136) !important;
+                    color: rgb(0, 0, 0) !important;
+                    border: 1.33333px solid rgb(0, 255, 136) !important;
+                }
+                
+                /* 変更ボタンのホバーエフェクト */
+                #changePeriodBtn:hover {
+                    opacity: 0.9;
+                }
+                
+                /* プルダウンのフォーカススタイル */
+                #periodSelect:focus {
+                    outline: none;
+                    border-color: rgb(0, 255, 136);
+                }
+                </style>
+                
+                <!-- ==========================================
+                     期間統計12項目（中部・青系背景）
+                     レイアウト: 6列×2段
+                     切り替え: Pips統計 / 円建て統計
+                     ========================================== -->
+                
+                <div class="period-stats-container" style="
+                    background: rgba(30, 64, 175, 0.2);
+                    border: 1px solid rgba(59, 130, 246, 0.3);
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 id="periodStatsTitle" style="color: #60a5fa; margin: 0; font-size: 1.1em;">
+                            📊 2025年10月
+                        </h3>
+                        
+                        <!-- Pips/円建て切り替えボタン -->
+                        <div class="period-stats-toggle">
+                            <button class="period-stats-btn active" 
+                                    data-stats-type="pips"
+                                    onclick="switchPeriodStatsView('pips')"
+                                    style="
+                                        padding: 8px 16px;
+                                        background: rgb(0, 255, 136);
+                                        color: rgb(0, 0, 0);
+                                        border: 1.33333px solid rgb(0, 255, 136);
+                                        border-radius: 4px 0 0 4px;
+                                        cursor: pointer;
+                                        font-weight: bold;
+                                        transition: all 0.2s ease;">
+                                📊 Pips
+                            </button>
+                            <button class="period-stats-btn" 
+                                    data-stats-type="yen"
+                                    onclick="switchPeriodStatsView('yen')"
+                                    style="
+                                        padding: 8px 16px;
+                                        background: rgba(255, 255, 255, 0.1);
+                                        color: rgb(136, 136, 136);
+                                        border: 1.33333px solid rgba(255, 255, 255, 0.2);
+                                        border-radius: 0 4px 4px 0;
+                                        cursor: pointer;
+                                        font-weight: bold;
+                                        transition: all 0.2s ease;">
+                                💰 円建て
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Pips統計12項目（6列×2段） -->
+                    <div id="periodPipsStats" class="period-stats-grid" style="
+                        display: grid;
+                        grid-template-columns: repeat(6, 1fr);
+                        gap: 10px;">
+                        
+                        <!-- 1段目 -->
+                        <div class="period-stat-item">
+                            <span class="stat-label">総トレード数</span>
+                            <span class="stat-value" id="periodTotalTrades">0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">勝敗</span>
+                            <span class="stat-value" id="periodWinLoss">0勝0敗</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">勝率</span>
+                            <span class="stat-value" id="periodWinRate">0.0%</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">総獲得Pips</span>
+                            <span class="stat-value" id="periodTotalPips">0.0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">平均保有時間</span>
+                            <span class="stat-value" id="periodAvgHoldTime">0時間</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">R:R</span>
+                            <span class="stat-value" id="periodRR">0.00</span>
+                        </div>
+                        
+                        <!-- 2段目 -->
+                        <div class="period-stat-item">
+                            <span class="stat-label">最大連勝</span>
+                            <span class="stat-value" id="periodMaxWinStreak">0回</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">最大連敗</span>
+                            <span class="stat-value" id="periodMaxLoseStreak">0回</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">平均利益pips</span>
+                            <span class="stat-value" id="periodAvgProfitPips">0.0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">平均損失pips</span>
+                            <span class="stat-value" id="periodAvgLossPips">0.0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">最大獲得pips</span>
+                            <span class="stat-value" id="periodMaxWinPips">0.0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">最大損失pips</span>
+                            <span class="stat-value" id="periodMaxLossPips">0.0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 円建て統計12項目（6列×2段） -->
+                    <div id="periodYenStats" class="period-stats-grid" style="
+                        display: none;
+                        grid-template-columns: repeat(6, 1fr);
+                        gap: 10px;">
+                        
+                        <!-- 1段目 -->
+                        <div class="period-stat-item">
+                            <span class="stat-label">円建て登録済</span>
+                            <span class="stat-value" id="periodYenRegistration">0/0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">勝率（純損益）</span>
+                            <span class="stat-value" id="periodYenWinRate">0.0%</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">総損益</span>
+                            <span class="stat-value" id="periodYenTotalPL">¥0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">PF</span>
+                            <span class="stat-value" id="periodYenPF">0.00</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">期待値</span>
+                            <span class="stat-value" id="periodYenExpectedValue">¥0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">平均利益</span>
+                            <span class="stat-value" id="periodYenAvgProfit">¥0</span>
+                        </div>
+                        
+                        <!-- 2段目 -->
+                        <div class="period-stat-item">
+                            <span class="stat-label">平均損失</span>
+                            <span class="stat-value" id="periodYenAvgLoss">¥0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">最大利益</span>
+                            <span class="stat-value" id="periodYenMaxProfit">¥0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">最大損失</span>
+                            <span class="stat-value" id="periodYenMaxLoss">¥0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">最大DD</span>
+                            <span class="stat-value" id="periodYenMaxDD">¥0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">スワップ損益</span>
+                            <span class="stat-value" id="periodYenSwap">¥0</span>
+                        </div>
+                        <div class="period-stat-item">
+                            <span class="stat-label">手数料合計</span>
+                            <span class="stat-value" id="periodYenCommission">¥0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <style>
+                /* 期間統計グリッド */
+                .period-stats-grid {
+                    background: rgba(0, 0, 0, 0.2);
+                    padding: 15px;
+                    border-radius: 8px;
+                }
+                
+                .period-stat-item {
+                    background: rgba(255, 255, 255, 0.05);
+                    padding: 12px;
+                    border-radius: 6px;
+                    text-align: center;
+                    min-height: 70px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                }
+                
+                .period-stat-item .stat-label {
+                    display: block;
+                    font-size: 0.75rem;
+                    color: rgba(255, 255, 255, 0.6);
+                    margin-bottom: 6px;
+                    line-height: 1.2;
+                }
+                
+                .period-stat-item .stat-value {
+                    display: block;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    color: #fff;
+                }
+                
+                /* 切り替えボタンのホバー */
+                .period-stats-btn:hover {
+                    opacity: 0.8;
+                }
+                
+                .period-stats-btn.active {
+                    background: rgb(0, 255, 136) !important;
+                    color: rgb(0, 0, 0) !important;
+                    border: 1.33333px solid rgb(0, 255, 136) !important;
+                }
+                
+                /* 色分け（明度差40%で色覚異常にも対応） */
+                .stat-value.positive {
+                    color: #6ee7b7 !important;  /* 明るい緑（明度80%） */
+                }
+                
+                .stat-value.negative {
+                    color: #dc2626 !important;  /* 暗い赤（明度40%） */
+                }
+                </style>
+                
+                <!-- ==========================================
+                     レポート詳細（下部）
+                     アコーディオン: 4セクション
+                     ========================================== -->
+                        
+                <div class="report-content" id="reportContent">
+                    <!-- 動的に生成 -->
+                </div>
+
+                <!-- 月別推移グラフ（維持） -->
+                <h3 style="color: #00ff88; margin-bottom: 15px;">月別推移</h3>
+                
+                <!-- ビュー切り替えボタンを追加 -->
+                <div class="chart-view-buttons" style="text-align: center; margin-bottom: 15px;">
+                    <button class="view-btn active" onclick="window.ChartModule.switchChartView('monthly')">月次</button>
+                    <button class="view-btn" onclick="window.ChartModule.switchChartView('yearly')">年次</button>
+                    <button class="view-btn" onclick="window.ChartModule.switchChartView('allTime')">全期間</button>
+                </div>
+                
+                <div id="monthlyPerformanceChart" style="padding: 20px; border-radius: 10px;">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+
+            </div>
+        </div>
+        
+        <script>
+        // ==========================================
+        // 期間選択UI - JavaScript
+        // ==========================================
+        
+        // 現在の選択状態
+        let currentPeriodType = 'monthly';
+        let currentYear = new Date().getFullYear();
+        let currentPeriod = new Date().getMonth() + 1;
+        
+        /**
+         * 期間タイプを切り替え
+         */
+        function switchPeriodType(periodType) {
+            currentPeriodType = periodType;
+            
+            // ボタンのアクティブ状態を更新
+            document.querySelectorAll('.period-type-btn').forEach(btn => {
+                const btnType = btn.getAttribute('data-period-type');
+                if (btnType === periodType) {
+                    btn.classList.add('active');
+                    btn.style.background = 'rgb(0, 255, 136)';
+                    btn.style.color = 'rgb(0, 0, 0)';
+                    btn.style.border = '1.33333px solid rgb(0, 255, 136)';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.color = 'rgb(136, 136, 136)';
+                    btn.style.border = '1.33333px solid rgba(255, 255, 255, 0.2)';
+                }
+            });
+            
+            // 年度選択の表示/非表示を切り替え
+            const yearSelectContainer = document.getElementById('yearSelectContainer');
+            if (periodType === 'yearly') {
+                // 年次選択時は年度ドロップダウンを非表示
+                yearSelectContainer.style.display = 'none';
+            } else {
+                // 週次・月次・四半期選択時は年度ドロップダウンを表示
+                yearSelectContainer.style.display = 'flex';
+            }
+            
+            // プルダウンの内容を更新
+            updatePeriodOptions();
+        }
+        
+        /**
+         * プルダウンの選択肢を更新
+         */
+        function updatePeriodOptions() {
+            const select = document.getElementById('periodSelect');
+            const yearSelect = document.getElementById('yearSelect');
+            select.innerHTML = '';
+            
+            const currentDate = new Date();
+            const currentYearNow = currentDate.getFullYear();
+            
+            // 選択された年度を取得（週次・月次・四半期の場合）
+            // 年次の場合はcurrentYearNowを使用
+            const selectedYear = (currentPeriodType === 'yearly') ? 
+                currentYearNow : 
+                (yearSelect ? parseInt(yearSelect.value) : currentYearNow);
+            
+            switch (currentPeriodType) {
+                case 'weekly':
+                    // 週次: 第1週〜第52週（選択年度）
+                    for (let week = 1; week <= 52; week++) {
+                        const option = document.createElement('option');
+                        option.value = `${selectedYear}-W${week}`;
+                        const dateRange = getWeekDateRange(selectedYear, week);
+                        option.textContent = `${selectedYear}年第${week}週（${dateRange}）`;
+                        if (selectedYear === currentYearNow && week === getCurrentWeekNumber()) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    }
+                    break;
+                    
+                case 'monthly':
+                    // 月次: 1月〜12月（選択年度）
+                    const months = ['1月', '2月', '3月', '4月', '5月', '6月', 
+                                   '7月', '8月', '9月', '10月', '11月', '12月'];
+                    months.forEach((month, index) => {
+                        const option = document.createElement('option');
+                        option.value = `${selectedYear}-${index + 1}`;
+                        option.textContent = `${selectedYear}年${month}`;
+                        if (selectedYear === currentYearNow && index + 1 === currentDate.getMonth() + 1) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                    break;
+                    
+                case 'quarterly':
+                    // 四半期: Q1〜Q4（選択年度）
+                    for (let q = 1; q <= 4; q++) {
+                        const option = document.createElement('option');
+                        option.value = `${selectedYear}-Q${q}`;
+                        const months = ['1-3月', '4-6月', '7-9月', '10-12月'];
+                        option.textContent = `${selectedYear}年Q${q}（${months[q-1]}）`;
+                        if (selectedYear === currentYearNow && q === Math.floor(currentDate.getMonth() / 3) + 1) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    }
+                    break;
+                    
+                case 'yearly':
+                    // 年次: 2020年〜現在年
+                    for (let year = 2020; year <= currentYearNow; year++) {
+                        const option = document.createElement('option');
+                        option.value = `${year}`;
+                        option.textContent = `${year}年`;
+                        if (year === currentYearNow) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    }
+                    break;
+            }
+        }
+        
+        /**
+         * 現在のISO週番号を取得
+         */
+        function getCurrentWeekNumber() {
+            const date = new Date();
+            const target = new Date(date.valueOf());
+            const dayNum = (date.getDay() + 6) % 7;
+            target.setDate(target.getDate() - dayNum + 3);
+            const firstThursday = target.valueOf();
+            target.setMonth(0, 1);
+            if (target.getDay() !== 4) {
+                target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+            }
+            return 1 + Math.ceil((firstThursday - target) / 604800000);
+        }
+        
+        /**
+         * 週番号から日付範囲を取得（月/日-月/日形式）
+         * @param {number} year - 年
+         * @param {number} weekNum - 週番号（1-52）
+         * @returns {string} - "7/1-7/7"形式の文字列
+         */
+        function getWeekDateRange(year, weekNum) {
+            // ISO週番号の定義：木曜日を含む週が基準
+            const jan4 = new Date(year, 0, 4); // 1月4日（第1週の木曜日）
+            const jan4Day = (jan4.getDay() + 6) % 7; // 月曜=0, 日曜=6
+            
+            // 第1週の月曜日を計算
+            const firstMonday = new Date(jan4);
+            firstMonday.setDate(jan4.getDate() - jan4Day);
+            
+            // 指定週の月曜日を計算
+            const weekStart = new Date(firstMonday);
+            weekStart.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
+            
+            // 日曜日を計算
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            
+            // 月/日形式に整形
+            const startMonth = weekStart.getMonth() + 1;
+            const startDay = weekStart.getDate();
+            const endMonth = weekEnd.getMonth() + 1;
+            const endDay = weekEnd.getDate();
+            
+            return `${startMonth}/${startDay}-${endMonth}/${endDay}`;
+        }
+        
+        /**
+         * 年度選択ドロップダウンを初期化
+         */
+        function initYearSelect() {
+            const yearSelect = document.getElementById('yearSelect');
+            if (!yearSelect) return;
+            
+            yearSelect.innerHTML = '';
+            
+            const currentYear = new Date().getFullYear();
+            
+            // 2020年から現在年まで
+            for (let year = 2020; year <= currentYear; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = `${year}年`;
+                if (year === currentYear) {
+                    option.selected = true;
+                }
+                yearSelect.appendChild(option);
+            }
+        }
+        
+        /**
+         * 期間を変更
+         */
+        function changePeriod() {
+            const select = document.getElementById('periodSelect');
+            const selectedValue = select.value;
+            const selectedText = select.options[select.selectedIndex].textContent;
+            
+            // 選択期間表示を更新
+            document.getElementById('currentPeriodText').textContent = selectedText;
+            
+            // 期間情報をパース
+            let year, period;
+            
+            switch (currentPeriodType) {
+                case 'weekly':
+                    [year, period] = selectedValue.split('-W');
+                    period = parseInt(period);
+                    break;
+                case 'monthly':
+                    [year, period] = selectedValue.split('-');
+                    period = parseInt(period);
+                    break;
+                case 'quarterly':
+                    [year, period] = selectedValue.split('-Q');
+                    period = parseInt(period);
+                    break;
+                case 'yearly':
+                    year = selectedValue;
+                    period = null;
+                    break;
+            }
+            
+            year = parseInt(year);
+            
+            // StatisticsModuleから期間統計を取得
+            const pipsStats = window.StatisticsModule.getPeriodStats(
+                currentPeriodType, 
+                year, 
+                period, 
+                'pips'
+            );
+            
+            const yenStats = window.StatisticsModule.getPeriodStats(
+                currentPeriodType, 
+                year, 
+                period, 
+                'yen'
+            );
+            
+            console.log('期間変更:', {
+                type: currentPeriodType,
+                year,
+                period,
+                pipsStats,
+                yenStats
+            });
+            
+            // 期間統計UIを更新
+            if (typeof updatePeriodStatsUI === 'function') {
+                updatePeriodStatsUI(pipsStats, yenStats, selectedText);
+            }
+            
+            // レポート詳細も期間に連動して更新
+            if (window.ReportModule && typeof window.ReportModule.generateReport === 'function') {
+                // 四半期の場合は最初の月を計算（Q1→1月, Q2→4月, Q3→7月, Q4→10月）
+                let reportMonth = period;
+                if (currentPeriodType === 'quarterly') {
+                    reportMonth = (period - 1) * 3 + 1;
+                }
+                
+                console.log('レポート詳細更新:', {
+                    type: currentPeriodType,
+                    year: year,
+                    month: reportMonth
+                });
+                
+                window.ReportModule.generateReport(currentPeriodType, year, reportMonth);
+            }
+        }
+        
+        // ==========================================
+        // 期間統計UI - JavaScript
+        // ==========================================
+        
+        // 現在の表示タイプ
+        let currentStatsView = 'pips';
+        
+        /**
+         * 期間統計の表示を切り替え（Pips ⇔ 円建て）
+         */
+        function switchPeriodStatsView(statsType) {
+            currentStatsView = statsType;
+            
+            const pipsStats = document.getElementById('periodPipsStats');
+            const yenStats = document.getElementById('periodYenStats');
+            
+            // 表示切り替え
+            if (statsType === 'pips') {
+                pipsStats.style.display = 'grid';
+                yenStats.style.display = 'none';
+            } else {
+                pipsStats.style.display = 'none';
+                yenStats.style.display = 'grid';
+            }
+            
+            // ボタンのスタイル更新
+            document.querySelectorAll('.period-stats-btn').forEach(btn => {
+                const btnType = btn.getAttribute('data-stats-type');
+                if (btnType === statsType) {
+                    btn.classList.add('active');
+                    btn.style.background = 'rgb(0, 255, 136)';
+                    btn.style.color = 'rgb(0, 0, 0)';
+                    btn.style.border = '1.33333px solid rgb(0, 255, 136)';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.color = 'rgb(136, 136, 136)';
+                    btn.style.border = '1.33333px solid rgba(255, 255, 255, 0.2)';
+                }
+            });
+        }
+        
+        /**
+         * 期間統計UIを更新
+         */
+        function updatePeriodStatsUI(pipsStats, yenStats, periodText) {
+            // タイトル更新
+            document.getElementById('periodStatsTitle').textContent = `📊 ${periodText}`;
+            
+            // Pips統計更新
+            if (pipsStats) {
+                document.getElementById('periodTotalTrades').textContent = pipsStats.totalTrades;
+                document.getElementById('periodWinLoss').textContent = pipsStats.winLossRecord;
+                document.getElementById('periodWinRate').textContent = pipsStats.winRate;
+                
+                // 総獲得Pips - 色付け追加
+                const totalPipsElement = document.getElementById('periodTotalPips');
+                totalPipsElement.textContent = Math.abs(parseFloat(pipsStats.totalPips)).toFixed(1);
+                totalPipsElement.className = 'stat-value ' + (parseFloat(pipsStats.totalPips) >= 0 ? 'positive' : 'negative');
+                
+                document.getElementById('periodAvgHoldTime').textContent = pipsStats.avgHoldTime;
+                document.getElementById('periodRR').textContent = pipsStats.rrRatio;
+                document.getElementById('periodMaxWinStreak').textContent = pipsStats.maxWinStreak + '回';
+                document.getElementById('periodMaxLoseStreak').textContent = pipsStats.maxLoseStreak + '回';
+                
+                // 平均利益pips - 色付け追加
+                const periodAvgProfitPipsElem = document.getElementById('periodAvgProfitPips');
+                const avgProfitPipsValue = parseFloat(pipsStats.avgProfitPips) || 0;
+                periodAvgProfitPipsElem.textContent = Math.abs(avgProfitPipsValue).toFixed(1);
+                periodAvgProfitPipsElem.className = 'stat-value ' + (avgProfitPipsValue >= 0 ? 'positive' : 'negative');
+                
+                // 平均損失pips - 色付け追加＋絶対値化
+                const periodAvgLossPipsElem = document.getElementById('periodAvgLossPips');
+                const avgLossPipsValue = parseFloat(pipsStats.avgLossPips) || 0;
+                periodAvgLossPipsElem.textContent = Math.abs(avgLossPipsValue).toFixed(1);
+                periodAvgLossPipsElem.className = 'stat-value negative';
+                
+                // 最大獲得pips - 色付け追加
+                const periodMaxWinPipsElem = document.getElementById('periodMaxWinPips');
+                const maxWinPipsValue = parseFloat(pipsStats.maxWinPips) || 0;
+                periodMaxWinPipsElem.textContent = Math.abs(maxWinPipsValue).toFixed(1);
+                periodMaxWinPipsElem.className = 'stat-value ' + (maxWinPipsValue >= 0 ? 'positive' : 'negative');
+                
+                // 最大損失pips - 色付け追加＋絶対値化
+                const periodMaxLossPipsElem = document.getElementById('periodMaxLossPips');
+                const maxLossPipsValue = parseFloat(pipsStats.maxLossPips) || 0;
+                periodMaxLossPipsElem.textContent = Math.abs(maxLossPipsValue).toFixed(1);
+                periodMaxLossPipsElem.className = 'stat-value negative';
+            }
+            
+            // 円建て統計更新
+            if (yenStats) {
+                document.getElementById('periodYenRegistration').textContent = yenStats.registrationStatus;
+                document.getElementById('periodYenWinRate').textContent = yenStats.winRate;
+                
+                // 総損益 - 符号削除
+                document.getElementById('periodYenTotalPL').textContent = `¥${Math.abs(yenStats.totalProfitLoss).toLocaleString()}`;
+                document.getElementById('periodYenTotalPL').className = 'stat-value ' + (yenStats.totalProfitLoss >= 0 ? 'positive' : 'negative');
+                
+                document.getElementById('periodYenPF').textContent = yenStats.profitFactor;
+                
+                // 期待値 - 符号削除
+                document.getElementById('periodYenExpectedValue').textContent = `¥${Math.abs(yenStats.expectedValue).toLocaleString()}`;
+                document.getElementById('periodYenExpectedValue').className = 'stat-value ' + (yenStats.expectedValue >= 0 ? 'positive' : 'negative');
+                
+                // 平均利益 - 色付け追加＋記号削除
+                const periodYenAvgProfitElem = document.getElementById('periodYenAvgProfit');
+                periodYenAvgProfitElem.textContent = `¥${Math.abs(yenStats.avgProfit).toLocaleString()}`;
+                periodYenAvgProfitElem.className = 'stat-value ' + (yenStats.avgProfit >= 0 ? 'positive' : 'negative');
+                
+                // 平均損失 - 色付け追加＋記号削除
+                const periodYenAvgLossElem = document.getElementById('periodYenAvgLoss');
+                periodYenAvgLossElem.textContent = `¥${Math.abs(yenStats.avgLoss).toLocaleString()}`;
+                periodYenAvgLossElem.className = 'stat-value negative';
+                
+                // 最大利益 - 色付け追加＋記号削除
+                const periodYenMaxProfitElem = document.getElementById('periodYenMaxProfit');
+                periodYenMaxProfitElem.textContent = `¥${Math.abs(yenStats.maxProfit).toLocaleString()}`;
+                periodYenMaxProfitElem.className = 'stat-value ' + (yenStats.maxProfit >= 0 ? 'positive' : 'negative');
+                
+                // 最大損失 - 色付け追加＋記号削除
+                const periodYenMaxLossElem = document.getElementById('periodYenMaxLoss');
+                periodYenMaxLossElem.textContent = `¥${Math.abs(yenStats.maxLoss).toLocaleString()}`;
+                periodYenMaxLossElem.className = 'stat-value negative';
+                
+                // 最大DD - 符号削除 + 赤色追加
+                const maxDDElement = document.getElementById('periodYenMaxDD');
+                maxDDElement.textContent = `¥${yenStats.maxDrawdown.toLocaleString()}`;
+                maxDDElement.className = 'stat-value negative';
+                
+                // スワップ損益 - 符号削除
+                document.getElementById('periodYenSwap').textContent = `¥${Math.abs(yenStats.swapTotal).toLocaleString()}`;
+                document.getElementById('periodYenSwap').className = 'stat-value ' + (yenStats.swapTotal >= 0 ? 'positive' : 'negative');
+                
+                // 手数料合計 - 赤色追加
+                const commissionElement = document.getElementById('periodYenCommission');
+                commissionElement.textContent = `¥${Math.abs(yenStats.commissionTotal).toLocaleString()}`;
+                commissionElement.className = 'stat-value negative';
+            }
+        }
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            initYearSelect();
+            updatePeriodOptions();
+            switchPeriodType('monthly');
+            switchPeriodStatsView('pips');
+            changePeriod();
+        });
+        
+        // 既にDOMが読み込まれている場合は即座に実行
+        if (document.readyState !== 'loading') {
+            initYearSelect();
+            updatePeriodOptions();
+            switchPeriodType('monthly');
+            switchPeriodStatsView('pips');
+            setTimeout(() => changePeriod(), 100);
+        }
+        </script>
+
+
+
+        <!-- 収支管理（Part 7） -->
+        <div id="tax" class="tab-content" style="display: none;">
+            <!-- Part 7で動的に生成（仮実装） -->
+            
+            <!-- 📌 入出金管理（Phase 2追加） -->
+            <div id="capital-management-section" style="margin-top: 30px;">
+                <h3 style="color: #10b981; margin-bottom: 20px;">📌 入出金管理</h3>
+                
+                <!-- 現在の投入資金表示 -->
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                    <p style="color: white; margin: 0 0 10px 0; font-size: 1.1em;">現在の投入資金</p>
+                    <div id="currentCapitalDisplay" style="color: white; font-size: 2em; font-weight: bold;">¥0</div>
+                </div>
+                
+                <!-- 新規入出金追加フォーム -->
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e5e7eb; margin-bottom: 20px;">
+                    <h4 style="margin-top: 0;">新規入出金の追加</h4>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">種別</label>
+                        <label style="margin-right: 20px;">
+                            <input type="radio" id="capitalRecordType" name="capitalType" value="deposit" checked> 入金
+                        </label>
+                        <label>
+                            <input type="radio" name="capitalType" value="withdrawal"> 出金
+                        </label>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">日付</label>
+                        <input type="date" id="capitalRecordDate" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">金額（円）</label>
+                        <input type="number" id="capitalRecordAmount" min="0" step="1000" placeholder="1000000" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">メモ（任意）</label>
+                        <input type="text" id="capitalRecordNote" placeholder="例：初期資金、追加入金、利益出金" style="width: 100%; max-width: 500px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                    </div>
+                    
+                    <button id="btnAddCapitalRecord" style="background: #10b981; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold;">
+                        ➕ 入出金を追加
+                    </button>
+                </div>
+                
+                <!-- 入出金履歴一覧 -->
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e5e7eb;">
+                    <h4 style="margin-top: 0;">入出金履歴</h4>
+                    
+                    <table id="capitalHistoryTable" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f3f4f6;">
+                                <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">種別</th>
+                                <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">日付</th>
+                                <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">金額</th>
+                                <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">残高</th>
+                                <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="capitalHistoryBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">記録がありません</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 設定 -->
+        <div id="settings" class="tab-content">
+            <div class="section">
+                <h2>⚙️ 設定</h2>
+                
+                <!-- サブタブボタン -->
+                <div class="settings-subtabs">
+                    <button class="settings-subtab-btn active" data-subtab="basic" onclick="window.SettingsModule.switchSubtab('basic')">
+                        📄 基本
+                    </button>
+                    <button class="settings-subtab-btn" data-subtab="trading" onclick="window.SettingsModule.switchSubtab('trading')">
+                        💼 トレーディング
+                    </button>
+                    <button class="settings-subtab-btn" data-subtab="data" onclick="window.SettingsModule.switchSubtab('data')">
+                        💾 データ
+                    </button>
+                </div>
+                
+                <!-- ========================================
+                     基本タブ
+                     ======================================== -->
+                <div id="settings-basic" class="settings-subtab-content active">
+                    <div class="input-group">
+                        <label>サイトタイトル</label>
+                        <input type="text" id="siteTitle" placeholder="例: Trading Complete" onchange="updateSiteTitle()">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>サブタイトル</label>
+                        <input type="text" id="siteSubtitle" placeholder="例: すべてのトレードを、この一つで" onchange="updateSiteSubtitle()">
+                    </div>
+                    
+                    <!-- 設定タブ内のサイトタイトル設定の後に追加 -->
+                    <div class="input-group" style="margin-top: 30px;">
+                        <label>テーマ設定</label>
+                        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                            <div class="theme-selector">
+                                <button class="theme-btn active" onclick="setTheme('dark')">🌙 ダークモード</button>
+                                <button class="theme-btn" onclick="setTheme('light')">☀️ ライトモード</button>
+                            </div>
+                            <span style="color: #888; font-size: 0.85em;">⌨️ ショートカット: <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid #555;">Ctrl</kbd> + <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid #555;">Shift</kbd> + <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid #555;">D</kbd></span>
+                        </div>
+                    </div>
+                    
+                    <!-- セルフイメージ（名称変更） -->
+                    <div class="goal-settings">
+                        <h3>🎯 セルフイメージ</h3>
+                        <div class="goal-input-area">
+                            <div class="goal-input-item">
+                                <label>イメージ1:</label>
+                                <input type="text" id="goalText1" placeholder="例: 場所に縛られない生活" maxlength="30">
+                                <input type="date" id="goalDeadline1" style="margin-left: 10px;" title="いつまでに達成">
+                            </div>
+                            <div class="goal-input-item">
+                                <label>イメージ2:</label>
+                                <input type="text" id="goalText2" placeholder="例: 家族や地域への貢献" maxlength="30">
+                                <input type="date" id="goalDeadline2" style="margin-left: 10px;" title="いつまでに達成">
+                            </div>
+                            <div class="goal-input-item">
+                                <label>イメージ3:</label>
+                                <input type="text" id="goalText3" placeholder="例: 自己実現とスキル追求" maxlength="30">
+                                <input type="date" id="goalDeadline3" style="margin-left: 10px;" title="いつまでに達成">
+                            </div>
+                            <button class="btn btn-primary" onclick="saveGoals()">セルフイメージを保存</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ========================================
+                     トレーディングタブ（新規）
+                     ======================================== -->
+                <div id="settings-trading" class="settings-subtab-content">
+                    <h3>🏢 ブローカー管理</h3>
+                    <p style="color: #aaa; margin-bottom: 15px;">
+                        お使いのブローカーを登録しておくと、新規エントリー時にプルダウンから簡単に選択できます。<br>
+                        1ロット単位も自動で表示されるため、入力ミスを防げます。
+                    </p>
+                    
+                    <!-- ブローカー一覧 -->
+                    <div id="broker-list" style="margin-bottom: 20px;">
+                        <!-- SettingsModule.jsが動的に生成 -->
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="openAddBrokerModal()">
+                        ➕ ブローカーを追加
+                    </button>
+                    
+                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
+                    
+                    <h3>⭐ お気に入り通貨ペア</h3>
+                    <p style="color: #aaa; margin-bottom: 15px;">
+                        よく取引する通貨ペアを最大10個まで登録できます。<br>
+                        新規エントリー時にワンクリックで入力できるようになります。
+                    </p>
+                    
+                    <!-- お気に入り通貨ペア入力 -->
+                    <div class="input-group">
+                        <label>お気に入り通貨ペアを追加</label>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="openAddFavoritePairModal()">
+                                ➕ プリセットから選択
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- お気に入り一覧 -->
+                    <div id="favorite-pairs-list" style="margin-top: 15px;">
+                        <!-- SettingsModule.jsが動的に生成 -->
+                    </div>
+                </div>
+                
+                <!-- ========================================
+                     データタブ
+                     ======================================== -->
+                <div id="settings-data" class="settings-subtab-content">
+                    <div class="toolbar" style="margin-top: 0;">
+                        <button class="tool-btn" onclick="exportAllData()">📥 全データエクスポート</button>
+                        <button class="tool-btn" onclick="importAllData()">📤 全データインポート</button>
+                    </div>
+                    
+                    <div style="margin-top: 40px; padding: 20px; background: rgba(70, 130, 180, 0.1); border-radius: 10px; border: 1px solid rgba(70, 130, 180, 0.3);">
+                        <h3 style="color: #4682b4; margin-bottom: 15px;">📚 バックアップとアップデート方法</h3>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #00ff88; margin-bottom: 10px;">🔒 バックアップ方法（データを守る）</h4>
+                            <ol style="margin-left: 20px; line-height: 1.8;">
+                                <li><strong>「📥 全データエクスポート」</strong>ボタンをクリック</li>
+                                <li>JSONファイルがダウンロードされます（例: trade-record-backup-2025-01-01.json）</li>
+                                <li>このファイルを安全な場所に保存してください</li>
+                                <li>推奨: 月1回または重要なトレード後にバックアップ</li>
+                            </ol>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #00ff88; margin-bottom: 10px;">🔄 アップデート方法（安全に更新）</h4>
+                            <ol style="margin-left: 20px; line-height: 1.8;">
+                                <li><strong>必ず先にバックアップを取る</strong>（上記手順）</li>
+                                <li>新しいバージョンのHTMLファイルを入手</li>
+                                <li>古いHTMLファイルを別名で保存（例: trade-record-old.html）</li>
+                                <li>新しいHTMLファイルを配置</li>
+                                <li>ブラウザで開いて「📤 全データインポート」からバックアップファイルを選択</li>
+                                <li>データが復元されたことを確認</li>
+                            </ol>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #ffa500; margin-bottom: 10px;">⚠️ 重要な注意事項</h4>
+                            <ul style="margin-left: 20px; line-height: 1.8;">
+                                <li>バックアップファイルは<strong>絶対に編集しない</strong>でください</li>
+                                <li>複数のバックアップを日付付きで保管することを推奨</li>
+                                <li>ブラウザのキャッシュクリアでもデータが消える可能性があります</li>
+                                <li>大切なデータは定期的にエクスポートして保管してください</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; padding: 20px; background: rgba(0, 255, 136, 0.1); border-radius: 10px; border: 1px solid #00ff88;">
+                        <h3 style="color: #00ff88; margin-bottom: 15px;">✅ 完成版情報</h3>
+                        <p style="margin-bottom: 10px;"><strong>システム名:</strong> Trading Complete</p>
+                        <p style="margin-bottom: 10px;"><strong>コンセプト:</strong> 「すべてのトレードを、この一つで」</p>
+                        <p style="margin-bottom: 10px;"><strong>最終更新:</strong> 2025年12月</p>
+                        <p style="margin-bottom: 10px;"><strong>主要機能（6タブ・32機能）:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 10px;">
+                            <li>📝 新規エントリー - チェックリスト3項目必須、チャート画像3枚対応</li>
+                            <li>📄 トレード記録 - フィルター、詳細表示、編集・削除、円建て損益</li>
+                            <li>📓 相場ノート - 日記形式、週間プレビュー、検索機能、月メモ機能</li>
+                            <li>📊 分析 - Pips/円建て統計切替、月次レポート、チャート可視化</li>
+                            <li>💰 収支管理 - 月次カレンダー、経費管理、入出金管理、CSV出力</li>
+                            <li>⚙️ 設定 - ブローカー管理(25社)、お気に入り通貨ペア(53種)、テーマ切替</li>
+                        </ul>
+                        <p style="margin-bottom: 10px;"><strong>特徴:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 10px;">
+                            <li>ダークモード・ライトモード対応</li>
+                            <li>ショートカット機能【F1】【Ctrl+Shift+D】</li>
+                            <li>レスポンシブ対応（PC/タブレット/スマホ）</li>
+                            <li>LocalStorage保存（オフライン動作）</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- 全データ削除（危険ゾーン） -->
+                    <div class="danger-zone">
+                        <h3>
+                            <span style="font-size: 1.5rem;">⚠️</span>
+                            危険な操作
+                        </h3>
+                        <p>
+                            以下のボタンをクリックすると、<strong>すべてのトレード記録、相場ノート、設定</strong>が完全に削除されます。<br>
+                            この操作は取り消すことができません。必ず事前にバックアップを取ってください。
+                        </p>
+                        <button class="btn btn-delete-all" onclick="deleteAllData()">
+                            🗑️ 全データを削除する
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 決済モーダル -->
+    <div id="exitModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>決済記録</h2>
+                <button class="modal-close" onclick="closeExitModal()">×</button>
+            </div>
+            <div id="exitModalContent">
+                <!-- 動的に生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- トレード詳細モーダル -->
+    <div id="tradeDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>トレード詳細</h2>
+                <button class="modal-close" onclick="closeTradeDetailModal()">×</button>
+            </div>
+            <div id="tradeDetailContent">
+                <!-- 動的に生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- トレード編集モーダル -->
+    <div id="tradeEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>トレード編集</h2>
+                <button class="modal-close" onclick="closeTradeEditModal()">×</button>
+            </div>
+            <div id="tradeEditContent">
+                <!-- 動的に生成 -->
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- 画像追加モーダル（新規追加） -->
+    <!-- 画像追加モーダル（リニューアル版） -->
+    <div id="imageAddModal" class="modal" style="z-index: 1001;">
+        <div class="modal-content image-add-modal-content">
+            <!-- ヘッダー -->
+            <div class="modal-header">
+                <h2>📷 画像を追加</h2>
+                <button class="modal-close" id="imageAddModalClose" aria-label="閉じる">×</button>
+            </div>
+            
+            <!-- メインコンテンツ -->
+            <div class="image-add-body">
+                <!-- ドラッグ＆ドロップエリア -->
+                <div class="drop-zone" id="imageDropZone">
+                    <div class="drop-zone-content">
+                        <div class="drop-zone-icon">📁</div>
+                        <p class="drop-zone-text">ここにドラッグ＆ドロップ</p>
+                        <p class="drop-zone-or">または</p>
+                        <button type="button" class="btn btn-primary" id="selectFileBtn">
+                            ファイルを選択
+                        </button>
+                        <p class="drop-zone-hint">PNG, JPG, GIF（最大5MB）</p>
+                    </div>
+                    <div class="drop-zone-hover">
+                        <div class="drop-zone-icon">📥</div>
+                        <p>ドロップして追加</p>
+                    </div>
+                </div>
+                
+                <!-- 区切り線 -->
+                <div class="divider-with-text">
+                    <span>または</span>
+                </div>
+                
+                <!-- 外部URL入力 -->
+                <div class="url-input-section">
+                    <label class="url-input-label">
+                        <span class="url-icon">🔗</span>
+                        外部URLを使用
+                    </label>
+                    <div class="url-input-group">
+                        <input 
+                            type="url" 
+                            id="externalImageUrl" 
+                            class="url-input"
+                            placeholder="https://example.com/image.png"
+                        >
+                        <button type="button" class="btn btn-secondary" id="addUrlBtn">
+                            追加
+                        </button>
+                    </div>
+                    <p class="url-hint">Google Drive、Dropbox等の共有リンク</p>
+                </div>
+            </div>
+            
+            <!-- 非表示のファイル入力 -->
+            <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+        </div>
+    </div>
+
+    <!-- トースト通知 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 画像モーダル（画像拡大用） -->
+    <div id="imageModal" class="modal" onclick="closeImageModal()">
+        <div class="modal-content" style="max-width: 90%; max-height: 90%; padding: 0; background: transparent; border: none;" onclick="event.stopPropagation()">
+            <span class="modal-close" onclick="closeImageModal()" style="position: absolute; top: -40px; right: 0; color: #fff; font-size: 2rem; cursor: pointer;">×</span>
+            <img id="modalImage" src="" alt="拡大画像" style="width: 100%; height: auto; display: block;">
+        </div>
+    </div>
+
+    <!-- ========== 編集用モーダル（index.htmlの既存モーダルの後に追加） ========== -->
+
+    <!-- 基本情報編集モーダル -->
+    <div id="editBasicInfoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>基本情報編集</h2>
+                <button class="modal-close" onclick="closeEditModal('editBasicInfoModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>通貨ペア</label>
+                    <input type="text" id="editPair" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>方向</label>
+                    <select id="editDirection" class="form-control">
+                        <option value="long">ロング</option>
+                        <option value="short">ショート</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>エントリー日時</label>
+                    <input type="datetime-local" id="editEntryTime" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>エントリー価格</label>
+                    <input type="number" id="editEntryPrice" step="0.00001" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>ロット数</label>
+                    <input type="number" id="editLotSize" step="0.1" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>ストップロス</label>
+                    <input type="number" id="editStopLoss" step="0.00001" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>テイクプロフィット</label>
+                    <input type="number" id="editTakeProfit" step="0.00001" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>シナリオ</label>
+                    <textarea id="editScenario" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>感情</label>
+                    <textarea id="editEmotion" class="form-control" rows="3" placeholder="例: 冷静に分析できていた / 少し焦りがあった / 確信を持ってエントリー など"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="saveBasicInfo()">保存</button>
+                    <button class="btn btn-secondary" onclick="closeEditModal('editBasicInfoModal')">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 理由編集モーダル -->
+    <div id="editTradeReasonsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>エントリー理由編集</h2>
+                <button class="modal-close" onclick="closeEditModal('editTradeReasonsModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>理由1</label>
+                    <input type="text" id="editReason1" class="form-control" placeholder="例：上昇トレンド中の押し目">
+                </div>
+                <div class="form-group">
+                    <label>理由2</label>
+                    <input type="text" id="editReason2" class="form-control" placeholder="例：サポートラインでの反発">
+                </div>
+                <div class="form-group">
+                    <label>理由3</label>
+                    <input type="text" id="editReason3" class="form-control" placeholder="例：MACDのゴールデンクロス">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="saveReasons()">保存</button>
+                    <button class="btn btn-secondary" onclick="closeEditModal('editTradeReasonsModal')">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 決済情報編集モーダル -->
+    <div id="editExitInfoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>決済情報編集</h2>
+                <button class="modal-close" onclick="closeEditModal('editExitInfoModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="editExitsContainer">
+                    <!-- 動的に決済エントリーが追加される -->
+                </div>
+                <button class="btn btn-secondary" onclick="addNewExit()">決済追加</button>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="saveExitInfo()">保存</button>
+                    <button class="btn btn-secondary" onclick="closeEditModal('editExitInfoModal')">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 円建て損益モーダル（ブローカー選択付き完全版） -->
+    <div id="yenProfitLossModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>円建て損益編集</h2>
+                <button class="modal-close" onclick="closeYenProfitLossModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>ブローカー</label>
+                    <select id="yenBroker" class="form-control">
+                        <option value="">選択してください</option>
+                        <option value="DMM">DMM FX</option>
+                        <option value="GMO">GMOクリック証券</option>
+                        <option value="SBI">SBI FXトレード</option>
+                        <option value="MATSUI">松井証券 MATSUI FX</option>
+                        <option value="YJFX">YJFX!</option>
+                        <option value="GAITAME">外為どっとコム</option>
+                        <option value="HIROSE">ヒロセ通商</option>
+                        <option value="MONEX">マネックス証券</option>
+                        <option value="RAKUTEN">楽天証券</option>
+                        <option value="XM">XM Trading</option>
+                        <option value="AXIORY">Axiory</option>
+                        <option value="TITANFX">Titan FX</option>
+                        <option value="OTHER">その他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>損益（円）</label>
+                    <input type="number" id="yenProfitLoss" class="form-control" placeholder="例：50000">
+                    <small class="form-text">プラスの場合は正の数、マイナスの場合は負の数で入力</small>
+                </div>
+                <div class="form-group">
+                    <label>スワップポイント（円）</label>
+                    <input type="number" id="yenSwapPoints" class="form-control" placeholder="例：1200">
+                </div>
+                <div class="form-group">
+                    <label>手数料（円）</label>
+                    <input type="number" id="yenCommission" class="form-control" placeholder="例：-500">
+                    <small class="form-text">通常は負の数で入力</small>
+                </div>
+                <div class="form-group">
+                    <label>決済時レート（USD/JPY）</label>
+                    <input type="number" id="yenExchangeRate" step="0.001" class="form-control" placeholder="例：150.500">
+                    <small class="form-text">円建て以外の通貨ペアの場合、決済時のUSD/JPYレート</small>
+                </div>
+                <div class="form-group">
+                    <label>実損益（円）</label>
+                    <div class="calculated-value" id="yenNetProfitLoss">
+                        計算結果: ¥0
+                    </div>
+                    <small class="form-text">損益 + スワップ + 手数料</small>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="saveYenProfitLoss()">保存</button>
+                    <button class="btn btn-danger" onclick="deleteYenProfitLoss()">削除</button>
+                    <button class="btn btn-secondary" onclick="closeYenProfitLossModal()">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== JavaScript ========== -->
+    <!-- Chart.js（外部ライブラリ） -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- ========== Phase 1: 基盤整備ファイル ========== -->
+    <!-- 1. 定数管理（最初に読み込む） -->
+    <script src="js/constants.js"></script>
+
+    <!-- EventBus - 基盤なので早い段階で -->
+    <script src="js/core/EventBus.js"></script>
+    
+    <!-- 2. 設定管理 -->
+    <script src="js/config.js"></script>
+    
+    <!-- 3. ユーティリティ -->
+    <script src="js/utils/validation.js"></script>
+    <script src="js/utils/errorHandler.js"></script>
+    
+    <!-- ========== Phase 2: 画像処理分離 ========== -->
+    <!-- 画像ハンドラー -->
+    <script src="js/handlers/imageHandler.js"></script>
+    
+    <!-- ========== Phase 4: 円建て損益管理 ========== -->
+    <!-- 円建て損益マネージャー -->
+    <script src="js/yen-profit-loss/YenProfitLossManager.js"></script>
+    <script src="js/yen-profit-loss/YenProfitLossModalModule.js"></script>
+
+    <!-- Part 2 モジュール群 -->
+    <script src="js/part2/TradeManager-nomodule.js"></script>
+    <script src="js/part2/TradeValidator.js"></script>
+    <script src="js/part2/TradeCalculator.js"></script>
+    <script src="js/part2/TradeEntry.js"></script>
+    <script src="js/part2/TradeList.js"></script>
+    <script src="js/part2/TradeEdit.js"></script>
+    <script src="js/part2/TradeExit.js"></script>
+    <script src="js/part2/TradeDetail.js"></script>
+    <!-- Phase 4: 新規エントリーフォーム強化 -->
+    <script src="js/part2/entry-form-enhancement.js"></script>
+    <script src="js/part2/bridge.js"></script>
+
+    <!-- Part 3: 相場ノート（モジュール化） -->
+    <script src="js/part3_modules/NoteManagerModule.js"></script>
+    
+    <!-- Part 7 Modules -->
+    <script src="js/part7_modules/ExpenseManagerModule.js"></script>
+    <script src="js/part7_modules/ClosingManagerModule.js"></script>
+    <script src="js/part7_modules/CSVExporterModule.js"></script>
+    <script src="js/part7_modules/SummaryCalculatorModule.js"></script>
+    <script src="js/part7_modules/CapitalManagerModule.js"></script>
+    <script src="js/part7_modules/MonthlyCalendarModule.js"></script>
+
+    <!-- Part 8: 統計モジュール -->
+    <script src="js/part8_modules/StatisticsModule.js"></script>
+    <script src="js/part8_modules/ReportModule.js"></script>
+    <script src="js/part8_modules/ChartModule.js"></script>
+
+    <!-- Part 5: 設定タブ関連モジュール -->
+    <script src="js/part5_modules/PRESET_BROKERS.js"></script>
+    <script src="js/part5_modules/PRESET_CURRENCY_PAIRS.js"></script>
+    <script src="js/part5_modules/SettingsModule.js"></script>
+    <script src="js/part5/broker-ui.js"></script>
+    <script src="js/part5/favorite-pair-ui.js"></script>
+
+    <!-- 画像追加モーダルモジュール -->
+    <script src="js/modules/ImageAddModalModule.js"></script>
+
+    <!-- メインスクリプト（最後に読み込む） -->
+    <script src="js/script.js"></script>
+
+    <!-- 円建て損益セクションのスタイル -->
+    <style>
+    .yen-profit-loss-section {
+        background: #2a2a2a;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .yen-profit-loss-section .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #444;
+    }
+
+    .yen-profit-loss-section h3 {
+        color: #4ade80;
+        margin: 0;
+    }
+
+    .yen-profit-loss-section .btn-edit {
+        background: #4ade80;
+        color: #000;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .yen-profit-loss-section .btn-edit:hover {
+        background: #22c55e;
+    }
+
+    .yen-profit-loss-section .section-content p {
+        margin: 8px 0;
+        color: #ccc;
+    }
+
+    .yen-profit-loss-section .net-profit {
+        font-size: 18px;
+        font-weight: bold;
+        color: #4ade80;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px solid #444;
+    }
+
+    .calculated-value {
+        padding: 15px;
+        background-color: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 4px;
+        color: #4ade80;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .btn-edit {
+        background: #4ade80;
+        color: #000;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .btn-edit:hover {
+        background: #22c55e;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #444;
+    }
+
+/* ======================================
+   画像追加モーダル - リニューアルスタイル
+   ====================================== */
+
+/* モーダルコンテンツ */
+.image-add-modal-content {
+    max-width: 480px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* モーダルボディ */
+.image-add-body {
+    padding: 24px;
+}
+
+/* ドラッグ＆ドロップゾーン */
+.drop-zone {
+    position: relative;
+    border: 2px dashed #4a4a4a;
+    border-radius: 12px;
+    padding: 40px 24px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #2a2a2a;
+    cursor: pointer;
+}
+
+.drop-zone:hover {
+    border-color: #4ade80;
+    background: #2f3a2f;
+}
+
+.drop-zone.drag-over {
+    border-color: #4ade80;
+    background: #2f3a2f;
+    transform: scale(1.02);
+}
+
+.drop-zone-content {
+    transition: opacity 0.2s ease;
+}
+
+.drop-zone.drag-over .drop-zone-content {
+    opacity: 0;
+}
+
+.drop-zone-hover {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.drop-zone.drag-over .drop-zone-hover {
+    opacity: 1;
+}
+
+.drop-zone-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.drop-zone-text {
+    font-size: 16px;
+    color: #ccc;
+    margin-bottom: 8px;
+}
+
+.drop-zone-or {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 16px;
+}
+
+.drop-zone-hint {
+    font-size: 12px;
+    color: #666;
+    margin-top: 16px;
+}
+
+/* 区切り線 */
+.divider-with-text {
+    display: flex;
+    align-items: center;
+    margin: 24px 0;
+    color: #666;
+}
+
+.divider-with-text::before,
+.divider-with-text::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #444;
+}
+
+.divider-with-text span {
+    padding: 0 16px;
+    font-size: 14px;
+}
+
+/* URL入力セクション */
+.url-input-section {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.url-input-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #ccc;
+    margin-bottom: 12px;
+}
+
+.url-icon {
+    font-size: 16px;
+}
+
+.url-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.url-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 14px;
+}
+
+.url-input:focus {
+    outline: none;
+    border-color: #4ade80;
+}
+
+.url-input::placeholder {
+    color: #666;
+}
+
+.url-hint {
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+}
+
+/* ボタンスタイル（画像追加モーダル専用） */
+.image-add-modal-content .btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.image-add-modal-content .btn-primary {
+    background: #4ade80;
+    color: #000;
+    border: none;
+}
+
+.image-add-modal-content .btn-primary:hover {
+    background: #22c55e;
+    transform: translateY(-1px);
+}
+
+.image-add-modal-content .btn-secondary {
+    background: transparent;
+    color: #4ade80;
+    border: 1px solid #4ade80;
+}
+
+.image-add-modal-content .btn-secondary:hover {
+    background: rgba(74, 222, 128, 0.1);
+}
+
+/* モーダルヘッダー調整 */
+.image-add-modal-content .modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #333;
+}
+
+.image-add-modal-content .modal-header h2 {
+    font-size: 18px;
+    margin: 0;
+}
+
+/* アニメーション */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.image-add-modal-content {
+    animation: modalFadeIn 0.2s ease-out;
+}
+    </style>
+
+    <!-- Phase 2: 入出金管理UI -->
+    <script src="js/part5/capital-ui.js"></script>
+
+
+    <script>
+    // ページ読み込み時にチェックリスト表示を初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        // チェックリスト表示を初期化
+        if (window.updateConditionStatus) {
+            updateConditionStatus();
+        }
+    });
+    </script>
+
+<!-- ============================================
+     ブローカー管理モーダル
+     ============================================ -->
+
+<!-- ブローカー追加モーダル -->
+<div id="add-broker-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3>➕ ブローカーを追加</h3>
+            <button class="modal-close-btn" onclick="closeAddBrokerModal()">✕</button>
+        </div>
+        
+        <!-- タブボタン -->
+        <div class="modal-tabs">
+            <button id="preset-tab-btn" class="modal-tab-btn active" onclick="switchAddBrokerTab('preset')">
+                📋 プリセットから選択
+            </button>
+            <button id="custom-tab-btn" class="modal-tab-btn" onclick="switchAddBrokerTab('custom')">
+                ✏️ カスタム追加
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- プリセットタブ -->
+            <div id="preset-tab-content" style="display: block;">
+                <div class="input-group">
+                    <label>デフォルトロット数</label>
+                    <input type="number" id="preset-default-lot" value="1.0" step="0.1" min="0.1" 
+                           placeholder="例: 1.0" style="max-width: 200px;">
+                    <p style="color: #888; font-size: 0.85em; margin: 5px 0 0 0;">
+                        ℹ️ 新規エントリー時のデフォルト値です（後で変更可能）
+                    </p>
+                </div>
+                
+                <hr style="margin: 20px 0; border-color: rgba(255,255,255,0.1);">
+                
+                <div id="preset-broker-list">
+                    <!-- broker-ui.jsが動的に生成 -->
+                </div>
+            </div>
+            
+            <!-- カスタムタブ -->
+            <div id="custom-tab-content" style="display: none;">
+                <p style="color: #aaa; margin-bottom: 20px; font-size: 0.9em;">
+                    プリセットにないブローカーを追加できます
+                </p>
+                
+                <div class="input-group">
+                    <label>ブローカー名 <span style="color: #f44;">*</span></label>
+                    <input type="text" id="custom-broker-name" placeholder="例: My Broker" required>
+                </div>
+                
+                <div class="input-group">
+                    <label>略称（3-5文字推奨）<span style="color: #f44;">*</span></label>
+                    <input type="text" id="custom-broker-shortname" placeholder="例: MyB" maxlength="10" required>
+                    <p style="color: #888; font-size: 0.85em; margin: 5px 0 0 0;">
+                        ℹ️ トレード一覧でバッジ表示されます
+                    </p>
+                </div>
+                
+                <div class="input-group">
+                    <label>1ロットあたりの通貨単位 <span style="color: #f44;">*</span></label>
+                    <select id="custom-broker-lotunit" style="max-width: 300px;">
+                        <option value="100000">100,000通貨（標準ロット）</option>
+                        <option value="10000">10,000通貨（ミニロット）</option>
+                        <option value="1000">1,000通貨（マイクロロット）</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label>デフォルトロット数</label>
+                    <input type="number" id="custom-default-lot" value="1.0" step="0.1" min="0.1" 
+                           placeholder="例: 1.0" style="max-width: 200px;">
+                </div>
+                
+                <button class="btn btn-primary" onclick="addCustomBroker()" style="width: 100%; margin-top: 10px;">
+                    ➕ カスタムブローカーを追加
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ブローカー編集モーダル -->
+<div id="edit-broker-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>✏️ ブローカーを編集</h3>
+            <button class="modal-close-btn" onclick="closeEditBrokerModal()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+            <div id="edit-preset-info" style="display: none; margin-bottom: 15px;">
+                <!-- broker-ui.jsが動的に生成 -->
+            </div>
+            
+            <div class="input-group">
+                <label>ブローカー名 <span style="color: #f44;">*</span></label>
+                <input type="text" id="edit-broker-name" required>
+            </div>
+            
+            <div class="input-group">
+                <label>略称 <span style="color: #f44;">*</span></label>
+                <input type="text" id="edit-broker-shortname" maxlength="10" required>
+            </div>
+            
+            <div class="input-group">
+                <label>1ロットあたりの通貨単位 <span style="color: #f44;">*</span></label>
+                <input type="number" id="edit-broker-lotunit" min="1" required>
+            </div>
+            
+            <div class="input-group">
+                <label>デフォルトロット数 <span style="color: #f44;">*</span></label>
+                <input type="number" id="edit-broker-defaultlot" step="0.1" min="0.1" required>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closeEditBrokerModal()" style="flex: 1;">
+                    キャンセル
+                </button>
+                <button class="btn btn-primary" onclick="updateBroker()" style="flex: 1;">
+                    💾 更新
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- お気に入り通貨ペア追加モーダル（Phase 3.5 検索機能付き） -->
+<div id="add-favorite-pair-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3>⭐ お気に入り通貨ペアを追加</h3>
+            <button class="modal-close" onclick="closeAddFavoritePairModal()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- 検索バー -->
+            <div class="preset-pair-search">
+                <input 
+                    type="text" 
+                    id="preset-pair-search-input"
+                    placeholder="🔍 通貨ペア名で検索 (例: USD, EUR, BTC)"
+                    class="search-input"
+                    oninput="searchPresetPairs()"
+                />
+            </div>
+            
+            <!-- カテゴリタブ -->
+            <div class="category-tabs">
+                <button class="category-tab active" data-category="all" onclick="filterByCategory('all')">
+                    すべて
+                </button>
+                <button class="category-tab" data-category="usd" onclick="filterByCategory('usd')">
+                    🇺🇸 ドル絡み
+                </button>
+                <button class="category-tab" data-category="jpy" onclick="filterByCategory('jpy')">
+                    🇯🇵 円絡み
+                </button>
+                <button class="category-tab" data-category="cross" onclick="filterByCategory('cross')">
+                    🌐 クロス
+                </button>
+                <button class="category-tab" data-category="commodity" onclick="filterByCategory('commodity')">
+                    🏅 コモディティ
+                </button>
+                <button class="category-tab" data-category="crypto" onclick="filterByCategory('crypto')">
+                    ₿ 仮想通貨
+                </button>
+            </div>
+            
+            <!-- 検索結果一覧 -->
+            <div id="preset-pair-results" class="preset-pair-list">
+                <!-- JavaScript で動的に生成 -->
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAddFavoritePairModal()">閉じる</button>
+        </div>
+    </div>
+</div>
+
+    <!-- ノート検索モーダル（新規追加） -->
+    <div id="noteSearchModal" class="modal" style="display: none;">
+        <div class="modal-content note-search-modal-content">
+            <div class="modal-header">
+                <h3>🔍 ノート検索</h3>
+                <button class="modal-close" onclick="closeNoteSearchModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-input-container">
+                    <input type="text" id="noteSearchInput" placeholder="キーワードを入力..." onkeypress="if(event.key==='Enter') executeNoteSearch()">
+                    <button class="btn btn-primary" onclick="executeNoteSearch()">検索</button>
+                </div>
+                <div class="search-results-container" id="noteSearchResults">
+                    <div class="search-placeholder">
+                        <p>🔍 キーワードを入力して検索</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 月メモ編集モーダル（新規追加） -->
+    <div id="monthlyMemoEditModal" class="modal" style="display: none;">
+        <div class="modal-content monthly-memo-edit-modal-content">
+            <div class="modal-header">
+                <h3 id="monthlyMemoEditTitle">📝 メモ編集</h3>
+                <button class="modal-close" onclick="closeMonthlyMemoEditModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="monthlyMemoEditTextarea" class="monthly-memo-textarea" placeholder="メモを入力..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMonthlyMemoEditModal()">キャンセル</button>
+                <button class="btn btn-primary" onclick="saveMonthlyMemoFromModal()">保存</button>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+</html>

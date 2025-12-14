@@ -1,0 +1,193 @@
+// ========================================
+// 経費テストデータ100件作成（偏りなし）
+// ========================================
+
+console.log('🧪 経費テストデータ100件作成開始');
+
+// ExpenseManagerModuleのインスタンス確認
+if (!window.expenseManager) {
+    console.error('❌ expenseManagerが見つかりません');
+} else {
+    console.log('✅ expenseManager確認完了');
+    
+    // 既存データをクリア（上書き）
+    localStorage.removeItem('tc_expenses');
+    console.log('📝 既存経費データをクリアしました');
+    
+    // カテゴリリスト（22種類）
+    const categories = [
+        "通信費（ネット代）",
+        "VPS・クラウドサービス",
+        "電気代（按分）",
+        "家賃（按分）",
+        "PC・モニター",
+        "PC周辺機器",
+        "デスク・チェア",
+        "事務用品",
+        "書籍・教材費",
+        "セミナー参加費",
+        "オンラインサロン",
+        "情報配信サービス",
+        "新聞・雑誌",
+        "取引ツール",
+        "EA・インジケーター",
+        "セキュリティソフト",
+        "取引手数料",
+        "振込手数料",
+        "税理士報酬",
+        "交通費",
+        "会議費",
+        "その他"
+    ];
+    
+    // カテゴリ別の金額範囲設定（実際の経費を想定）
+    const categoryAmounts = {
+        "通信費（ネット代）": [3000, 6000],
+        "VPS・クラウドサービス": [2000, 8000],
+        "電気代（按分）": [2000, 5000],
+        "家賃（按分）": [10000, 30000],
+        "PC・モニター": [50000, 200000],
+        "PC周辺機器": [3000, 30000],
+        "デスク・チェア": [10000, 50000],
+        "事務用品": [500, 3000],
+        "書籍・教材費": [1500, 15000],
+        "セミナー参加費": [5000, 50000],
+        "オンラインサロン": [3000, 10000],
+        "情報配信サービス": [2000, 20000],
+        "新聞・雑誌": [500, 2000],
+        "取引ツール": [10000, 100000],
+        "EA・インジケーター": [5000, 50000],
+        "セキュリティソフト": [3000, 15000],
+        "取引手数料": [1000, 10000],
+        "振込手数料": [300, 1000],
+        "税理士報酬": [30000, 100000],
+        "交通費": [1000, 10000],
+        "会議費": [2000, 15000],
+        "その他": [1000, 20000]
+    };
+    
+    // 説明文のテンプレート
+    const descriptions = {
+        "通信費（ネット代）": ["光回線月額", "プロバイダー料金", "ネット接続費"],
+        "VPS・クラウドサービス": ["VPS月額料金", "クラウドストレージ", "AWS利用料"],
+        "電気代（按分）": ["電気代（事業用）", "電気代按分30%", "電気代按分50%"],
+        "家賃（按分）": ["家賃按分30%", "家賃按分50%", "事務所家賃"],
+        "PC・モニター": ["トレーディングPC購入", "4Kモニター購入", "デュアルモニター"],
+        "PC周辺機器": ["キーボード購入", "マウス購入", "Webカメラ"],
+        "デスク・チェア": ["昇降デスク購入", "ゲーミングチェア", "デスク周辺整理"],
+        "事務用品": ["文房具購入", "ノート・メモ", "プリンター用紙"],
+        "書籍・教材費": ["FX書籍購入", "トレード本", "経済書購入"],
+        "セミナー参加費": ["トレードセミナー", "投資セミナー", "オンライン講座"],
+        "オンラインサロン": ["サロン月額", "コミュニティ参加費", "情報交換会費"],
+        "情報配信サービス": ["ニュース配信", "経済指標配信", "FX情報サービス"],
+        "新聞・雑誌": ["日経新聞購読", "経済誌購読", "投資雑誌"],
+        "取引ツール": ["MT4/MT5ツール", "分析ツール購入", "EA購入"],
+        "EA・インジケーター": ["EA購入", "カスタムインジ", "自動売買ツール"],
+        "セキュリティソフト": ["ウイルス対策ソフト", "セキュリティ更新", "VPNサービス"],
+        "取引手数料": ["FX取引手数料", "スプレッドコスト", "取引コスト"],
+        "振込手数料": ["銀行振込手数料", "入出金手数料", "送金手数料"],
+        "税理士報酬": ["確定申告代行", "税務相談", "記帳代行"],
+        "交通費": ["セミナー交通費", "打ち合わせ交通費", "移動費"],
+        "会議費": ["打ち合わせ費用", "会食費", "ミーティング費"],
+        "その他": ["その他経費", "雑費", "予備費"]
+    };
+    
+    // 100件の経費データ生成
+    const expenses = [];
+    const startDate = new Date('2024-01-01');
+    const endDate = new Date('2025-10-22');
+    const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+    
+    // カテゴリごとに均等に配分（100件 ÷ 22カテゴリ = 約4〜5件ずつ）
+    let expenseCount = 0;
+    let categoryIndex = 0;
+    
+    while (expenseCount < 100) {
+        const category = categories[categoryIndex % categories.length];
+        const [minAmount, maxAmount] = categoryAmounts[category];
+        
+        // ランダムな日付生成（2024年1月〜2025年10月）
+        const randomDays = Math.floor(Math.random() * daysDiff);
+        const randomDate = new Date(startDate);
+        randomDate.setDate(randomDate.getDate() + randomDays);
+        const dateStr = randomDate.toISOString().split('T')[0];
+        
+        // ランダムな金額
+        const amount = Math.floor(Math.random() * (maxAmount - minAmount + 1)) + minAmount;
+        
+        // ランダムな説明文
+        const descList = descriptions[category];
+        const description = descList[Math.floor(Math.random() * descList.length)];
+        
+        // 年度計算（1-3月は前年度）
+        const year = randomDate.getFullYear();
+        const month = randomDate.getMonth() + 1;
+        const taxYear = (month >= 1 && month <= 3) ? year - 1 : year;
+        
+        // 経費オブジェクト作成
+        const expense = {
+            date: dateStr,
+            category: category,
+            amount: amount,
+            description: description,
+            memo: `テストデータ ${expenseCount + 1}件目`,
+            taxYear: taxYear
+        };
+        
+        expenses.push(expense);
+        expenseCount++;
+        categoryIndex++;
+    }
+    
+    // 日付順にソート
+    expenses.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // 一括で保存
+    console.log(`📦 ${expenses.length}件の経費データを作成しました`);
+    
+    // LocalStorageに直接保存
+    const expensesWithIds = expenses.map((exp, index) => ({
+        ...exp,
+        id: (Date.now() + index).toString(),
+        createdAt: new Date().toISOString()
+    }));
+    
+    localStorage.setItem('tc_expenses', JSON.stringify(expensesWithIds));
+    
+    // ExpenseManagerModuleを再読み込み
+    window.expenseManager.loadExpenses();
+    
+    console.log('✅ 経費データ保存完了');
+    console.log('📊 カテゴリ別件数:');
+    
+    // カテゴリ別集計
+    const categoryCount = {};
+    expensesWithIds.forEach(exp => {
+        categoryCount[exp.category] = (categoryCount[exp.category] || 0) + 1;
+    });
+    
+    Object.entries(categoryCount).forEach(([cat, count]) => {
+        console.log(`  ${cat}: ${count}件`);
+    });
+    
+    console.log('\n💰 金額統計:');
+    const totalAmount = expensesWithIds.reduce((sum, exp) => sum + exp.amount, 0);
+    const avgAmount = Math.floor(totalAmount / expensesWithIds.length);
+    console.log(`  総額: ${totalAmount.toLocaleString()}円`);
+    console.log(`  平均: ${avgAmount.toLocaleString()}円`);
+    console.log(`  最小: ${Math.min(...expensesWithIds.map(e => e.amount)).toLocaleString()}円`);
+    console.log(`  最大: ${Math.max(...expensesWithIds.map(e => e.amount)).toLocaleString()}円`);
+    
+    console.log('\n📅 期間別件数:');
+    const yearCount = {};
+    expensesWithIds.forEach(exp => {
+        const year = new Date(exp.date).getFullYear();
+        yearCount[year] = (yearCount[year] || 0) + 1;
+    });
+    Object.entries(yearCount).sort().forEach(([year, count]) => {
+        console.log(`  ${year}年: ${count}件`);
+    });
+    
+    console.log('\n🎉 経費テストデータ作成完了！');
+    console.log('💡 収支管理タブを開いて確認してください');
+}

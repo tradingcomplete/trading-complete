@@ -1,0 +1,28 @@
+/* ========== styles.css ========== */
+/* 
+ * Trading Complete System v10.0
+ * 分割CSS統合ファイル
+ * 最終更新: 2025年9月9日
+ * 変更禁止：インポート順序を変えると動作が変わります
+ */
+
+/* 基本スタイル（必須・最初に読み込み） */
+@import url('1_base.css');
+
+/* 機能別スタイル */
+@import url('2_trading.css');
+@import url('3_notes.css');
+@import url('4_features.css');
+
+/* Part 7: 収支管理スタイル */
+@import url('8_expense.css');
+
+/* テーマとレスポンシブ（最後に読み込み） */
+@import url('5_themes.css');
+@import url('6_responsive.css');
+
+/* 将来の拡張用 */
+/* @import url('7_learning.css'); */
+/* @import url('9_ai.css'); */
+
+/* ========== styles.css 終了 ========== */

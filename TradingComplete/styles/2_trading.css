@@ -1,0 +1,802 @@
+/* ========== styles/2_trading.css ========== */
+/* トレード関連機能 */
+
+/* 売買方向表示 */
+.direction-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.direction-badge.long {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+    border: 1px solid #00ff88;
+}
+
+.direction-badge.short {
+    background: rgba(255, 68, 68, 0.2);
+    color: #ff4444;
+    border: 1px solid #ff4444;
+}
+
+/* エントリー条件 */
+.entry-conditions {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px; 
+    padding: 20px; 
+    margin-bottom: 20px;
+}
+
+.condition-status {
+    text-align: center; 
+    padding: 15px; 
+    border-radius: 10px;
+    margin-top: 15px; 
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.condition-status.ready {
+    background: rgba(0, 255, 136, 0.2); 
+    color: #00ff88;
+    border: 1px solid #00ff88;
+}
+
+.condition-status.not-ready {
+    background: rgba(255, 68, 68, 0.2); 
+    color: #ff4444;
+    border: 1px solid #ff4444;
+}
+
+/* リスクリワード表示 */
+.risk-reward-display {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px; 
+    border-radius: 10px; 
+    margin: 15px 0;
+}
+
+.risk-reward-display > div {
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 15px; 
+    text-align: center;
+}
+
+/* トレードカード */
+.trade-list { 
+    display: grid; 
+    gap: 20px; 
+}
+
+.trade-card {
+    background: #000; 
+    border: 1px solid #333;
+    border-radius: 20px; 
+    padding: 25px;
+    transition: all 0.3s ease; 
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.trade-card:hover {
+    transform: translateY(-3px); 
+    border-color: #00ff88;
+    box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
+}
+
+.trade-header {
+    display: flex; 
+    justify-content: space-between;
+    align-items: center; 
+    margin-bottom: 20px;
+    gap: 20px;
+}
+
+.trade-header-left {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    flex: 1;
+}
+
+.trade-pair { 
+    font-size: 1.8rem; 
+    font-weight: bold; 
+    color: #fff; 
+}
+
+.trade-result {
+    font-size: 1.5rem; 
+    font-weight: bold;
+}
+
+.trade-result.win { 
+    color: #00ff88; 
+}
+
+.trade-result.loss { 
+    color: #ff4444; 
+}
+
+.trade-result.draw { 
+    color: #ffd700; 
+}
+
+.trade-result.open-position { 
+    color: #4169e1; 
+}
+
+.trade-subtitle {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.trade-reflection-preview {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* トレードカード内のコンテンツ行（画像と振り返り） */
+.trade-content-row {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    align-items: flex-start;
+}
+
+.trade-images-section {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.trade-chart-thumb {
+    width: 150px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.trade-chart-thumb:hover {
+    transform: scale(1.05);
+    border-color: #00ff88;
+}
+
+.trade-reflection-section {
+    flex: 1;
+    min-width: 0; /* flexアイテムのテキスト折り返し対応 */
+}
+
+.reflection-header {
+    color: #00ff88;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.reflection-text {
+    color: #e0e0e0;
+    font-size: 1rem;  /* 0.95rem → 1rem に変更 */
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* レスポンシブ対応 → 6_responsive.css へ移動 */
+
+.trade-reflection-preview {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.trade-image {
+    width: 80px; 
+    height: 80px; 
+    border-radius: 50%;
+    object-fit: cover; 
+    border: 2px solid #00ff88;
+    flex-shrink: 0;
+}
+
+.trade-actions {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+}
+
+.trade-card:hover .trade-actions {
+    opacity: 1;
+}
+
+.edit-btn {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffd700;
+    border: 1px solid #ffd700;
+}
+
+.edit-btn:hover {
+    background: rgba(255, 193, 7, 0.3);
+}
+
+.delete-btn {
+    background: rgba(255, 68, 68, 0.2);
+    color: #ff4444;
+    border: 1px solid #ff4444;
+}
+
+.delete-btn:hover {
+    background: rgba(255, 68, 68, 0.3);
+}
+
+/* フィルター */
+.filter-section {
+    background: #1a1a1a;
+    padding: 20px; 
+    border-radius: 10px; 
+    margin-bottom: 25px;
+    border: 1px solid #333;
+}
+
+.filter-row { 
+    display: flex; 
+    gap: 15px; 
+    flex-wrap: wrap; 
+    align-items: end; 
+}
+
+.filter-group { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-group label { 
+    color: #888; 
+    font-size: 0.85rem; 
+    font-weight: 500;
+}
+
+.filter-group select, 
+.filter-group input {
+    padding: 10px; 
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff; 
+    border-radius: 8px; 
+    font-size: 0.9rem;
+}
+
+.filter-group select option {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+/* 未決済ロット表示 */
+.remaining-lot-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffd700;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    border: 1px solid #ffd700;
+}
+
+/* ステータスバッジ */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.status-badge.win {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+}
+
+.status-badge.loss {
+    background: rgba(255, 68, 68, 0.2);
+    color: #ff4444;
+}
+
+.status-badge.draw {
+    background: rgba(255, 215, 0, 0.2);
+    color: #ffd700;
+}
+
+/* 画像アップロード */
+.image-upload-area {
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 10px; 
+    padding: 40px; 
+    text-align: center;
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+    margin-bottom: 20px;
+    position: relative;
+    background: rgba(0, 255, 136, 0.05);
+}
+
+.image-upload-area:hover {
+    border-color: #00ff88; 
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.image-upload-area.circle {
+    padding: 20px;
+    border-radius: 15px;
+    width: auto;
+    height: auto;
+    display: block;
+    margin: 0 0 20px 0;
+}
+
+.image-upload-area p:first-child {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.image-upload-area p:last-child {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.uploaded-image-container {
+    position: relative;
+    display: inline-block;
+    margin-top: 20px;
+}
+
+.uploaded-image { 
+    max-width: 100%; 
+    max-height: 300px;
+    border-radius: 10px; 
+    cursor: move;
+    border: 2px solid #00ff88;
+}
+
+.uploaded-image.circle { 
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #00ff88;
+}
+
+.image-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.image-control-btn {
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.image-control-btn:hover {
+    background: #000;
+}
+
+/* トレード詳細の改善スタイル */
+.trade-detail-header {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 255, 136, 0.05));
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.trade-detail-header h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.trade-detail-result {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.trade-detail-result.profit {
+    color: #00ff88;
+}
+
+.trade-detail-result.loss {
+    color: #ff4444;
+}
+
+.trade-detail-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 3px solid #00ff88;
+}
+
+.trade-detail-section h4 {
+    color: #00ff88;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.trade-detail-section p {
+    margin-bottom: 10px;
+    line-height: 1.8;
+}
+
+.trade-detail-label {
+    color: #888;
+    font-weight: normal;
+    margin-right: 10px;
+}
+
+.trade-detail-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+/* 価格・数値の強調 */
+.trade-detail-price {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    color: #ffd700;
+}
+
+.trade-detail-pips {
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+.trade-detail-pips.positive {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+}
+
+.trade-detail-pips.negative {
+    background: rgba(255, 68, 68, 0.2);
+    color: #ff4444;
+}
+
+/* エントリー根拠のスタイル */
+.trade-reason-item {
+    margin-bottom: 15px;
+}
+
+.trade-reason-item:last-child {
+    margin-bottom: 0;
+}
+
+.trade-reason-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.trade-reason-label.entry {
+    color: #00ff88;
+}
+
+.trade-reason-label.stoploss {
+    color: #ff4444;
+}
+
+.trade-reason-label.takeprofit {
+    color: #ffd700;
+}
+
+.trade-reason-text {
+    padding-left: 25px;
+    color: #e0e0e0;
+    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 10px 10px 10px 25px;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+/* トレード詳細の振り返りスタイル */
+.trade-detail-section div[style*="white-space: pre-wrap"] {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    color: #e0e0e0;
+}
+
+/* エラー画像のプレースホルダー */
+.trade-image.default-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    background: rgba(255, 68, 68, 0.1);
+    border: 2px solid rgba(255, 68, 68, 0.3);
+}
+
+/* ボタンのz-indexを確保 */
+.trade-detail-section button {
+    z-index: 10;
+}
+
+/* 分割決済 */
+.exit-entries {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px; 
+    padding: 20px; 
+    margin-top: 20px;
+}
+
+.exit-entry {
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px; 
+    align-items: end; 
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.exit-entry:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.exit-entry input {
+    padding: 10px; 
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff; 
+    border-radius: 5px;
+    width: 100%;
+}
+
+.remove-exit {
+    background: #ff4444; 
+    color: white; 
+    border: none;
+    padding: 10px; 
+    border-radius: 5px; 
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.remove-exit:hover {
+    background: #ff3333;
+}
+
+/* 統計情報 */
+.quick-stats {
+    background: #1a1a1a;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid #333;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.stat-box:hover {
+    background: rgba(0, 255, 136, 0.1);
+    transform: translateY(-2px);
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #00ff88;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+/* 画像モーダル */
+.image-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    cursor: pointer;
+    animation: fadeIn 0.3s ease;
+}
+
+.image-modal img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+}
+
+.image-modal.closing {
+    animation: fadeOut 0.3s ease;
+}
+
+
+
+/* 画像ホバー効果 */
+.uploaded-image:hover,
+.trade-image:hover,
+.trade-chart-image:hover,
+.note-image-section img:hover {
+    cursor: pointer;
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+}
+
+/* 画像追加モーダル */
+.image-add-options {
+    padding: 20px;
+}
+
+.image-add-options h3 {
+    color: #00ff88;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.storage-option {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.storage-option:hover {
+    background: rgba(0, 255, 136, 0.1);
+    border-color: #00ff88;
+    transform: translateY(-2px);
+}
+
+.option-icon {
+    font-size: 2.5rem;
+}
+
+.option-info h4 {
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.option-info p {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+.storage-warning {
+    display: block;
+    color: #ffd700;
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+/* レスポンシブ対応 → 6_responsive.css へ移動 */
+
+/* ========== 振り返り展開アニメーション（新規追加）========== */
+/* 振り返り展開アニメーション */
+.reflection-content {
+    transition: all 0.3s ease;
+}
+
+.reflection-preview,
+.reflection-full {
+    transition: opacity 0.3s ease, max-height 0.3s ease;
+}
+
+/* 展開ボタンのスタイル */
+.reflection-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.reflection-toggle:hover {
+    opacity: 0.8;
+    transform: translateX(3px);
+}
+
+/* 矢印アイコンのアニメーション */
+.reflection-arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.reflection-arrow.expanded {
+    transform: rotate(90deg);
+}
+
+/* 展開時のハイライト効果 */
+@keyframes highlight {
+    0% { background-color: rgba(255, 255, 255, 0.1); }
+    50% { background-color: rgba(255, 255, 255, 0.05); }
+    100% { background-color: transparent; }
+}
+
+.reflection-expanded {
+    animation: highlight 0.5s ease;
+}
+
+/* ========== 2_trading.css 終了 ========== */

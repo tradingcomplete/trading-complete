@@ -1,0 +1,3495 @@
+/* ========== styles/6_responsive.css ========== */
+/* 
+ * レスポンシブデザイン集約ファイル
+ * すべてのメディアクエリをここに統合
+ * ブレークポイント：
+ * - 1024px: デスクトップ
+ * - 768px: タブレット
+ * - 480px: スマートフォン
+ * - 360px: 小型スマートフォン
+ */
+
+/* =====================================================
+   共通スタイル（全画面サイズ）
+   ===================================================== */
+
+/* ノート詳細の空行・改行を反映 */
+.detail-text {
+    white-space: pre-wrap !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* =====================================================
+   PC表示（481px以上）- モバイル専用要素を非表示
+   ===================================================== */
+@media (min-width: 481px) {
+    /* モバイル専用のアコーディオン要素を非表示 */
+    .day-preview .accordion-icon,
+    .day-preview .btn-edit-note {
+        display: none !important;
+    }
+}
+
+/* =====================================================
+   デスクトップ（1024px以上）
+   ===================================================== */
+@media (min-width: 1024px) {
+    /* 目標表示の拡大 */
+    .goal-item {
+        padding: 15px 25px;
+    }
+    
+    .goal-text {
+        font-size: 1.3rem;
+    }
+    
+    /* ノート表示コンテナ */
+    .note-display-container {
+        /* デスクトップでは2カラム維持 */
+    }
+}
+
+/* =====================================================
+   大画面（1200px以上）
+   ===================================================== */
+@media (min-width: 1200px) {
+    .responsive-grid { 
+        grid-template-columns: 1fr 1fr; 
+    }
+}
+
+/* =====================================================
+   タブレット以下（1024px以下）
+   ===================================================== */
+@media (max-width: 1024px) {
+    /* ノート表示の1カラム化 */
+    .note-display-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .weekly-preview,
+    .note-detail {
+        height: auto;  /* モバイルでは高さ自動 */
+        max-height: 500px;  /* モバイルでは最大高さ制限 */
+    }
+}
+
+/* =====================================================
+   タブレット（768px以下）
+   ===================================================== */
+@media (max-width: 768px) {
+    /* === 基本レイアウト（1_base.css から移動）=== */
+    body {
+        padding: 10px;
+    }
+    
+    .header-content {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .header-info {
+        text-align: center;
+    }
+    
+    .header-title {
+        font-size: 1.5rem;
+    }
+    
+    .goals-display {
+        width: 100%;
+        justify-content: center;
+        margin-top: 15px;
+    }
+    
+    .goal-item {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+    
+    .tab-nav {
+        grid-template-columns: repeat(2, 1fr);  /* 2列に */
+        grid-template-rows: repeat(4, 1fr);     /* 4行に変更 */
+        gap: 5px;
+        padding: 10px;
+    }
+    
+    .tab-btn {
+        padding: 12px 8px;
+        font-size: 0.85rem;
+        min-height: 45px;
+    }
+    
+    .section {
+        padding: 20px;
+    }
+    
+    /* フォームは2列維持（PCと同じ） */
+    .input-grid { 
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .input-grid label {
+        font-size: 0.85rem;
+    }
+    
+    .input-grid input,
+    .input-grid select {
+        font-size: 0.9rem;
+        padding: 10px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+    }
+    
+    /* === トレード関連（2_trading.css から移動）=== */
+    .trade-header { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 10px; 
+    }
+    
+    .trade-pair {
+        font-size: 1.5rem;
+    }
+    
+    .trade-result {
+        font-size: 1.5rem;
+    }
+    
+    .filter-row { 
+        flex-direction: column; 
+        align-items: stretch; 
+    }
+    
+    /* トレードカード内のコンテンツ */
+    .trade-content-row {
+        flex-direction: column;
+    }
+    
+    .trade-images-section {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .trade-reflection-section {
+        width: 100%;
+        margin-top: 10px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+    }
+    
+    /* === ノート関連（3_notes.css から移動）=== */
+    .note-display-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .report-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .trades-table {
+        font-size: 0.85rem;
+    }
+    
+    .trades-table th,
+    .trades-table td {
+        padding: 8px;
+    }
+}
+
+/* =====================================================
+   スマートフォン（480px以下）
+   ===================================================== */
+@media (max-width: 480px) {
+    /* === お気に入り通貨ペアドロップダウン修正 === */
+    /* 詳細度を上げて#new-entry .input-groupのoverflow:hiddenを上書き */
+    #new-entry .input-group.pair-input-container {
+        overflow: visible !important;
+    }
+    
+    /* 通貨ペア入力欄と☆ボタンの一体化 */
+    #new-entry .pair-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    
+    #new-entry .pair-input-wrapper input#pair {
+        width: 100% !important;
+        padding-right: 45px !important;  /* ☆ボタン分のスペース確保 */
+    }
+    
+    #new-entry .pair-input-wrapper .favorite-select-btn {
+        position: absolute !important;
+        right: 8px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+    }
+    
+    /* 新規エントリータブのsectionもoverflow対応 */
+    #new-entry .section {
+        overflow: visible !important;
+        overflow-x: visible !important;
+        overflow-y: visible !important;
+    }
+    
+    /* リスク/リワード/R:R比率の表示を1行に収める */
+    #riskRewardDisplay {
+        display: flex !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+    }
+    
+    #riskRewardDisplay > div {
+        flex: 1 !important;
+        text-align: center !important;
+        min-width: 0 !important;
+    }
+    
+    #riskRewardDisplay > div > div:last-child {
+        font-size: 0.9rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    
+    /* Pipsを含む行全体 */
+    #riskPips, #rewardPips, #rrRatio {
+        font-size: 0.9rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === トレード記録カードのバッジ2行整列 === */
+    /* 1行目: 通貨ペア（左）+ 未決済バッジ（右） */
+    .trade-card {
+        position: relative !important;
+    }
+    
+    .trade-card .remaining-lot-badge {
+        position: absolute !important;
+        top: 15px !important;
+        right: 15px !important;
+    }
+    
+    .trade-card .trade-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+    
+    .trade-card .trade-header-left {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+    
+    /* 通貨ペア名を1行目に（バッジを含まない） */
+    .trade-card .trade-header-left > div {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    
+    /* 通貨ペア名 */
+    .trade-card .trade-pair {
+        font-size: 1.3rem !important;
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 5px !important;
+        margin-right: 0 !important;
+    }
+    
+    /* 2行目: バッジ群を横並び */
+    .trade-card .direction-badge,
+    .trade-card .broker-badge,
+    .trade-card .status-badge,
+    .trade-card .trade-result {
+        display: inline-flex !important;
+        margin-left: 0 !important;
+        margin-right: 6px !important;
+        font-size: 0.7rem !important;
+        padding: 3px 8px !important;
+    }
+    
+    /* 保有中/決済済みバッジを2行目に移動 */
+    .trade-card .trade-result.open-position {
+        position: absolute !important;
+        top: 52px !important;
+        left: auto !important;
+        right: 15px !important;
+    }
+    
+    /* 損益Pipsバッジ（決済済み）をEntry行の高さに */
+    .trade-card .trade-result:not(.open-position) {
+        position: absolute !important;
+        top: 38px !important;
+        left: auto !important;
+        right: -10px !important;
+        font-size: 0.85rem !important;
+        padding: 4px 8px !important;
+    }
+    
+    /* 決済・削除ボタンを含む親DIVを非表示にしてボタンのみ右上に */
+    .trade-card .trade-header > div:last-child {
+        position: absolute !important;
+        top: 45px !important;
+        right: 15px !important;
+        display: flex !important;
+        gap: 5px !important;
+    }
+    
+    /* ボタンを小さく */
+    .trade-card .exit-btn,
+    .trade-card .delete-btn {
+        font-size: 0.65rem !important;
+        padding: 2px 6px !important;
+    }
+    
+    /* === iOS日付入力欄の高さ統一 === */
+    input[type="date"],
+    input[type="datetime-local"] {
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
+        padding: 8px 12px !important;
+        font-size: 1rem !important;
+        line-height: 1.2 !important;
+        box-sizing: border-box !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+    }
+    
+    /* 決済エントリー行の日付入力を見やすく */
+    .exit-entry-row input[type="datetime-local"],
+    .exit-row input[type="datetime-local"] {
+        min-width: 120px !important;
+        font-size: 0.7rem !important;
+        padding: 4px 6px !important;
+    }
+    
+    /* 決済エントリー行全体のレイアウト調整 - 1行に */
+    .exit-entry-row,
+    .exit-row {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
+        align-items: center !important;
+    }
+    
+    .exit-entry-row input,
+    .exit-row input {
+        flex: 1 !important;
+        min-width: 0 !important;
+        font-size: 0.75rem !important;
+        padding: 6px 4px !important;
+        height: 36px !important;
+    }
+    
+    .exit-entry-row input[type="datetime-local"],
+    .exit-row input[type="datetime-local"] {
+        flex: 2 !important;
+        min-width: 0 !important;
+        font-size: 0.65rem !important;
+        height: 36px !important;
+    }
+    
+    .exit-entry-row button,
+    .exit-row button {
+        flex-shrink: 0 !important;
+        font-size: 0.65rem !important;
+        padding: 4px 8px !important;
+        height: 36px !important;
+    }
+    
+    /* 決済エントリーの親要素を1行化 */
+    #exitEntriesContainer > div,
+    .exit-entries > div {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
+        align-items: center !important;
+        margin-bottom: 8px !important;
+    }
+    
+    #exitEntriesContainer input,
+    .exit-entries input {
+        flex: 1 !important;
+        min-width: 0 !important;
+        font-size: 0.7rem !important;
+        padding: 4px !important;
+        height: 34px !important;
+    }
+    
+    #exitEntriesContainer input[type="datetime-local"],
+    .exit-entries input[type="datetime-local"] {
+        flex: 2.5 !important;
+        font-size: 0.6rem !important;
+    }
+    
+    #exitEntriesContainer button,
+    .exit-entries button {
+        flex-shrink: 0 !important;
+        font-size: 0.6rem !important;
+        padding: 4px 6px !important;
+        height: 34px !important;
+    }
+    
+    /* === 分析タブ - トレード履歴ヘッダーを1行に === */
+    .accordion-header {
+        flex-wrap: nowrap !important;
+    }
+    
+    .accordion-header h4 {
+        flex-wrap: nowrap !important;
+        gap: 5px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* トレード履歴のボタン群を1行に */
+    .accordion-header h4 > div {
+        flex-wrap: nowrap !important;
+        gap: 5px !important;
+        margin-right: 5px !important;
+    }
+    
+    .accordion-header h4 > div button {
+        font-size: 0.6rem !important;
+        padding: 3px 6px !important;
+        white-space: nowrap !important;
+    }
+    
+    /* トレード履歴タイトルを短く */
+    .accordion-header h4 > span:nth-child(2) {
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === 相場ノート - 検索＋日付を1行に（iPhone対応） === */
+    .date-selector {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 4px !important;
+        width: 100% !important;
+    }
+    
+    .date-selector .note-search-btn {
+        flex-shrink: 0 !important;
+        width: auto !important;
+        max-width: none !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+        min-width: auto !important;
+    }
+    
+    .date-selector .date-input-group {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 3px !important;
+        flex: 1 !important;
+    }
+    
+    .date-selector input[type="date"] {
+        min-width: 0 !important;
+        width: auto !important;
+        flex: 1 !important;
+        font-size: 0.75rem !important;
+        padding: 6px 4px !important;
+        -webkit-appearance: none !important;
+    }
+    
+    .date-selector .date-nav-btn {
+        flex-shrink: 0 !important;
+        min-width: 28px !important;
+        padding: 6px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .date-selector .btn-small:not(.note-search-btn) {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        padding: 6px 8px !important;
+        font-size: 0.7rem !important;
+        width: auto !important;
+    }
+    
+    /* === 決済情報編集モーダル - 参考情報を1行に === */
+    .entry-reference-info .info-grid,
+    .reference-info .info-grid {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+    }
+    
+    .entry-reference-info .info-item,
+    .reference-info .info-item {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+    
+    .entry-reference-info .info-label,
+    .reference-info .info-label {
+        font-size: 0.65rem !important;
+    }
+    
+    .entry-reference-info .info-value,
+    .reference-info .info-value {
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    
+    /* 決済情報編集モーダル - インラインstyleを上書き */
+    .modal-body .form-group > div[style*="grid"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 5px !important;
+    }
+    
+    .modal-body .form-group > div[style*="grid"] > div {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+    
+    .modal-body .form-group > div[style*="grid"] label {
+        font-size: 0.6rem !important;
+    }
+    
+    .modal-body .form-group > div[style*="grid"] > div > div {
+        font-size: 0.75rem !important;
+        padding: 5px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    
+    #favoritePairDropdown {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        right: auto !important;
+        transform: none !important;
+        width: 250px !important;
+        max-height: 50vh !important;
+        overflow-y: auto !important;
+        z-index: 9999 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        margin-top: 4px !important;
+    }
+
+    /* ヘッダー調整 */
+    .header-title {
+        font-size: 1.2rem;
+    }
+    
+    .user-icon img {
+        width: 120px;
+        height: 120px;
+    }
+    
+    /* タブボタンの縮小 */
+    .tab-btn { 
+        font-size: 0.8rem;
+        padding: 8px;
+        min-height: 40px;
+    }
+    
+    /* セクションのパディング削減 */
+    .section { 
+        padding: 15px; 
+    }
+    
+    /* モーダルの最大化 */
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+        padding: 15px;
+    }
+    
+    /* チャート高さ制限 */
+    .chart-container {
+        height: 200px;
+    }
+    
+    /* ボタングループの縦積み */
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    /* テーブルのスクロール対応 */
+    .trades-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    /* 新規エントリーフォームのはみ出し防止 */
+    /* overflow-xは削除（ドロップダウン表示のため） */
+    #new-entry .section {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    
+    #new-entry .section h2 {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        font-size: 1.1rem !important;
+    }
+    
+    #new-entry .input-grid {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+    }
+    
+    #new-entry .input-group {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        min-width: 0 !important;
+    }
+    
+    #new-entry .input-group label {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* =====================================================
+   小型スマートフォン（360px以下）
+   ===================================================== */
+@media (max-width: 360px) {
+    /* リスク/リワード/R:R比率をさらにコンパクトに */
+    #riskRewardDisplay > div > div:first-child {
+        font-size: 0.75rem !important;
+    }
+    
+    #riskRewardDisplay > div > div:last-child {
+        font-size: 0.85rem !important;
+    }
+    
+    /* === 相場ノート: 編集インジケーター（360px以下） === */
+    .editing-indicator {
+        gap: 4px !important;
+        padding: 5px 8px !important;
+    }
+    
+    .editing-badge {
+        font-size: 0.7rem !important;
+    }
+    
+    #editingDate {
+        font-size: 0.65rem !important;
+        color: #fff !important;
+    }
+    
+    .editing-indicator .btn-secondary,
+    .editing-indicator .btn-small {
+        padding: 2px 5px !important;
+        font-size: 0.6rem !important;
+        min-width: auto !important;
+        width: auto !important;
+    }
+    
+    /* さらなる縮小調整 */
+    .header-title {
+        font-size: 1rem;
+    }
+    
+    .user-icon img {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .tab-btn {
+        font-size: 0.7rem;
+        padding: 6px;
+        min-height: 35px;
+    }
+    
+    .section {
+        padding: 10px;
+    }
+    
+    /* 目標表示の最小化 */
+    .goal-item {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+    }
+    
+    .goal-text {
+        font-size: 0.8rem;
+    }
+    
+    /* 入力フィールドの調整 */
+    input, select, textarea {
+        font-size: 16px; /* iOSのズーム防止 */
+    }
+}
+
+/* =====================================================
+   印刷用スタイル
+   ===================================================== */
+@media print {
+    /* ナビゲーション非表示 */
+    .tab-nav,
+    .button-group,
+    .filter-section,
+    .toolbar {
+        display: none !important;
+    }
+    
+    /* 背景色の削除 */
+    body {
+        background: white;
+        color: black;
+    }
+    
+    .section {
+        background: white;
+        border: 1px solid #ccc;
+        box-shadow: none;
+    }
+    
+    /* リンクのURL表示 */
+    a:after {
+        content: " (" attr(href) ")";
+    }
+}
+
+/* =====================================================
+   高解像度ディスプレイ対応
+   ===================================================== */
+@media (-webkit-min-device-pixel-ratio: 2),
+       (min-resolution: 192dpi) {
+    /* Retinaディスプレイ用の細線調整 */
+    .section {
+        border-width: 0.5px;
+    }
+    
+    .trade-card {
+        border-width: 0.5px;
+    }
+}
+
+/* =====================================================
+   ランドスケープモード（横向き）
+   ===================================================== */
+@media (max-width: 768px) and (orientation: landscape) {
+    /* 横向きスマホ対応 */
+    .header {
+        margin-bottom: 15px;
+    }
+    
+    .tab-nav {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+    }
+    
+    .modal-content {
+        max-height: 80vh;
+    }
+}
+
+/* =====================================================
+   ダークモード対応（システム設定連動）
+   ===================================================== */
+@media (prefers-color-scheme: dark) {
+    /* システムがダークモードの場合のデフォルト設定 */
+    /* （現在のダークテーマがデフォルトなので特に変更なし） */
+}
+
+@media (prefers-color-scheme: light) {
+    /* システムがライトモードの場合の自動切り替え（オプション） */
+    /* body:not(.dark-mode) {
+        自動的にライトモードを適用する場合はここに記述
+    } */
+}
+
+/* ========================================
+   相場ノート機能改善 - レスポンシブ対応
+   追加日: 2025-11-27
+   ======================================== */
+
+@media (max-width: 768px) {
+    /* === 相場ノート: 編集インジケーター === */
+    .editing-indicator {
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 8px 12px !important;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+        border-radius: 8px !important;
+        margin-bottom: 10px !important;
+    }
+    
+    .editing-badge {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        font-size: 0.8rem !important;
+        font-weight: bold !important;
+    }
+    
+    #editingDate {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        font-size: 0.75rem !important;
+        color: #fff !important;
+    }
+    
+    .editing-indicator .btn-secondary,
+    .editing-indicator .btn-small {
+        flex-shrink: 0 !important;
+        padding: 4px 8px !important;
+        font-size: 0.7rem !important;
+        white-space: nowrap !important;
+        min-width: auto !important;
+        width: auto !important;
+    }
+    
+    /* 検索ボタン：テキスト非表示 */
+    .search-btn-text {
+        display: none;
+    }
+    
+    .note-search-btn {
+        padding: 8px 12px;
+    }
+    
+    /* 月メモ */
+    .monthly-memo-container {
+        padding: 10px;
+        margin: 10px 0;
+    }
+    
+    .monthly-memo-section-header {
+        padding: 8px 10px;
+    }
+    
+    .memo-edit-btn {
+        padding: 4px 8px;
+        font-size: 0.75em;
+    }
+    
+    /* 検索モーダル：全画面 */
+    .note-search-modal-content {
+        max-width: 100%;
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+    
+    .search-results-container {
+        max-height: calc(100vh - 200px);
+    }
+    
+    /* 月メモ編集モーダル：全画面 */
+    .monthly-memo-edit-modal-content {
+        max-width: 100%;
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+    
+    .monthly-memo-textarea {
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* === 相場ノート: 編集インジケーター（480px以下） === */
+    .editing-indicator {
+        gap: 6px !important;
+        padding: 6px 10px !important;
+    }
+    
+    .editing-badge {
+        font-size: 0.75rem !important;
+    }
+    
+    #editingDate {
+        font-size: 0.7rem !important;
+        color: #fff !important;
+    }
+    
+    .editing-indicator .btn-secondary,
+    .editing-indicator .btn-small {
+        padding: 3px 6px !important;
+        font-size: 0.65rem !important;
+        min-width: auto !important;
+        width: auto !important;
+    }
+    
+    /* 日付選択部 - 1行レイアウト維持 */
+    .date-selector {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 3px !important;
+    }
+    
+    .note-search-btn {
+        width: auto !important;
+        flex-shrink: 0 !important;
+        padding: 5px 6px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .search-btn-text {
+        display: none !important;
+    }
+    
+    .date-input-group {
+        flex: 1 !important;
+        width: auto !important;
+        justify-content: flex-start !important;
+        gap: 2px !important;
+    }
+    
+    .date-input-group input[type="date"] {
+        flex: 1 !important;
+        min-width: 0 !important;
+        font-size: 0.7rem !important;
+        padding: 5px 3px !important;
+    }
+    
+    .date-input-group .date-nav-btn {
+        min-width: 26px !important;
+        padding: 5px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .date-input-group .btn-small {
+        padding: 5px 6px !important;
+        font-size: 0.65rem !important;
+    }
+}
+
+/* =====================================================
+   Week 6: 追加レスポンシブ対応
+   追加日: 2025-12-02
+   対象: 分析タブ・設定タブ・収支管理タブ
+   ===================================================== */
+
+/* === 目標折りたたみボタン: デフォルト非表示 === */
+.goals-toggle-btn {
+    display: none;
+}
+
+/* === チェックリストのラベル（PC・スマホ共通） === */
+.checklist-label {
+    color: #aaa !important;
+    font-weight: 400 !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 2px !important;
+}
+
+.checklist-value {
+    color: #fff !important;
+    font-size: 0.9rem !important;
+    padding-left: 15px !important;
+    margin-bottom: 10px !important;
+}
+
+/* === 詳細モーダル画像セクション統一（PC・スマホ共通） === */
+.detail-images-container {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.detail-image-item {
+    flex: 0 0 auto;
+    width: 150px;
+    height: 100px;
+    position: relative;
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #333;
+}
+
+.detail-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.detail-image-item:hover {
+    opacity: 0.9;
+    border-color: #00ff88;
+}
+
+/* 空枠のスタイル */
+.detail-image-item.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed #444;
+}
+
+.detail-image-item.empty:hover {
+    border-color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.detail-image-placeholder {
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.detail-image-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.detail-image-delete:hover {
+    background: rgb(220, 38, 38);
+}
+
+/* === 相場ノート画像セクション統一 === */
+.note-images-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.note-image-item {
+    flex: 0 0 auto;
+    width: 150px;
+    height: 100px;
+    position: relative;
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.note-image-item.has-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.note-image-item.has-image:hover {
+    opacity: 0.9;
+}
+
+.note-image-item.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed #444;
+}
+
+.note-image-item.empty:hover {
+    border-color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.note-image-placeholder {
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.note-image-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.note-image-delete:hover {
+    background: rgb(220, 38, 38);
+}
+
+/* === エントリー情報編集モーダル（トレード編集）モバイル対応 === */
+@media screen and (max-width: 480px) {
+    /* tradeEditModal内のグリッドを2列均等に（新規エントリーと統一） */
+    #tradeEditModal .modal-body [style*="grid-template-columns"] {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 10px !important;
+    }
+    
+    /* form-groupを新規エントリーのinput-groupと同じスタイルに */
+    #tradeEditModal .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 0;  /* グリッド内でのオーバーフロー防止 */
+    }
+    
+    #tradeEditModal .form-group label {
+        font-size: 0.75rem;
+        color: #00ff88;
+        margin-bottom: 2px;
+        white-space: nowrap;
+    }
+    
+    /* モーダルコンテンツの幅調整 */
+    #tradeEditModal .modal-content {
+        width: 95%;
+        max-width: none;
+        margin: 10px;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 15px;
+    }
+    
+    /* 入力フィールドの調整 */
+    #tradeEditModal input,
+    #tradeEditModal select {
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 0.85rem;
+        padding: 8px;
+        min-width: 0;  /* グリッド内でのオーバーフロー防止 */
+    }
+    
+    /* 通貨ペア入力とお気に入りボタンの配置 */
+    #tradeEditModal .pair-input-container,
+    #tradeEditModal [style*="display: flex"][style*="gap: 8px"] {
+        display: flex !important;
+        gap: 5px !important;
+    }
+    
+    #tradeEditModal .pair-input-container input,
+    #tradeEditModal [style*="display: flex"][style*="gap: 8px"] input {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    /* お気に入り通貨ドロップダウンの幅調整 */
+    #tradeEditModal .edit-autocomplete-dropdown {
+        min-width: 180px !important;
+        left: 0 !important;
+        right: auto !important;
+        z-index: 9999 !important;
+        background: #1a1a2e !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    
+    /* ドロップダウンの親要素にz-indexを設定 */
+    #tradeEditModal .edit-pair-input-container {
+        z-index: 100 !important;
+    }
+    
+    /* 通貨ペア入力のform-groupを他より前面に */
+    #tradeEditModal .form-group:has(.edit-pair-input-container) {
+        z-index: 100 !important;
+    }
+    
+    /* お気に入りドロップダウン（editFavoritePairDropdown）の調整 */
+    #editFavoritePairDropdown {
+        min-width: 160px !important;
+        left: 0 !important;
+        right: auto !important;
+    }
+    
+    /* お気に入りドロップダウンのアイテムを縦並びに */
+    #editFavoritePairDropdown > div {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        justify-content: flex-start !important;
+        padding: 8px 12px !important;
+    }
+    
+    #editFavoritePairDropdown > div > span:first-child {
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    #editFavoritePairDropdown > div > span:last-child {
+        font-size: 0.75rem !important;
+        margin-top: 2px;
+    }
+}
+
+/* === 相場ノート 月メモセクション モバイル対応 === */
+@media screen and (max-width: 480px) {
+    /* 月メモセクションヘッダーの調整 */
+    .monthly-memo-section-header {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-wrap: nowrap;
+    }
+    
+    /* ラベルが残りの幅を使う */
+    .monthly-memo-section-header .section-label {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* 編集ボタンを小さく固定 */
+    .monthly-memo-section-header .memo-edit-btn {
+        flex-shrink: 0;
+        width: auto !important;
+        min-width: 50px;
+        max-width: 60px;
+        padding: 4px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* アイコンのサイズ調整 */
+    .monthly-memo-section-header .collapse-icon,
+    .monthly-memo-section-header .section-icon {
+        flex-shrink: 0;
+        font-size: 0.9rem;
+    }
+    
+    /* 月メモコンテンツの余白調整 */
+    .monthly-memo-section-content {
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+    
+    /* 月メモタイトル */
+    .monthly-memo-title {
+        font-size: 1rem;
+    }
+    
+    /* 相場ノート画像エリア - 3枠横並び */
+    .note-images-container {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        justify-content: flex-start;
+    }
+    
+    .note-image-item {
+        width: calc((100% - 16px) / 3) !important;  /* 3等分 - gap考慮 */
+        min-width: 0 !important;
+        max-width: none !important;
+        height: 80px !important;
+        flex-shrink: 0;
+    }
+    
+    .note-image-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    /* === 週間プレビュー ナビゲーション 2段構成 === */
+    .week-navigation {
+        display: grid !important;
+        grid-template-columns: auto 1fr auto !important;
+        grid-template-rows: auto auto !important;
+        gap: 8px !important;
+        align-items: center !important;
+        justify-items: center !important;
+    }
+    
+    /* 1段目: 前週（左）・日付範囲（中央）・翌週（右） */
+    .week-navigation > button:first-child {
+        grid-column: 1;
+        grid-row: 1;
+        white-space: nowrap !important;
+    }
+    
+    .week-navigation > span {
+        grid-column: 2;
+        grid-row: 1;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    
+    .week-navigation > button:last-child {
+        grid-column: 3;
+        grid-row: 1;
+        white-space: nowrap !important;
+    }
+    
+    /* 2段目: カレンダーボタン（2番目のボタン、中央に配置） */
+    .week-navigation > button:nth-child(2) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-self: center;
+        width: auto;
+        max-width: 150px;
+        white-space: nowrap !important;
+    }
+    
+    /* ボタンサイズ調整 */
+    .week-navigation > button {
+        padding: 5px 8px !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === 週間プレビュー レイアウト調整 === */
+    /* 右側のノート詳細を非表示 */
+    .note-display-container .note-detail {
+        display: none !important;
+    }
+    
+    /* 週間プレビューを全幅に */
+    .note-display-container {
+        display: block !important;
+        background: transparent !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+    
+    .note-display-container .weekly-preview {
+        width: 100% !important;
+        max-width: none !important;
+        min-height: auto !important;
+        height: auto !important;
+        max-height: none !important;  /* ツートンカラー修正 */
+        overflow: visible !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    /* 日付カード一覧の背景を統一 */
+    .week-days {
+        background: transparent !important;
+    }
+    
+    /* 日付カードをタップ可能に見せる */
+    .day-preview {
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .day-preview:active {
+        background: rgba(0, 255, 136, 0.2);
+    }
+    
+    /* === 今日の相場観 高さ調整 === */
+    #noteMarketView {
+        height: 250px !important;
+        min-height: 200px !important;
+        max-height: 250px !important;
+    }
+    
+    /* === 週間プレビュー アコーディオン（モバイル） === */
+    .day-preview .accordion-icon {
+        font-size: 0.8rem;
+        margin-right: 8px;
+        cursor: pointer;
+        user-select: none;
+        flex-shrink: 0;
+        width: 15px;
+    }
+    
+    .day-preview .btn-edit-note {
+        margin-left: auto;
+        padding: 2px 6px !important;
+        font-size: 0.65rem !important;
+        background: #00ff88;
+        color: #000;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        flex-shrink: 0;
+        width: auto !important;
+        min-width: auto !important;
+        max-width: 40px !important;
+    }
+    
+    .day-preview .btn-edit-note:hover {
+        background: #00cc6a;
+    }
+    
+    .day-preview .day-preview-header {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .day-preview .day-preview-date {
+        min-width: 45px;
+    }
+    
+    .day-preview .day-preview-weekday {
+        flex: 1;
+    }
+    
+    .day-preview .day-preview-content {
+        max-height: 85px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+    
+    .day-preview.expanded .day-preview-content {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    
+    .day-preview.expanded {
+        background: rgba(0, 255, 136, 0.1);
+        overflow: visible !important;
+    }
+    
+    /* 展開時のコンテンツ行 - 自動折り返し */
+    .day-preview .day-preview-line {
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        line-height: 1.6 !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding-bottom: 4px;
+        display: block;
+    }
+}
+
+/* === チャート画像: 画像を枠いっぱいに（PC・スマホ共通） === */
+.image-upload-area {
+    position: relative;
+    overflow: hidden;
+    min-height: 120px;
+}
+
+/* 画像を枠いっぱいに表示 */
+.image-upload-area img {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 8px !important;
+    z-index: 1 !important;
+}
+
+/* 画像追加時：プレースホルダーを非表示 */
+.image-upload-area.has-image p {
+    display: none !important;
+}
+
+/* 削除ボタンを右上に（画像の上に表示） */
+.image-upload-area .btn-danger,
+.image-upload-area [id^="clearTradeChart"] {
+    position: absolute !important;
+    top: 5px !important;
+    right: 5px !important;
+    z-index: 10 !important;
+}
+
+/* =====================================================
+   タブレット（1024px以下）追加対応
+   ===================================================== */
+@media (max-width: 1024px) {
+    /* 分析タブ: 全期間統計グリッド - 6列→3列 */
+    .overall-stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    
+    /* 期間選択ボタン群 */
+    .period-type-buttons {
+        flex-wrap: wrap;
+    }
+    
+    .period-type-btn {
+        flex: 1 1 calc(50% - 5px) !important;
+        min-width: 120px !important;
+    }
+}
+
+/* =====================================================
+   タブレット（768px以下）追加対応
+   ===================================================== */
+@media (max-width: 768px) {
+    /* === クイック統計（新規エントリー上部）4列1行 === */
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+    
+    .stat-box {
+        padding: 10px 6px;
+    }
+    
+    .stat-number {
+        font-size: 1.1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.7rem;
+    }
+    
+    /* === 分析タブ: 全期間統計グリッド - 3列維持（18項目/3列=6行） === */
+    .overall-stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+    }
+    
+    .overall-stat-item {
+        min-height: 60px !important;
+        padding: 10px !important;
+    }
+    
+    .overall-stat-item .stat-label {
+        font-size: 0.7rem !important;
+    }
+    
+    .overall-stat-item .stat-value {
+        font-size: 1rem !important;
+    }
+    
+    /* === 分析タブ: 期間統計グリッド - 3列維持（12項目/3列=4行） === */
+    .period-stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+    }
+    
+    .period-stat-item {
+        min-height: 55px !important;
+        padding: 8px !important;
+    }
+    
+    .period-stat-item .stat-label {
+        font-size: 0.7rem !important;
+    }
+    
+    .period-stat-item .stat-value {
+        font-size: 0.95rem !important;
+    }
+    
+    /* === 期間選択UI === */
+    .period-selection-container {
+        padding: 15px !important;
+    }
+    
+    /* 期間タイプボタン: 4つ横並び1行 */
+    .period-type-buttons {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+    }
+    
+    .period-type-btn {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        padding: 8px 6px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+    }
+    
+    .period-selector {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    
+    .period-selector select {
+        flex: 1 1 auto !important;
+        min-width: 100px !important;
+    }
+    
+    .period-selector button {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+    }
+    
+    #yearSelectContainer {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+    }
+    
+    #yearSelectContainer label {
+        white-space: nowrap !important;
+        font-size: 0.85rem !important;
+    }
+    
+    #yearSelectContainer select {
+        min-width: 80px !important;
+        padding: 8px !important;
+    }
+    
+    /* 対象期間ラベルをコンパクトに */
+    .period-selector > label {
+        white-space: nowrap !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* 期間を変更ボタン */
+    #changePeriodBtn {
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* 現在の期間表示 */
+    #currentPeriodDisplay {
+        margin-top: 10px !important;
+        padding: 8px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* === 期間統計タイトル + 切り替えボタン: 横並び維持 === */
+    .period-stats-container > div:first-child {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: nowrap !important;
+        gap: 10px !important;
+    }
+    
+    #periodStatsTitle {
+        font-size: 0.95rem !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .period-stats-toggle {
+        display: flex !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .period-stats-btn {
+        padding: 6px 10px !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === 分析タブ: レポートアコーディオン === */
+    .report-accordion {
+        margin-top: 15px !important;
+    }
+    
+    .accordion-header {
+        padding: 8px !important;
+        margin-left: -20px !important;
+        margin-right: -20px !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        border-radius: 0 !important;
+    }
+    
+    .accordion-header h4 {
+        font-size: 0.85rem !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+    }
+    
+    /* トグルアイコン（▼）のサイズ調整 */
+    .accordion-header h4 > span[id$="-icon"],
+    .accordion-header > span[id$="-icon-right"] {
+        padding: 4px 8px !important;
+        font-size: 12px !important;
+    }
+    
+    /* トレード履歴内のボタン */
+    .accordion-header h4 button {
+        padding: 4px 8px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    /* === 分析タブ: ページネーション === */
+    .pagination-controls {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        padding: 8px !important;
+    }
+    
+    .pagination-controls > div {
+        flex: 1 1 auto !important;
+        justify-content: center !important;
+    }
+    
+    .pagination-controls label {
+        font-size: 0.75rem !important;
+    }
+    
+    .pagination-controls select {
+        padding: 4px 6px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .pagination-controls button {
+        padding: 4px 10px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .pagination-controls span {
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 分析タブ: 月別推移グラフ === */
+    #monthlyPerformanceChart {
+        padding: 10px !important;
+        margin-left: -20px !important;
+        margin-right: -20px !important;
+        border-radius: 0 !important;
+    }
+    
+    #monthlyChart {
+        max-height: 450px !important;
+        min-height: 450px !important;
+    }
+    
+    /* 月別推移タイトル */
+    #analysis h3 {
+        margin-bottom: 10px !important;
+    }
+    
+    /* ビュー切り替えボタン */
+    .chart-view-buttons {
+        margin-bottom: 10px !important;
+    }
+    
+    .chart-view-buttons .view-btn {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    /* === 設定タブ: サブタブナビゲーション === */
+    .settings-subtabs {
+        display: flex !important;
+        gap: 5px !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .settings-subtab-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        padding-bottom: 10px;
+    }
+    
+    .settings-subtab-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .settings-subtab-nav::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+    }
+    
+    .settings-subtab-btn {
+        flex: 1 !important;
+        padding: 10px 8px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === 設定タブ: 入力フォーム === */
+    .settings-subtab-content .input-group {
+        margin-bottom: 15px !important;
+    }
+    
+    .settings-subtab-content .input-group label {
+        font-size: 0.85rem !important;
+        margin-bottom: 6px !important;
+        display: block !important;
+    }
+    
+    .settings-subtab-content .input-group input[type="text"] {
+        width: 100% !important;
+        padding: 10px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* === 設定タブ: テーマセレクタ === */
+    .theme-selector {
+        display: flex !important;
+        gap: 8px !important;
+    }
+    
+    .theme-btn {
+        flex: 1 !important;
+        padding: 10px 8px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === 設定タブ: セルフイメージ入力 === */
+    .goal-settings {
+        margin-top: 25px !important;
+        padding: 15px !important;
+        border-radius: 8px !important;
+    }
+    
+    .goal-settings h3 {
+        font-size: 1rem !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .goal-input-area {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .goal-input-item {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    
+    .goal-input-item label {
+        font-size: 0.75rem !important;
+        color: #aaa !important;
+        width: 100% !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .goal-input-item input[type="text"] {
+        flex: 1 !important;
+        min-width: 0 !important;
+        padding: 10px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .goal-input-item input[type="date"] {
+        width: 95px !important;
+        padding: 8px 4px !important;
+        font-size: 0.7rem !important;
+        margin-left: 0 !important;
+        flex-shrink: 0 !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #e0e0e0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    .goal-settings .btn-primary {
+        width: 100% !important;
+        padding: 12px !important;
+        margin-top: 10px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* === 設定タブ: データセクション（エクスポート/インポート） === */
+    #settings-data .toolbar {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        margin-bottom: 20px !important;
+    }
+    
+    #settings-data .tool-btn {
+        flex: 1 !important;
+        padding: 12px 10px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === 収支管理タブ: サブタブ === */
+    .expense-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap !important;
+        padding-bottom: 5px;
+    }
+    
+    .expense-tab-btn {
+        flex-shrink: 0;
+        padding: 8px 12px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap;
+    }
+    
+    /* === 収支管理タブ: 収支サマリー横並び === */
+    .summary-grid {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+    }
+    
+    .summary-item {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        padding: 12px 6px !important;
+        text-align: center !important;
+    }
+    
+    .summary-item > div:first-child,
+    .summary-label {
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+        margin-bottom: 6px !important;
+        color: #aaa !important;
+    }
+    
+    .summary-item > div:last-child,
+    .summary-value {
+        font-size: clamp(1rem, 4.5vw, 1.4rem) !important;
+        font-weight: bold !important;
+        white-space: nowrap !important;
+    }
+    
+    /* === 収支管理タブ: カレンダーコントロール === */
+    .calendar-controls {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        padding: 10px !important;
+    }
+    
+    .calendar-controls label {
+        font-size: 0.8rem !important;
+    }
+    
+    .calendar-controls select {
+        padding: 6px 10px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .calendar-controls button {
+        padding: 6px 10px !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+    }
+    
+    #currentMonthLabel {
+        font-size: 1rem !important;
+        min-width: 50px !important;
+    }
+    
+    /* === 月次カレンダー === */
+    .monthly-calendar-grid {
+        font-size: 0.75rem;
+    }
+    
+    .calendar-day {
+        min-height: 50px;
+        padding: 4px;
+    }
+    
+    .calendar-day-amount {
+        font-size: 0.7rem;
+    }
+    
+    /* === 経費入力フォーム === */
+    .expense-form {
+        padding: 12px !important;
+    }
+    
+    .expense-form > div[style*="grid-template-columns"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    
+    .expense-form input,
+    .expense-form select {
+        font-size: 0.85rem !important;
+        padding: 10px !important;
+    }
+    
+    .expense-form .btn-primary {
+        width: 100% !important;
+        padding: 12px !important;
+    }
+    
+    /* === 経費一覧（expense-list） === */
+    .expense-list {
+        font-size: 0.8rem !important;
+    }
+    
+    .expense-item {
+        display: grid !important;
+        grid-template-columns: auto 1fr auto auto !important;
+        gap: 6px 8px !important;
+        padding: 10px !important;
+        align-items: center !important;
+    }
+    
+    .expense-date {
+        font-size: 0.7rem !important;
+        white-space: nowrap !important;
+    }
+    
+    .expense-category {
+        font-size: 0.65rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 80px !important;
+    }
+    
+    .expense-amount {
+        font-size: 0.75rem !important;
+        font-weight: bold !important;
+        white-space: nowrap !important;
+    }
+    
+    .expense-description {
+        grid-column: 1 / -1 !important;
+        font-size: 0.7rem !important;
+        opacity: 0.8 !important;
+        order: 5 !important;
+    }
+    
+    .expense-item .btn-delete {
+        font-size: 0.65rem !important;
+        padding: 4px 8px !important;
+    }
+    
+    /* === 入出金管理 === */
+    .current-balance-display {
+        padding: 15px !important;
+    }
+    
+    #currentCapitalDisplay {
+        font-size: 1.6em !important;
+    }
+    
+    .add-capital-record {
+        padding: 15px !important;
+    }
+    
+    .add-capital-record > div[style*="grid-template-columns"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .add-capital-record input,
+    .add-capital-record label {
+        font-size: 0.85rem !important;
+    }
+    
+    /* === 入出金履歴テーブル === */
+    #capitalHistoryTable {
+        font-size: 0.75rem !important;
+    }
+    
+    #capitalHistoryTable th,
+    #capitalHistoryTable td {
+        padding: 6px 4px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    #capitalHistoryTable th:nth-child(1),
+    #capitalHistoryTable td:nth-child(1) {
+        width: 40px !important;
+    }
+    
+    #capitalHistoryTable th:nth-child(2),
+    #capitalHistoryTable td:nth-child(2) {
+        width: 70px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    #capitalHistoryTable th:nth-child(5),
+    #capitalHistoryTable td:nth-child(5) {
+        width: 40px !important;
+    }
+    
+    /* === チャート画像コンテナ === */
+    .chart-images-container {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+    
+    .image-upload-area {
+        min-height: 150px;
+    }
+    
+    /* === ブローカー・通貨ペア入力 === */
+    .broker-input-wrapper,
+    .pair-input-wrapper {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .lot-unit-display {
+        margin-top: 5px;
+    }
+    
+    /* === お気に入りドロップダウン === */
+    .favorite-pair-dropdown {
+        width: 100% !important;
+        max-width: none !important;
+    }
+    
+    .pair-autocomplete-dropdown {
+        width: 100% !important;
+    }
+    
+    /* お気に入りドロップダウン内の文字サイズ調整 */
+    .favorite-pair-dropdown .dropdown-header,
+    .favorite-pair-dropdown .dropdown-title {
+        font-size: 0.8rem !important;
+    }
+    
+    .favorite-pair-dropdown .dropdown-item,
+    .favorite-pair-dropdown .no-favorites-message,
+    .favorite-pair-dropdown .favorite-item {
+        font-size: 0.75rem !important;
+        padding: 6px 10px !important;
+    }
+    
+    .favorite-pair-dropdown .no-favorites-message {
+        line-height: 1.4 !important;
+    }
+    
+    /* === ライトモード + スマホ対応 === */
+    body.light-mode .input-group input,
+    body.light-mode .input-group select,
+    body.light-mode .input-group textarea {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    body.light-mode .pair-input-wrapper,
+    body.light-mode .broker-input-wrapper {
+        max-width: 100%;
+        /* overflow: hidden; 削除（ドロップダウン表示のため） */
+    }
+    
+    /* body.light-mode .section { overflow-x: hidden; } 削除（ドロップダウン表示のため） */
+}
+
+/* =====================================================
+   スマートフォン（480px以下）追加対応
+   ===================================================== */
+@media (max-width: 480px) {
+    /* === ヘッダー改善 === */
+    .header {
+        padding: 10px 0;
+        margin-bottom: 10px;
+    }
+    
+    .header-content {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+    }
+    
+    /* ロゴ縮小: 120px → 60px */
+    .user-icon img {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    
+    .header-info {
+        flex: 1;
+        text-align: left;
+    }
+    
+    .header-title {
+        font-size: 1.1rem !important;
+        margin-bottom: 2px;
+    }
+    
+    .header-subtitle {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+    
+    /* === 目標折りたたみ機能 === */
+    .goals-display {
+        display: none; /* デフォルト非表示 */
+        flex-direction: column;
+        width: 100%;
+        margin-top: 10px;
+        padding: 0 10px;
+        gap: 8px;
+    }
+    
+    .goals-display.expanded {
+        display: flex; /* 展開時に表示 */
+    }
+    
+    .goal-item {
+        font-size: 0.75rem;
+        padding: 8px 12px;
+        margin: 0;
+    }
+    
+    .goal-text {
+        font-size: 0.8rem;
+    }
+    
+    .goal-deadline {
+        font-size: 0.65rem;
+    }
+    
+    /* 折りたたみトグルボタン */
+    .goals-toggle-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        width: 100%;
+        padding: 8px;
+        margin-top: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #aaa;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .goals-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+    
+    .goals-toggle-btn .toggle-arrow {
+        transition: transform 0.3s;
+    }
+    
+    .goals-toggle-btn.expanded .toggle-arrow {
+        transform: rotate(180deg);
+    }
+    
+    /* === クイック統計（4列1行に変更） === */
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 6px;
+    }
+    
+    .stat-box {
+        padding: 8px 4px;
+    }
+    
+    .stat-number {
+        font-size: 0.95rem;
+    }
+    
+    .stat-label {
+        font-size: 0.6rem;
+    }
+    
+    /* === 分析タブ: 全期間統計 === */
+    .overall-stats-grid {
+        gap: 6px !important;
+    }
+    
+    .overall-stat-item {
+        min-height: 55px !important;
+        padding: 8px !important;
+    }
+    
+    .overall-stat-item .stat-label {
+        font-size: 0.65rem !important;
+        margin-bottom: 4px !important;
+    }
+    
+    .overall-stat-item .stat-value {
+        font-size: 0.9rem !important;
+    }
+    
+    /* === 分析タブ: 期間統計グリッド（480px以下） === */
+    .period-stats-grid {
+        gap: 6px !important;
+    }
+    
+    .period-stat-item {
+        min-height: 50px !important;
+        padding: 6px !important;
+    }
+    
+    .period-stat-item .stat-label {
+        font-size: 0.65rem !important;
+    }
+    
+    .period-stat-item .stat-value {
+        font-size: 0.85rem !important;
+    }
+    
+    /* === 期間選択UI（480px以下） === */
+    .period-type-btn {
+        padding: 6px 4px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    /* 年度・対象期間・期間を変更: 横並び維持 */
+    .period-selector {
+        gap: 6px !important;
+    }
+    
+    .period-selector select {
+        padding: 6px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    #yearSelectContainer label,
+    .period-selector > label {
+        font-size: 0.75rem !important;
+    }
+    
+    #changePeriodBtn {
+        padding: 6px 10px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    /* 統計タイトル + 切り替えボタン: 横並び維持 */
+    #periodStatsTitle {
+        font-size: 0.85rem !important;
+    }
+    
+    .period-stats-btn {
+        padding: 5px 8px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .period-selection-container h3 {
+        font-size: 0.95em !important;
+    }
+    
+    #currentPeriodDisplay {
+        font-size: 0.8em !important;
+    }
+    
+    /* === 分析タブ: レポートアコーディオン（480px以下） === */
+    .report-accordion {
+        margin-top: 12px !important;
+    }
+    
+    .accordion-header {
+        padding: 6px !important;
+        margin-left: -15px !important;
+        margin-right: -15px !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+    
+    .accordion-header h4 {
+        font-size: 0.75rem !important;
+    }
+    
+    /* トグルアイコン */
+    .accordion-header h4 > span[id$="-icon"],
+    .accordion-header > span[id$="-icon-right"] {
+        padding: 3px 6px !important;
+        font-size: 10px !important;
+    }
+    
+    /* トレード履歴内のボタン */
+    .accordion-header h4 button {
+        padding: 3px 6px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    /* === 分析タブ: ページネーション（480px以下） === */
+    .pagination-controls {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 6px !important;
+    }
+    
+    /* 上段: 表示件数 + ページ送り を横並び一行 */
+    .pagination-controls > div:first-child,
+    .pagination-controls > div:nth-child(2) {
+        flex: 0 0 auto !important;
+        gap: 6px !important;
+    }
+    
+    /* 下段: 全X件中... */
+    .pagination-controls > div:last-child {
+        flex: 1 1 100% !important;
+        text-align: center !important;
+    }
+    
+    .pagination-controls label {
+        font-size: 0.7rem !important;
+    }
+    
+    .pagination-controls select {
+        padding: 3px 5px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .pagination-controls button {
+        padding: 3px 6px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .pagination-controls span {
+        font-size: 0.7rem !important;
+    }
+    
+    /* === 設定タブ（480px以下） === */
+    .settings-subtab-btn {
+        padding: 8px 6px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .settings-subtab-content .input-group label {
+        font-size: 0.8rem !important;
+    }
+    
+    .settings-subtab-content .input-group input[type="text"] {
+        padding: 8px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .theme-btn {
+        padding: 8px 6px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .goal-settings {
+        padding: 12px !important;
+    }
+    
+    .goal-settings h3 {
+        font-size: 0.95rem !important;
+    }
+    
+    .goal-input-item label {
+        font-size: 0.7rem !important;
+    }
+    
+    .goal-input-item input[type="text"] {
+        padding: 8px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .goal-input-item input[type="date"] {
+        width: 90px !important;
+        padding: 6px 3px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    .goal-settings .btn-primary {
+        padding: 10px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* === 設定タブ: データセクション（480px以下） === */
+    #settings-data .tool-btn {
+        padding: 10px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 分析タブ: 月別推移グラフ（480px以下） === */
+    #monthlyPerformanceChart {
+        padding: 8px !important;
+        margin-left: -15px !important;
+        margin-right: -15px !important;
+    }
+    
+    #monthlyChart {
+        max-height: 450px !important;
+        min-height: 450px !important;
+    }
+    
+    .chart-view-buttons .view-btn {
+        padding: 5px 10px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 収支管理タブ === */
+    .expense-tab-btn {
+        padding: 6px 10px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 収支管理タブ: 収支サマリー（480px以下） === */
+    .summary-grid {
+        gap: 4px !important;
+    }
+    
+    .summary-item {
+        padding: 10px 4px !important;
+    }
+    
+    .summary-item > div:first-child,
+    .summary-label {
+        font-size: 0.65rem !important;
+    }
+    
+    .summary-item > div:last-child,
+    .summary-value {
+        font-size: clamp(0.95rem, 4vw, 1.2rem) !important;
+    }
+    
+    /* === 収支管理タブ: カレンダーコントロール（480px以下） === */
+    .calendar-controls {
+        gap: 6px !important;
+        padding: 8px !important;
+    }
+    
+    .calendar-controls label {
+        font-size: 0.75rem !important;
+    }
+    
+    .calendar-controls select {
+        padding: 5px 8px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .calendar-controls button {
+        padding: 5px 8px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    #currentMonthLabel {
+        font-size: 0.9rem !important;
+        min-width: 40px !important;
+    }
+    
+    /* === 月次カレンダー === */
+    .calendar-day {
+        min-height: 40px;
+        padding: 2px;
+    }
+    
+    .calendar-day-number {
+        font-size: 0.65rem;
+    }
+    
+    .calendar-day-amount {
+        font-size: 0.6rem;
+    }
+    
+    /* === 経費入力フォーム（480px以下） === */
+    .expense-form {
+        padding: 10px !important;
+    }
+    
+    .expense-form input,
+    .expense-form select {
+        font-size: 0.8rem !important;
+        padding: 8px !important;
+    }
+    
+    /* === 経費一覧（480px以下） === */
+    .expense-item {
+        grid-template-columns: auto 1fr auto !important;
+        gap: 4px 6px !important;
+        padding: 8px !important;
+    }
+    
+    .expense-date {
+        font-size: 0.65rem !important;
+    }
+    
+    .expense-category {
+        font-size: 0.6rem !important;
+        max-width: 60px !important;
+    }
+    
+    .expense-amount {
+        font-size: 0.7rem !important;
+    }
+    
+    .expense-description {
+        font-size: 0.65rem !important;
+    }
+    
+    .expense-item .btn-delete {
+        font-size: 0.6rem !important;
+        padding: 3px 6px !important;
+    }
+    
+    /* === 入出金管理（480px以下） === */
+    #currentCapitalDisplay {
+        font-size: 1.4em !important;
+    }
+    
+    .add-capital-record {
+        padding: 12px !important;
+    }
+    
+    .add-capital-record input {
+        padding: 8px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    /* === 入出金履歴テーブル（480px以下） === */
+    #capitalHistoryTable th,
+    #capitalHistoryTable td {
+        padding: 5px 3px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    /* === モーダル: ブローカー追加・通貨ペア追加 === */
+    .broker-add-modal-content,
+    .favorite-pair-modal-content {
+        width: 95% !important;
+        max-height: 90vh;
+    }
+    
+    /* === チャート画像: 横スクロール式 === */
+    .chart-images-container {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        gap: 8px !important;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+    }
+    
+    .chart-images-container::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .chart-images-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+    }
+    
+    .image-upload-area {
+        flex: 0 0 auto !important;
+        width: 180px !important;
+        min-width: 180px !important;
+        height: 120px !important;
+        min-height: 120px !important;
+        scroll-snap-align: start;
+        padding: 0 !important;
+        position: relative !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow: hidden !important;
+    }
+    
+    /* プレビューコンテナを枠いっぱいに */
+    .image-upload-area > div[id*="Preview"],
+    .image-upload-area > div[id*="preview"],
+    #tradeChartImagePreview1,
+    #tradeChartImagePreview2,
+    #tradeChartImagePreview3 {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 1 !important;
+    }
+    
+    /* プレビュー内の画像を枠いっぱいに */
+    .image-upload-area > div[id*="Preview"] img,
+    #tradeChartImagePreview1 img,
+    #tradeChartImagePreview2 img,
+    #tradeChartImagePreview3 img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        border-radius: 6px !important;
+    }
+    
+    /* テキスト（画像1等）を画像上に */
+    .image-upload-area > p {
+        position: relative !important;
+        z-index: 2 !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        font-size: 0.7rem !important;
+        margin: 0 !important;
+        color: #fff !important;
+    }
+    
+    /* 削除ボタン */
+    .image-upload-area > button,
+    .image-upload-area .btn-danger {
+        position: absolute !important;
+        top: 4px !important;
+        right: 4px !important;
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        padding: 0 !important;
+        font-size: 0.8rem !important;
+        line-height: 22px !important;
+        border-radius: 4px !important;
+        z-index: 10 !important;
+    }
+    
+    /* アイコンを非表示 */
+    .image-upload-area .upload-icon,
+    .image-upload-area svg,
+    .image-upload-area i,
+    .image-upload-area [class*="icon"] {
+        display: none !important;
+    }
+    
+    /* === トレードカード内の画像: 横スクロール式 === */
+    .trade-card .trade-images,
+    .trade-card .trade-images-container,
+    .trade-card .images-row,
+    .trade-images-section {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        gap: 8px !important;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+    }
+    
+    .trade-card .trade-images::-webkit-scrollbar,
+    .trade-card .trade-images-container::-webkit-scrollbar,
+    .trade-card .images-row::-webkit-scrollbar,
+    .trade-images-section::-webkit-scrollbar {
+        height: 3px;
+    }
+    
+    .trade-card .trade-images::-webkit-scrollbar-thumb,
+    .trade-card .trade-images-container::-webkit-scrollbar-thumb,
+    .trade-card .images-row::-webkit-scrollbar-thumb,
+    .trade-images-section::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+    }
+    
+    .trade-card .trade-images img,
+    .trade-card .trade-images-container img,
+    .trade-card .images-row img,
+    .trade-images-section img,
+    .trade-card .trade-image {
+        flex: 0 0 auto !important;
+        width: 100px !important;
+        min-width: 100px !important;
+        height: 70px !important;
+        object-fit: cover !important;
+        border-radius: 4px !important;
+        scroll-snap-align: start;
+    }
+    
+    /* === 経費カード === */
+    .expense-card {
+        padding: 10px;
+    }
+    
+    .expense-card-header {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    /* === トレード記録: フィルター 3列×2段 === */
+    .filter-section {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0 !important;
+        margin: 0 0 10px 0 !important;
+    }
+    
+    .filter-row {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        align-items: end;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0 !important;
+        margin: 0 0 8px 0 !important;
+    }
+    
+    .filter-section .input-group,
+    .filter-row .input-group,
+    .filter-section .filter-group,
+    .filter-row .filter-group {
+        margin-bottom: 0 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+    
+    .filter-section label,
+    .filter-row label {
+        font-size: 0.75rem !important;
+        margin-bottom: 4px !important;
+        white-space: nowrap;
+        display: block;
+    }
+    
+    .filter-section select,
+    .filter-row select {
+        font-size: 0.85rem !important;
+        padding: 10px 8px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    
+    .filter-section button,
+    .filter-row button,
+    .filter-section .btn,
+    .filter-row .btn {
+        font-size: 0.85rem !important;
+        padding: 10px 8px !important;
+        height: 40px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        white-space: nowrap;
+        box-sizing: border-box !important;
+        align-self: end !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* フィルターコンテナの余白調整 */
+    .section .filter-section,
+    .section .filter-row,
+    #records .filter-section,
+    #records .filter-row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    
+    /* === トレードカード最適化 === */
+    .trade-card {
+        padding: 12px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .trade-header {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        align-items: center !important;
+        gap: 8px !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .trade-pair {
+        font-size: 1.2rem !important;
+    }
+    
+    .trade-direction,
+    .trade-broker {
+        font-size: 0.7rem !important;
+        padding: 2px 6px !important;
+    }
+    
+    /* トレード結果（Pips）を1行に */
+    .trade-result {
+        font-size: 1.2rem !important;
+        margin-left: auto;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: baseline !important;
+        gap: 4px !important;
+        white-space: nowrap !important;
+    }
+    
+    .trade-result .pips-value,
+    .trade-result .pips-number {
+        display: inline !important;
+    }
+    
+    .trade-result .pips-label,
+    .trade-result .pips-unit {
+        display: inline !important;
+        font-size: 0.8rem !important;
+    }
+    
+    /* トレード詳細: 2列グリッド */
+    .trade-details {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 4px 12px !important;
+        font-size: 0.75rem !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .trade-details .detail-row {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    /* 損益情報: 1行に */
+    .trade-pnl-section {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 8px !important;
+        font-size: 0.8rem !important;
+        padding: 8px !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .trade-pnl-item {
+        flex: 1 1 auto;
+        min-width: 80px;
+        text-align: center;
+    }
+    
+    .trade-pnl-item .label {
+        font-size: 0.65rem !important;
+    }
+    
+    .trade-pnl-item .value {
+        font-size: 0.85rem !important;
+    }
+    
+    /* 振り返りセクション */
+    .trade-reflection-section {
+        padding: 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .trade-reflection-section .reflection-title {
+        font-size: 0.7rem !important;
+        margin-bottom: 4px !important;
+    }
+    
+    /* === トレード詳細モーダル最適化 === */
+    .trade-detail-modal .modal-content,
+    .modal-content.trade-detail {
+        padding: 15px !important;
+    }
+    
+    /* セクションヘッダー - 横並び1行 */
+    .detail-section-header {
+        color: #00ff88 !important;
+        margin-bottom: 10px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 0.9rem !important;
+        gap: 8px !important;
+        white-space: nowrap !important;
+    }
+    
+    /* セクションタイトル部分 */
+    .detail-section-header .section-title,
+    .detail-section-header span:first-child {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        flex-shrink: 1 !important;
+    }
+    
+    /* 編集ボタン: コンパクト化 */
+    .detail-section-header .btn,
+    .detail-section-header button,
+    .detail-edit-btn {
+        padding: 4px 10px !important;
+        font-size: 0.7rem !important;
+        min-width: 40px !important;
+        max-width: 50px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* 既存のインラインスタイル上書き用 */
+    .trade-detail-section h4 {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 0.85rem !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+        white-space: nowrap !important;
+    }
+    
+    .trade-detail-section h4 .btn,
+    .trade-detail-section h4 button {
+        padding: 4px 10px !important;
+        font-size: 0.7rem !important;
+        min-width: 40px !important;
+        max-width: 50px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* チェックリストのラベル・値（モバイル用サイズ調整） */
+    .checklist-label {
+        font-size: 0.8rem !important;
+    }
+    
+    .checklist-value {
+        font-size: 0.85rem !important;
+    }
+    
+    /* 決済情報の行 */
+    .settlement-line {
+        display: block !important;
+        margin-bottom: 4px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* トレード詳細セクション内のテキスト */
+    .trade-detail-section p,
+    .trade-detail-section div:not(.detail-section-header) {
+        font-size: 0.85rem !important;
+        line-height: 1.5 !important;
+    }
+    
+    /* 円建て損益セクション */
+    .yen-profit-loss-section p {
+        margin-bottom: 2px !important;
+    }
+    
+    /* 決済情報: 改行調整 */
+    .settlement-info,
+    .exit-info,
+    .trade-detail-section .settlement-text {
+        word-break: break-word !important;
+        line-height: 1.6 !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .settlement-info .settlement-line,
+    .exit-info .exit-line {
+        display: block !important;
+        margin-bottom: 4px !important;
+    }
+    
+    /* 円建て損益セクション */
+    .yen-pnl-section,
+    .detail-section.yen-pnl {
+        font-size: 0.85rem !important;
+    }
+    
+    .yen-pnl-section .pnl-row,
+    .yen-pnl-row {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 4px 0 !important;
+    }
+    
+    /* 振り返りセクション（モーダル内） */
+    .detail-section.reflection,
+    .reflection-section {
+        font-size: 0.85rem !important;
+        line-height: 1.5 !important;
+    }
+    
+    /* 画像セクション: 横スクロール */
+    .detail-section.images .image-container,
+    .trade-images-grid {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        gap: 10px !important;
+        padding-bottom: 10px !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .detail-section.images .image-item,
+    .trade-image-item {
+        flex: 0 0 auto !important;
+        width: 150px !important;
+    }
+    
+    .detail-section.images .image-item img,
+    .trade-image-item img {
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 6px !important;
+    }
+    
+    /* 変更・削除ボタン */
+    .image-actions {
+        display: flex !important;
+        gap: 5px !important;
+        margin-top: 5px !important;
+    }
+    
+    .image-actions button {
+        flex: 1 !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* =====================================================
+   小型スマートフォン（360px以下）追加対応
+   ===================================================== */
+@media (max-width: 360px) {
+    /* === 分析タブ: 全期間統計 - 3列維持でコンパクト === */
+    .overall-stat-item {
+        min-height: 45px !important;
+        padding: 5px !important;
+    }
+    
+    .overall-stat-item .stat-label {
+        font-size: 0.55rem !important;
+    }
+    
+    .overall-stat-item .stat-value {
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 分析タブ: 期間統計グリッド（360px以下） === */
+    .period-stat-item {
+        min-height: 45px !important;
+        padding: 5px !important;
+    }
+    
+    .period-stat-item .stat-label {
+        font-size: 0.55rem !important;
+    }
+    
+    .period-stat-item .stat-value {
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 期間選択ボタン: 4つ横並び維持 === */
+    .period-type-btn {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        padding: 6px 3px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    /* === 年度・対象期間・期間を変更: 横並び維持（360px以下） === */
+    .period-selector {
+        gap: 4px !important;
+    }
+    
+    .period-selector select {
+        padding: 5px !important;
+        font-size: 0.8rem !important;
+        min-width: 70px !important;
+    }
+    
+    #yearSelectContainer label,
+    .period-selector > label {
+        font-size: 0.7rem !important;
+    }
+    
+    #changePeriodBtn {
+        padding: 5px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 統計タイトル + 切り替えボタン: 横並び維持（360px以下） === */
+    #periodStatsTitle {
+        font-size: 0.8rem !important;
+    }
+    
+    .period-stats-btn {
+        padding: 4px 6px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    /* === 分析タブ: レポートアコーディオン（360px以下） === */
+    .report-accordion {
+        margin-top: 10px !important;
+    }
+    
+    .accordion-header {
+        padding: 5px !important;
+        margin-left: -10px !important;
+        margin-right: -10px !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    
+    .accordion-header h4 {
+        font-size: 0.7rem !important;
+    }
+    
+    /* トグルアイコン */
+    .accordion-header h4 > span[id$="-icon"],
+    .accordion-header > span[id$="-icon-right"] {
+        padding: 2px 5px !important;
+        font-size: 9px !important;
+    }
+    
+    /* トレード履歴内のボタン */
+    .accordion-header h4 button {
+        padding: 2px 5px !important;
+        font-size: 0.6rem !important;
+    }
+    
+    /* === 分析タブ: ページネーション（360px以下） === */
+    .pagination-controls {
+        gap: 6px !important;
+        padding: 5px !important;
+    }
+    
+    .pagination-controls > div:first-child,
+    .pagination-controls > div:nth-child(2) {
+        gap: 4px !important;
+    }
+    
+    .pagination-controls label {
+        font-size: 0.6rem !important;
+    }
+    
+    .pagination-controls select {
+        padding: 2px 3px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    .pagination-controls button {
+        padding: 2px 5px !important;
+        font-size: 0.6rem !important;
+    }
+    
+    .pagination-controls span {
+        font-size: 0.6rem !important;
+    }
+    
+    /* === 分析タブ: 月別推移グラフ（360px以下） === */
+    #monthlyPerformanceChart {
+        padding: 5px !important;
+        margin-left: -10px !important;
+        margin-right: -10px !important;
+    }
+    
+    #monthlyChart {
+        max-height: 450px !important;
+        min-height: 450px !important;
+    }
+    
+    .chart-view-buttons .view-btn {
+        padding: 4px 8px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    /* === 収支管理タブ: 収支サマリー（360px以下） === */
+    .summary-grid {
+        gap: 3px !important;
+    }
+    
+    .summary-item {
+        padding: 8px 3px !important;
+    }
+    
+    .summary-item > div:first-child,
+    .summary-label {
+        font-size: 0.6rem !important;
+    }
+    
+    .summary-item > div:last-child,
+    .summary-value {
+        font-size: clamp(0.85rem, 3.5vw, 1.1rem) !important;
+    }
+    
+    /* === 収支管理タブ: カレンダーコントロール（360px以下） === */
+    .calendar-controls {
+        gap: 4px !important;
+        padding: 6px !important;
+    }
+    
+    .calendar-controls label {
+        font-size: 0.7rem !important;
+    }
+    
+    .calendar-controls select {
+        padding: 4px 6px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .calendar-controls button {
+        padding: 4px 6px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    #currentMonthLabel {
+        font-size: 0.85rem !important;
+        min-width: 35px !important;
+    }
+    
+    /* === 経費入力フォーム（360px以下） === */
+    .expense-form {
+        padding: 8px !important;
+    }
+    
+    .expense-form input,
+    .expense-form select {
+        font-size: 0.75rem !important;
+        padding: 7px !important;
+    }
+    
+    /* === 経費一覧（360px以下） === */
+    .expense-item {
+        gap: 3px 5px !important;
+        padding: 6px !important;
+    }
+    
+    .expense-date {
+        font-size: 0.6rem !important;
+    }
+    
+    .expense-category {
+        font-size: 0.55rem !important;
+        max-width: 50px !important;
+    }
+    
+    .expense-amount {
+        font-size: 0.65rem !important;
+    }
+    
+    .expense-description {
+        font-size: 0.6rem !important;
+    }
+    
+    .expense-item .btn-delete {
+        font-size: 0.55rem !important;
+        padding: 2px 5px !important;
+    }
+    
+    /* === 入出金管理（360px以下） === */
+    #currentCapitalDisplay {
+        font-size: 1.2em !important;
+    }
+    
+    .add-capital-record {
+        padding: 10px !important;
+    }
+    
+    .add-capital-record input {
+        padding: 6px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 入出金履歴テーブル（360px以下） === */
+    #capitalHistoryTable th,
+    #capitalHistoryTable td {
+        padding: 4px 2px !important;
+        font-size: 0.6rem !important;
+    }
+    
+    /* === 設定タブ（360px以下） === */
+    .settings-subtab-btn {
+        padding: 6px 4px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .settings-subtab-content .input-group label {
+        font-size: 0.75rem !important;
+    }
+    
+    .settings-subtab-content .input-group input[type="text"] {
+        padding: 7px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .theme-btn {
+        padding: 6px 4px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .goal-settings {
+        padding: 10px !important;
+    }
+    
+    .goal-settings h3 {
+        font-size: 0.9rem !important;
+    }
+    
+    .goal-input-item label {
+        font-size: 0.65rem !important;
+    }
+    
+    .goal-input-item input[type="text"] {
+        padding: 7px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .goal-input-item input[type="date"] {
+        width: 85px !important;
+        padding: 5px 2px !important;
+        font-size: 0.6rem !important;
+    }
+    
+    .goal-settings .btn-primary {
+        padding: 8px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    /* === 設定タブ: データセクション（360px以下） === */
+    #settings-data .tool-btn {
+        padding: 8px 6px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    /* === 目標表示 === */
+    .goals-display {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .goal-item {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* =====================================================
+   横向きスマホ追加対応
+   ===================================================== */
+@media (max-width: 768px) and (orientation: landscape) {
+    /* 分析タブ: 横向きでは3列維持 */
+    .overall-stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    
+    /* 分析タブ: 期間統計も3列維持 */
+    .period-stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    
+    /* 期間選択ボタン: 4つ横並び */
+    .period-type-btn {
+        flex: 1 1 calc(25% - 8px) !important;
+    }
+}
+
+/* ========== 6_responsive.css 終了 ========== */

@@ -1,0 +1,275 @@
+// ===========================================
+// 完全クリア＋50件データ作成（確実版）
+// ===========================================
+
+console.log('=== データ完全削除＋新規作成 ===\n');
+
+// ステップ1: 既存データを完全削除
+console.log('【ステップ1: 既存データ削除】');
+localStorage.removeItem('trades');
+localStorage.removeItem('yenProfitLoss');
+console.log('✅ 既存データを削除しました\n');
+
+// 確認
+const checkEmpty = localStorage.getItem('trades');
+console.log('削除確認:', checkEmpty === null ? '✅ 完全に削除されました' : '⚠️ まだデータが残っています');
+console.log('');
+
+// ステップ2: 新しい50件データ作成
+console.log('【ステップ2: 新データ作成開始】\n');
+
+// ヘルパー関数
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomFloat(min, max, decimals = 2) {
+    return parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
+}
+
+function randomChoice(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+function generateId(date, index) {
+    const timestamp = new Date(date).getTime();
+    return `trade_${timestamp}_${index}_${randomInt(100000, 999999)}`;
+}
+
+// マスターデータ
+const pairs = [
+    { pair: 'USD/JPY', pipValue: 1000, priceDecimals: 3 },
+    { pair: 'EUR/USD', pipValue: 1000, priceDecimals: 5 },
+    { pair: 'GBP/JPY', pipValue: 1000, priceDecimals: 3 },
+    { pair: 'EUR/JPY', pipValue: 1000, priceDecimals: 3 },
+    { pair: 'AUD/USD', pipValue: 1000, priceDecimals: 5 }
+];
+
+const directions = ['long', 'short'];
+
+const reasons = [
+    ['テクニカル分析', 'サポートライン反発', ''],
+    ['トレンドフォロー', '移動平均線クロス', ''],
+    ['ファンダメンタルズ', '経済指標発表', ''],
+    ['チャートパターン', 'ダブルボトム確認', ''],
+    ['テクニカル分析', 'RSI過熱感', '']
+];
+
+const reflections = [
+    '想定通りの展開。エントリータイミングも良好。',
+    '損切り判断が早すぎた。もう少し待つべきだった。',
+    '利確位置が近すぎた。大きなトレンドを逃した。',
+    'エントリー根拠は正しかったが、ポジションサイズが大きすぎた。',
+    '予想外の経済指標で急変動。ストップに引っかかった。',
+    '完璧なトレード。計画通りに実行できた。',
+    'エントリーポイントが悪かった。もう少し引きつけるべき。',
+    '含み益を抱えすぎて欲が出た。早めに利確すべきだった。',
+    'トレンド転換のサインを見逃した。損失を抑えられた。',
+    '週末持ち越しのリスクを考慮せず失敗。',
+    'サポートライン反発を正確に捉えられた。',
+    '相場の勢いに乗れた。R:R比も良好。',
+    '逆指値の位置が近すぎた。もう少し余裕を持つべき。',
+    'ファンダメンタルズを軽視した結果の損失。',
+    '利益確定ルールを守れて満足。',
+    'レンジ相場でのトレードは避けるべきだった。',
+    'ブレイクアウト後の押し目で上手く入れた。',
+    '感情的になって追加エントリー。失敗。',
+    'ボラティリティが高すぎた。スプレッドも広がった。',
+    '我慢強く待ったおかげで良いポイントで入れた。'
+];
+
+// 月別データ配分
+const monthlyDistribution = [
+    { month: '2025-01', count: 3 },
+    { month: '2025-02', count: 4 },
+    { month: '2025-03', count: 5 },
+    { month: '2025-04', count: 6 },
+    { month: '2025-05', count: 5 },
+    { month: '2025-06', count: 6 },
+    { month: '2025-07', count: 5 },
+    { month: '2025-08', count: 5 },
+    { month: '2025-09', count: 5 },
+    { month: '2025-10', count: 6 }
+];
+
+// 勝敗パターン（58%勝率）
+const winPattern = [
+    1, 1, 0, 1, 1,  // 1-5
+    1, 0, 1, 1, 0,  // 6-10
+    1, 1, 1, 0, 0,  // 11-15
+    1, 0, 1, 1, 1,  // 16-20
+    0, 1, 1, 0, 1,  // 21-25
+    1, 1, 0, 1, 0,  // 26-30
+    1, 1, 1, 0, 1,  // 31-35
+    0, 1, 1, 1, 0,  // 36-40
+    1, 0, 1, 1, 1,  // 41-45
+    0, 1, 1, 0, 1   // 46-50
+]; // 29勝21敗 = 58%
+
+// トレードデータ生成
+const freshTrades = [];
+let tradeIndex = 0;
+
+monthlyDistribution.forEach(({ month, count }) => {
+    for (let i = 0; i < count; i++) {
+        const day = randomInt(1, 28);
+        const entryHour = randomInt(0, 23);
+        const entryMinute = randomInt(0, 59);
+        
+        const entryDate = `${month}-${String(day).padStart(2, '0')}`;
+        const entryTime = `${entryDate}T${String(entryHour).padStart(2, '0')}:${String(entryMinute).padStart(2, '0')}`;
+        
+        // 決済は1-5日後
+        const exitDay = Math.min(day + randomInt(1, 5), 28);
+        const exitHour = randomInt(0, 23);
+        const exitMinute = randomInt(0, 59);
+        const exitDate = `${month}-${String(exitDay).padStart(2, '0')}T${String(exitHour).padStart(2, '0')}:${String(exitMinute).padStart(2, '0')}`;
+        
+        // 通貨ペア選択
+        const pairData = randomChoice(pairs);
+        const direction = randomChoice(directions);
+        const lot = randomChoice([0.1, 0.2, 0.5, 1.0, 1.5, 2.0]);
+        
+        // 価格生成
+        let basePrice;
+        if (pairData.pair.includes('JPY')) {
+            basePrice = randomFloat(130, 160, pairData.priceDecimals);
+        } else {
+            basePrice = randomFloat(1.0, 1.3, pairData.priceDecimals);
+        }
+        
+        const entryPrice = basePrice;
+        
+        // 勝敗判定
+        const isWin = winPattern[tradeIndex] === 1;
+        
+        let pips, exitPrice, stopLoss, takeProfit;
+        
+        if (isWin) {
+            // 勝ちトレード: 10-50 pips
+            pips = randomInt(10, 50);
+            if (direction === 'long') {
+                exitPrice = parseFloat((entryPrice + (pips * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+                stopLoss = parseFloat((entryPrice - (pips * 0.6 * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+                takeProfit = exitPrice;
+            } else {
+                exitPrice = parseFloat((entryPrice - (pips * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+                stopLoss = parseFloat((entryPrice + (pips * 0.6 * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+                takeProfit = exitPrice;
+            }
+        } else {
+            // 負けトレード: -10 to -35 pips
+            pips = -randomInt(10, 35);
+            if (direction === 'long') {
+                exitPrice = parseFloat((entryPrice + (pips * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+                stopLoss = exitPrice;
+                takeProfit = parseFloat((entryPrice + (Math.abs(pips) * 1.5 * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+            } else {
+                exitPrice = parseFloat((entryPrice - (pips * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+                stopLoss = exitPrice;
+                takeProfit = parseFloat((entryPrice - (Math.abs(pips) * 1.5 * (pairData.priceDecimals === 5 ? 0.00001 : 0.001))).toFixed(pairData.priceDecimals));
+            }
+        }
+        
+        // 円建て損益計算
+        const profitLoss = pips * lot * pairData.pipValue;
+        const swap = randomInt(-300, 100);
+        const commission = -Math.floor(lot * 50);
+        const netProfit = profitLoss + swap + commission;
+        
+        // トレードオブジェクト作成
+        const trade = {
+            id: generateId(entryDate, tradeIndex),
+            date: entryDate,
+            pair: pairData.pair,
+            symbol: pairData.pair,
+            direction: direction,
+            entryPrice: entryPrice,
+            exitPrice: exitPrice,
+            stopLoss: stopLoss,
+            takeProfit: takeProfit,
+            lotSize: lot,
+            lot: lot,
+            yenProfitLoss: {
+                profitLoss: profitLoss,
+                swap: swap,
+                commission: commission,
+                netProfit: netProfit
+            },
+            profitLoss: profitLoss,
+            swap: swap,
+            commission: commission,
+            netProfitLoss: netProfit,
+            exits: [
+                {
+                    time: exitDate,
+                    price: exitPrice,
+                    lot: lot,
+                    pips: pips
+                }
+            ],
+            chartImages: [],
+            reasons: randomChoice(reasons),
+            scenario: `${pairData.pair}の${direction === 'long' ? '上昇' : '下降'}トレンドを狙う`,
+            entryEmotion: '',
+            reflection: randomChoice(reflections),
+            entryMethod: 'manual',
+            isBulkEntry: false,
+            status: 'closed',
+            createdAt: `${entryTime}:00.000Z`,
+            updatedAt: `${exitDate}:00.000Z`,
+            entryTime: entryTime,
+            entryDatetime: entryTime,
+            lots: lot,
+            pips: pips,
+            exitDate: exitDate,
+            tradePL: null,
+            swapPoints: null,
+            timestamp: entryTime
+        };
+        
+        freshTrades.push(trade);
+        tradeIndex++;
+    }
+});
+
+console.log(`✅ ${freshTrades.length}件のトレードデータを生成しました\n`);
+
+// 統計情報表示
+const wins = freshTrades.filter(t => t.pips > 0).length;
+const losses = freshTrades.length - wins;
+const totalPips = freshTrades.reduce((sum, t) => sum + t.pips, 0);
+const totalProfit = freshTrades.reduce((sum, t) => sum + t.netProfitLoss, 0);
+
+console.log('【統計情報】');
+console.log(`総トレード数: ${freshTrades.length}件`);
+console.log(`勝ちトレード: ${wins}件`);
+console.log(`負けトレード: ${losses}件`);
+console.log(`勝率: ${(wins / freshTrades.length * 100).toFixed(1)}%`);
+console.log(`総獲得Pips: ${totalPips.toFixed(1)} pips`);
+console.log(`総損益: ¥${totalProfit.toLocaleString()}`);
+
+// 月別分布確認
+console.log('\n【月別分布】');
+const monthCount = {};
+freshTrades.forEach(trade => {
+    const month = trade.date.substring(0, 7);
+    monthCount[month] = (monthCount[month] || 0) + 1;
+});
+Object.keys(monthCount).sort().forEach(month => {
+    console.log(`${month}: ${monthCount[month]}件`);
+});
+
+// ステップ3: localStorageに保存
+console.log('\n【ステップ3: 新データ保存】');
+localStorage.setItem('trades', JSON.stringify(freshTrades));
+console.log('✅ 新データ（50件）を保存しました');
+
+// 最終確認
+const finalCheck = JSON.parse(localStorage.getItem('trades') || '[]');
+console.log(`\n【最終確認】`);
+console.log(`保存されたトレード数: ${finalCheck.length}件`);
+console.log(finalCheck.length === 50 ? '✅ 完璧！50件です' : `⚠️ ${finalCheck.length}件になっています`);
+
+console.log('\n=== データ作成完了 ===');
+console.log('🔄 必ずページをリロード（F5）してください！');

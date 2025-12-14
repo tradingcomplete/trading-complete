@@ -1,0 +1,1675 @@
+/* ========== styles/4_features.css ========== */
+/* SNS投稿・設定・その他機能 */
+
+/* å…¨ãƒ‡ãƒ¼ã‚¿å‰Šé™¤ãƒœã‚¿ãƒ³ï¼ˆå±é™ºåº¦ã‚'è¦–è¦šçš„ã«è¡¨ç¾ï¼‰ */
+.danger-zone {
+    margin-top: 50px;
+    padding: 30px;
+    background: rgba(255, 68, 68, 0.1);
+    border: 2px solid #ff4444;
+    border-radius: 15px;
+}
+
+.danger-zone h3 {
+    color: #ff4444;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.danger-zone p {
+    color: #ffaaaa;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.btn-delete-all {
+    background: #ff4444;
+    color: #fff;
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    border: 2px solid #ff2222;
+}
+
+.btn-delete-all:hover {
+    background: #ff2222;
+    transform: scale(1.02);
+    box-shadow: 0 5px 20px rgba(255, 68, 68, 0.4);
+}
+
+/* ç›®æ¨™è¨­å®š */
+.goal-settings {
+    margin-top: 40px;
+    padding: 25px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.goal-settings h3 {
+    color: #00ff88;
+    margin-bottom: 20px;
+}
+
+.goal-input-area {
+    display: grid;
+    gap: 15px;
+}
+
+.goal-input-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.goal-input-item label {
+    min-width: 60px;
+    color: #888;
+}
+
+.goal-input-item input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-radius: 8px;
+}
+
+.goal-achieved-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #888;
+    cursor: pointer;
+}
+
+.goal-achieved-label:hover {
+    color: #00ff88;
+}
+
+/* ç"»åƒè¿½åŠ ãƒ¢ãƒ¼ãƒ€ãƒ« */
+.image-add-options {
+    padding: 20px;
+}
+
+.image-add-options h3 {
+    color: #00ff88;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.storage-option {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.storage-option:hover {
+    background: rgba(0, 255, 136, 0.1);
+    border-color: #00ff88;
+    transform: translateY(-2px);
+}
+
+.option-icon {
+    font-size: 2.5rem;
+}
+
+.option-info h4 {
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.option-info p {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+.storage-warning {
+    display: block;
+    color: #ffd700;
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+/* ã‚¨ãƒ©ãƒ¼ç"»åƒã®ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ›ãƒ«ãƒ€ãƒ¼ */
+.trade-image.default-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    background: rgba(255, 68, 68, 0.1);
+    border: 2px solid rgba(255, 68, 68, 0.3);
+}
+
+/* ã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ãƒãƒ¼ */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 136, 0.3);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 136, 0.5);
+}
+
+/* ãƒ­ãƒ¼ãƒ‡ã‚£ãƒ³ã‚° */
+.loading {
+    display: inline-block; 
+    width: 20px; 
+    height: 20px;
+    border: 2px solid #00ff88; 
+    border-radius: 50%;
+    border-top-color: transparent; 
+    animation: spin 1s linear infinite;
+}
+
+/* =====================================================
+   ãƒ†ãƒ¼ãƒžåˆ‡ã‚Šæ›¿ãˆ
+   ===================================================== */
+
+/* ãƒ†ãƒ¼ãƒžåˆ‡ã‚Šæ›¿ãˆãƒœã‚¿ãƒ³ */
+.theme-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.theme-btn {
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+body.light-mode .theme-btn {
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    color: #333;
+}
+
+.theme-btn.active {
+    background: #00ff88;
+    color: #000;
+    border-color: #00ff88;
+}
+
+.theme-btn:hover:not(.active) {
+    background: rgba(0, 255, 136, 0.2);
+    border-color: #00ff88;
+}
+
+/* ツールバー */
+.toolbar {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: end;
+}
+
+.tool-btn {
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.tool-btn:hover {
+    background: rgba(0, 255, 136, 0.2);
+    border-color: #00ff88;
+}
+
+.toolbar .filter-group {
+    margin-bottom: 0;
+}
+
+.toolbar select option {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+/* =====================================================
+   実装予定メッセージ・セレクトボックス拡張
+   ===================================================== */
+
+/* 実装予定メッセージのスタイル */
+.not-implemented-message {
+    background: rgba(255, 193, 7, 0.1);
+    border: 2px solid #ffc107;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.not-implemented-message h4 {
+    color: #ffd700;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.not-implemented-message pre {
+    color: #ffd700;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+/* セレクトボックスのグループ化スタイル */
+optgroup {
+    font-weight: bold;
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+}
+
+optgroup option {
+    font-weight: normal;
+    padding-left: 20px;
+    color: #fff;
+    background: #1a1a1a;
+}
+
+/* ダークモードでの視認性向上 */
+select optgroup {
+    background: #0a0a0a;
+    color: #00ff88;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+select optgroup option {
+    background: #1a1a1a;
+    color: #fff;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* ==========================================
+   円建て統計機能 - CSSスタイル（Week 3追加）
+   ========================================== */
+
+/* 統計表示切り替えボタン */
+.stats-view-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.view-toggle-btn {
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #888;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: bold;
+    min-width: 140px;
+}
+
+.view-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.view-toggle-btn.active {
+    background: #00ff88;
+    color: #000;
+    border-color: #00ff88;
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+}
+
+/* 統計サマリーの共通スタイル（既存を維持） */
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+/* 統計項目の色分け */
+.stat-value.positive {
+    color: #4ade80;
+}
+
+.stat-value.negative {
+    color: #f87171;
+}
+
+/* ========================================
+   設定タブ - サブタブ機能
+   ======================================== */
+
+/* サブタブボタンコンテナ */
+.settings-subtabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0;
+}
+
+/* サブタブボタン */
+.settings-subtab-btn {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #aaa;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.settings-subtab-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* アクティブなサブタブボタン */
+.settings-subtab-btn.active {
+    color: #00ff88;
+    border-bottom-color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+}
+
+/* サブタブコンテンツ */
+.settings-subtab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+/* アクティブなサブタブコンテンツ */
+.settings-subtab-content.active {
+    display: block;
+}
+
+/* フェードインアニメーション */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   レスポンシブ対応（モバイル）
+   ======================================== */
+
+@media (max-width: 768px) {
+    .settings-subtabs {
+        gap: 5px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+    
+    .settings-subtabs::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+    }
+    
+    .settings-subtab-btn {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-subtab-btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+}
+
+/* ========================================
+   ヘッダー - 目標日付表示
+   ======================================== */
+
+/* 目標アイテムのレイアウト調整 */
+.goal-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 目標コンテンツ（テキスト + 日付）のレイアウト */
+.goal-item .goal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+}
+
+/* 目標テキストのスタイル */
+.goal-item .goal-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+/* 目標日付のスタイル */
+.goal-item .goal-deadline {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: normal;
+}
+
+/* 達成済みの目標 */
+.goal-item.achieved .goal-text {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.goal-item.achieved .goal-deadline {
+    opacity: 0.4;
+}
+
+/* ホバー効果 */
+.goal-item:hover .goal-text {
+    color: #00ff88;
+}
+
+.goal-item:hover .goal-deadline {
+    color: #00ff88;
+    opacity: 0.8;
+}
+
+/* ========================================
+   ライトモード対応
+   ======================================== */
+
+[data-theme="light"] .goal-item .goal-text {
+    color: #333;
+}
+
+[data-theme="light"] .goal-item .goal-deadline {
+    color: #666;
+}
+
+[data-theme="light"] .goal-item:hover .goal-text {
+    color: #00aa66;
+}
+
+[data-theme="light"] .goal-item:hover .goal-deadline {
+    color: #00aa66;
+}
+
+[data-theme="light"] .goal-item.achieved .goal-text {
+    opacity: 0.5;
+}
+
+/* ========================================
+   レスポンシブ対応
+   ======================================== */
+
+@media (max-width: 768px) {
+    .goal-item .goal-text {
+        font-size: 0.85rem;
+    }
+    
+    .goal-item .goal-deadline {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .goal-item {
+        gap: 6px;
+    }
+    
+    .goal-item .goal-content {
+        gap: 2px;
+    }
+    
+    .goal-item .goal-text {
+        font-size: 0.8rem;
+    }
+    
+    .goal-item .goal-deadline {
+        font-size: 0.7rem;
+    }
+}
+
+/* ============================================
+   ブローカー管理 CSS
+   4_features.css に追加
+   ============================================ */
+
+/* ================
+   ブローカーカード
+   ================ */
+
+.broker-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.broker-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(74, 158, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.broker-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.broker-shortname {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.broker-name {
+    margin: 5px 0 0 0;
+    color: #fff;
+    font-size: 1.1em;
+}
+
+.broker-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.broker-badge-preset {
+    background: rgba(74, 158, 255, 0.2);
+    color: #4a9eff;
+    border: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+.broker-badge-custom {
+    background: rgba(155, 89, 182, 0.2);
+    color: #9b59b6;
+    border: 1px solid rgba(155, 89, 182, 0.3);
+}
+
+.broker-card-body {
+    margin: 12px 0;
+}
+
+.broker-info {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 0.9em;
+}
+
+.broker-info-label {
+    color: #aaa;
+}
+
+.broker-info-value {
+    color: #fff;
+    font-weight: 500;
+}
+
+.broker-card-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.05);
+}
+
+/* ================
+   モーダル
+   ================ */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.3em;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+/* ================
+   モーダルタブ
+   ================ */
+
+.modal-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 25px;
+}
+
+.modal-tab-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 0.95em;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.modal-tab-btn:hover {
+    color: #fff;
+}
+
+.modal-tab-btn.active {
+    color: #4a9eff;
+    border-bottom-color: #4a9eff;
+}
+
+/* ================
+   プリセットブローカーボタン
+   ================ */
+
+.preset-broker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.preset-broker-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 12px 15px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.preset-broker-btn:hover {
+    background: rgba(74, 158, 255, 0.1);
+    border-color: rgba(74, 158, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.preset-broker-name {
+    color: #fff;
+    font-weight: 500;
+    margin-bottom: 5px;
+    font-size: 0.95em;
+}
+
+.preset-broker-info {
+    color: #888;
+    font-size: 0.8em;
+}
+
+/* ================
+   レスポンシブ対応
+   ================ */
+
+@media (max-width: 768px) {
+    .modal-content {
+        max-width: 95%;
+        max-height: 90vh;
+    }
+    
+    .preset-broker-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .broker-card {
+        min-width: 100%;
+    }
+}
+
+/* ============================================
+   お気に入り通貨ペア
+   ============================================ */
+
+/* お気に入り通貨ペアタグ */
+.favorite-pair-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(74, 158, 255, 0.15);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    border-radius: 20px;
+    transition: all 0.2s ease;
+}
+
+.favorite-pair-tag:hover {
+    background: rgba(74, 158, 255, 0.25);
+    border-color: rgba(74, 158, 255, 0.5);
+}
+
+.favorite-pair-name {
+    color: #4a9eff;
+    font-weight: 500;
+    font-size: 0.95em;
+}
+
+.favorite-pair-delete {
+    background: none;
+    border: none;
+    color: #f44;
+    font-size: 1.1em;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.favorite-pair-delete:hover {
+    background: rgba(255, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+
+.favorite-pair-delete:active {
+    transform: scale(0.95);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .favorite-pair-tag {
+        padding: 6px 10px;
+        font-size: 0.9em;
+    }
+    
+    .favorite-pair-name {
+        font-size: 0.9em;
+    }
+}
+
+/* ============================================
+   プリセット通貨ペア選択
+   ============================================ */
+
+.preset-pair-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.preset-pair-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.preset-pair-btn:hover {
+    background: rgba(74, 158, 255, 0.1);
+    border-color: rgba(74, 158, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.preset-pair-name {
+    color: #4a9eff;
+    font-weight: 600;
+    font-size: 1.05em;
+    margin-bottom: 5px;
+}
+
+.preset-pair-info {
+    color: #aaa;
+    font-size: 0.85em;
+    margin-bottom: 5px;
+}
+
+.preset-pair-pip {
+    color: #888;
+    font-size: 0.8em;
+    font-family: 'Courier New', monospace;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .preset-pair-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .preset-pair-btn {
+        padding: 10px;
+    }
+    
+    .preset-pair-name {
+        font-size: 1em;
+    }
+}
+
+/* ============================================
+   Phase 3.5: お気に入り通貨ペア検索UI
+   ============================================ */
+
+/* 検索バー */
+.preset-pair-search {
+    margin-bottom: 15px;
+}
+
+.preset-pair-search .search-input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 0.95em;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    transition: all 0.2s ease;
+}
+
+.preset-pair-search .search-input:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+.preset-pair-search .search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* カテゴリタブ */
+.category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.category-tab {
+    padding: 8px 16px;
+    font-size: 0.9em;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.category-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.category-tab.active {
+    background: #4a9eff;
+    color: #fff;
+    border-color: #4a9eff;
+    font-weight: 500;
+}
+
+/* 検索結果一覧 */
+.preset-pair-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px 0;
+}
+
+/* カスタムスクロールバー */
+.preset-pair-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.preset-pair-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.preset-pair-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.preset-pair-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* 検索結果アイテム */
+.preset-pair-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.preset-pair-item:hover {
+    background: rgba(74, 158, 255, 0.15);
+    border-color: rgba(74, 158, 255, 0.3);
+    transform: translateX(5px);
+}
+
+.preset-pair-item:active {
+    transform: translateX(5px) scale(0.98);
+}
+
+/* 通貨ペア名（左側） */
+.pair-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.pair-name {
+    font-size: 1em;
+    font-weight: 600;
+    color: #fff;
+}
+
+.pair-display {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* pips値（右側） */
+.pair-pip {
+    font-size: 0.85em;
+    color: rgba(74, 158, 255, 0.8);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* 検索結果0件メッセージ */
+.no-results {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.no-results-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.no-results-text {
+    font-size: 1em;
+    margin-bottom: 5px;
+}
+
+.no-results-hint {
+    font-size: 0.9em;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .category-tabs {
+        gap: 6px;
+    }
+    
+    .category-tab {
+        padding: 6px 12px;
+        font-size: 0.85em;
+    }
+    
+    .preset-pair-item {
+        padding: 10px 12px;
+    }
+    
+    .pair-name {
+        font-size: 0.95em;
+    }
+    
+    .pair-display,
+    .pair-pip {
+        font-size: 0.8em;
+    }
+}
+
+/* ダークモード強調 */
+@media (prefers-color-scheme: dark) {
+    .preset-pair-search .search-input {
+        background: rgba(255, 255, 255, 0.08);
+    }
+    
+    .category-tab.active {
+        box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+    }
+    
+    .preset-pair-item:hover {
+        box-shadow: 0 2px 12px rgba(74, 158, 255, 0.2);
+    }
+}
+
+/* ======================================
+   Phase 4: 新規エントリーフォーム改修
+   作成日: 2025-11-26
+   ====================================== */
+
+/* --- 通貨ペア入力コンテナ --- */
+.pair-input-container {
+    position: relative;
+}
+
+.pair-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pair-input-wrapper input {
+    flex: 1;
+    padding-right: 40px;
+}
+
+/* --- お気に入りボタン --- */
+.favorite-select-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s, transform 0.2s;
+    z-index: 5;
+}
+
+.favorite-select-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* --- お気に入りドロップダウン --- */
+.favorite-pair-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 280px;
+    max-height: 300px;
+    background: var(--bg-secondary, #2d2d2d);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.favorite-dropdown-header {
+    padding: 12px 16px;
+    background: var(--bg-tertiary, #333);
+    border-bottom: 1px solid var(--border-color, #444);
+    font-weight: bold;
+    color: var(--text-primary, #fff);
+}
+
+.favorite-dropdown-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.favorite-dropdown-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+    border-bottom: 1px solid var(--border-color, #333);
+}
+
+.favorite-dropdown-item:hover {
+    background: var(--hover-color, #3a3a3a);
+}
+
+.favorite-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.favorite-dropdown-item .pair-name {
+    font-weight: bold;
+    color: var(--text-primary, #fff);
+}
+
+.favorite-dropdown-item .pair-display-name {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #aaa);
+}
+
+.favorite-dropdown-empty {
+    padding: 20px 16px;
+    text-align: center;
+    color: var(--text-secondary, #888);
+}
+
+/* --- オートコンプリートドロップダウン --- */
+.pair-autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    background: var(--bg-secondary, #2d2d2d);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+.autocomplete-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+    border-bottom: 1px solid var(--border-color, #333);
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+    background: var(--hover-color, #3a3a3a);
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item .pair-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.autocomplete-item .pair-name {
+    font-weight: bold;
+    color: var(--text-primary, #fff);
+}
+
+.autocomplete-item .pair-display-name {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #aaa);
+}
+
+.autocomplete-item .pair-pips {
+    font-size: 0.8rem;
+    color: var(--accent-color, #00ff88);
+    background: rgba(0, 255, 136, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.autocomplete-no-results {
+    padding: 20px 16px;
+    text-align: center;
+    color: var(--text-secondary, #888);
+}
+
+/* --- ブローカー入力コンテナ --- */
+.broker-input-container {
+    position: relative;
+}
+
+.broker-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.broker-select {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-secondary, #2d2d2d);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 8px;
+    color: var(--text-primary, #fff);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.broker-select:hover {
+    border-color: var(--accent-color, #00ff88);
+}
+
+.broker-select:focus {
+    outline: none;
+    border-color: var(--accent-color, #00ff88);
+    box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+}
+
+/* --- ロット単位表示 --- */
+.lot-unit-display {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: rgba(0, 255, 136, 0.1);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.lot-unit-label {
+    color: var(--text-secondary, #aaa);
+}
+
+.lot-unit-value {
+    font-weight: bold;
+    color: var(--accent-color, #00ff88);
+}
+
+.lot-unit-suffix {
+    color: var(--text-secondary, #aaa);
+}
+
+/* --- ロットサイズ入力欄 --- */
+.lot-input-container {
+    position: relative;
+}
+
+.default-lot-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #888);
+    font-weight: normal;
+}
+
+/* --- ライトモード対応 --- */
+body.light-mode .favorite-pair-dropdown,
+body.light-mode .pair-autocomplete-dropdown {
+    background: #fff;
+    border-color: #ddd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .favorite-dropdown-header {
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #333;
+}
+
+body.light-mode .favorite-dropdown-item,
+body.light-mode .autocomplete-item {
+    border-color: #eee;
+}
+
+body.light-mode .favorite-dropdown-item:hover,
+body.light-mode .autocomplete-item:hover {
+    background: #f0f0f0;
+}
+
+body.light-mode .pair-name {
+    color: #333;
+}
+
+body.light-mode .broker-select {
+    background: #fff;
+    border-color: #ddd;
+    color: #333;
+}
+
+body.light-mode .lot-unit-display {
+    background: rgba(0, 128, 0, 0.1);
+}
+
+/* ======================================
+   画像追加モーダル - リニューアルスタイル
+   2025-12-11追加
+   ====================================== */
+
+/* モーダルコンテンツ */
+.image-add-modal-content {
+    max-width: 480px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* モーダルボディ */
+.image-add-body {
+    padding: 24px;
+}
+
+/* ドラッグ＆ドロップゾーン */
+.drop-zone {
+    position: relative;
+    border: 2px dashed #4a4a4a;
+    border-radius: 12px;
+    padding: 40px 24px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #2a2a2a;
+    cursor: pointer;
+}
+
+.drop-zone:hover {
+    border-color: #4ade80;
+    background: #2f3a2f;
+}
+
+.drop-zone.drag-over {
+    border-color: #4ade80;
+    background: #2f3a2f;
+    transform: scale(1.02);
+}
+
+.drop-zone-content {
+    transition: opacity 0.2s ease;
+}
+
+.drop-zone.drag-over .drop-zone-content {
+    opacity: 0;
+}
+
+.drop-zone-hover {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.drop-zone.drag-over .drop-zone-hover {
+    opacity: 1;
+}
+
+.drop-zone-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.drop-zone-text {
+    font-size: 16px;
+    color: #ccc;
+    margin-bottom: 8px;
+}
+
+.drop-zone-or {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 16px;
+}
+
+.drop-zone-hint {
+    font-size: 12px;
+    color: #666;
+    margin-top: 16px;
+}
+
+/* 区切り線 */
+.divider-with-text {
+    display: flex;
+    align-items: center;
+    margin: 24px 0;
+    color: #666;
+}
+
+.divider-with-text::before,
+.divider-with-text::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #444;
+}
+
+.divider-with-text span {
+    padding: 0 16px;
+    font-size: 14px;
+}
+
+/* URL入力セクション */
+.url-input-section {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.url-input-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #ccc;
+    margin-bottom: 12px;
+}
+
+.url-icon {
+    font-size: 16px;
+}
+
+.url-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.url-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 14px;
+}
+
+.url-input:focus {
+    outline: none;
+    border-color: #4ade80;
+}
+
+.url-input::placeholder {
+    color: #666;
+}
+
+.url-hint {
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+}
+
+/* ボタンスタイル（画像追加モーダル専用） */
+.image-add-modal-content .btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.image-add-modal-content .btn-primary {
+    background: #4ade80;
+    color: #000;
+    border: none;
+}
+
+.image-add-modal-content .btn-primary:hover {
+    background: #22c55e;
+    transform: translateY(-1px);
+}
+
+.image-add-modal-content .btn-secondary {
+    background: transparent;
+    color: #4ade80;
+    border: 1px solid #4ade80;
+}
+
+.image-add-modal-content .btn-secondary:hover {
+    background: rgba(74, 222, 128, 0.1);
+}
+
+/* モーダルヘッダー調整 */
+.image-add-modal-content .modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #333;
+}
+
+.image-add-modal-content .modal-header h2 {
+    font-size: 18px;
+    margin: 0;
+}
+
+/* アニメーション */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.image-add-modal-content {
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+/* ======================================
+   画像追加モーダル - スタイル終了
+   ====================================== */
+
+/* ========== 4_features.css 終了 ========== */
