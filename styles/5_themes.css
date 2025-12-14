@@ -84,7 +84,7 @@ body.light-mode {
 
 body.light-mode .section {
     background: #fafafa;
-    border: 1px solid #999999;
+    border: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -1098,6 +1098,20 @@ body.light-mode .calendar-day-cell.today {
     border: 2px solid #0066cc !important;
 }
 
+/* 月次カレンダー - コントロール（レスポンシブ対応） */
+body.light-mode .calendar-controls {
+    padding: 5px !important;
+    gap: 5px !important;
+}
+
+body.light-mode .calendar-controls button {
+    padding: 4px 6px !important;
+}
+
+body.light-mode .calendar-controls select {
+    padding: 4px 6px !important;
+}
+
 /* 分析タブ - 統計セル */
 body.light-mode .overall-stat-item,
 body.light-mode .period-stat-item {
@@ -1641,9 +1655,9 @@ body.light-mode .closing-section h4 {
 /* 収支管理サブタブ共通セクション */
 body.light-mode .expense-section {
     background: #fafafa !important;
-    border: 1px solid #888888 !important;
+    border: none !important;
     border-radius: 8px;
-    padding: 5px !important;
+    padding: 0 !important;
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
 }
