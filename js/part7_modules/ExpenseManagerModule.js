@@ -462,6 +462,9 @@ class ExpenseManagerModule {
             const container = document.getElementById('recentExpenses');
             if (!container) return;
             
+            // CSSスタイルを<head>に挿入（初回のみ）
+            this.#insertExpenseListStyles();
+            
             // 最新5件を取得（降順）
             const recent = [...this.#expenses]
                 .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
@@ -496,6 +499,112 @@ class ExpenseManagerModule {
     // ================
     // カテゴリアコーディオン機能（Private Methods）
     // ================
+    
+    /**
+     * 経費リスト用CSSを<head>に挿入
+     * @private
+     */
+    #insertExpenseListStyles() {
+        // 既に存在する場合は何もしない
+        if (document.getElementById('expense-list-styles')) {
+            return;
+        }
+        
+        // <style>要素を作成
+        const style = document.createElement('style');
+        style.id = 'expense-list-styles';
+        style.textContent = `
+            /* 経費リストコンテナ */
+            .expense-list {
+                width: 100%;
+                border: 1px solid #444;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            
+            /* 経費アイテム（1行） - 5列グリッド */
+            .expense-item {
+                display: grid;
+                grid-template-columns: 1fr 1.5fr 1fr 2fr 0.8fr;
+                gap: 10px;
+                align-items: center;
+                padding: 12px 15px;
+                border-bottom: 1px solid #333;
+                background: #1a1a1a;
+                transition: background 0.2s;
+            }
+            
+            .expense-item:last-child {
+                border-bottom: none;
+            }
+            
+            .expense-item:hover {
+                background: #252525;
+            }
+            
+            /* 日付 */
+            .expense-date {
+                font-size: 14px;
+                color: #aaa;
+                white-space: nowrap;
+            }
+            
+            /* カテゴリ */
+            .expense-category {
+                display: inline-block;
+                padding: 4px 10px;
+                background: rgba(0, 150, 136, 0.2);
+                border: 1px solid #009688;
+                border-radius: 15px;
+                font-size: 12px;
+                color: #4DB6AC;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 180px;
+            }
+            
+            /* 金額 */
+            .expense-amount {
+                font-size: 15px;
+                font-weight: bold;
+                color: #f44336;
+                text-align: right;
+                white-space: nowrap;
+            }
+            
+            /* 説明 */
+            .expense-description {
+                font-size: 14px;
+                color: #ccc;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            /* 削除ボタン */
+            .expense-item .btn-delete {
+                padding: 6px 12px;
+                background: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                transition: background 0.2s;
+                white-space: nowrap;
+            }
+            
+            .expense-item .btn-delete:hover {
+                background: #c82333;
+            }
+        `;
+        
+        // <head>に追加
+        document.head.appendChild(style);
+        
+        console.log('✅ Expense list CSS inserted to <head>');
+    }
     
     /**
      * アコーディオン用CSSを<head>に挿入（確実に保持）

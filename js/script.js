@@ -3231,7 +3231,7 @@ function displayExpenseTab() {
             <div id="expense-section-input" class="expense-section" style="display: none;">
                 <h3>📝 経費入力</h3>
                 <div class="expense-form" style="background: white; padding: 15px; border-radius: 5px; border: 2px solid #dee2e6;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 15px; margin-bottom: 12px;">
                         <input type="date" id="expenseDate" value="${new Date().toISOString().split('T')[0]}" 
                             style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                         <select id="expenseCategory" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
@@ -3268,10 +3268,10 @@ function displayExpenseTab() {
                                 <option value="その他">その他</option>
                             </optgroup>
                         </select>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; margin-bottom: 10px;">
                         <input type="number" id="expenseAmount" placeholder="金額（円）" min="0"
                             style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 0.8fr 2fr 2fr 1fr; gap: 15px;">
                         <select id="expenseFrequency" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                             <option value="once">単発</option>
                             <option value="monthly">月払い</option>
@@ -3281,8 +3281,6 @@ function displayExpenseTab() {
                         </select>
                         <input type="text" id="expenseDescription" placeholder="説明（例：2025年度VPS年間契約）"
                             style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                    </div>
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                         <input type="text" id="expenseMemo" placeholder="メモ（任意）"
                             style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
                         <button onclick="addExpense()" class="btn btn-primary">経費を追加</button>
@@ -3474,7 +3472,7 @@ function displayExpenseTab() {
                     <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         選択した月のトレード記録と経費を締めます。一度締めた月は再度締められません。
                     </p>
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
                         <label style="font-weight: 500; color: #aaa;">年:</label>
                         <select id="closingMonthYear" style="padding: 8px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.05); font-size: 14px; min-width: 100px; color: inherit;">
                             <!-- JavaScriptで動的生成 -->
@@ -3509,7 +3507,7 @@ function displayExpenseTab() {
                     <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         選択した四半期のトレード記録と経費を締めます。対象月がすべて締まっている必要があります。
                     </p>
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
                         <label style="font-weight: 500; color: #aaa;">年:</label>
                         <select id="closingQuarterYear" style="padding: 8px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.05); font-size: 14px; min-width: 100px; color: inherit;">
                             <!-- JavaScriptで動的生成 -->
@@ -3536,7 +3534,7 @@ function displayExpenseTab() {
                     <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         選択した年のトレード記録と経費を締めます。全12ヶ月が締まっている必要があります。
                     </p>
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
                         <label style="font-weight: 500; color: #aaa;">年:</label>
                         <select id="closingYear" style="padding: 8px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.05); font-size: 14px; min-width: 100px; color: inherit;">
                             <!-- JavaScriptで動的生成 -->

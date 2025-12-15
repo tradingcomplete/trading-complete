@@ -990,6 +990,307 @@
         padding: 5px 6px !important;
         font-size: 0.65rem !important;
     }
+    
+    /* === 収支管理タブ - 締め処理セクション 1行化 === */
+    /* 月次締め処理の行 */
+    #closingMonthYear {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    #closingMonth {
+        min-width: 60px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* 四半期締め処理 */
+    #closingQuarterYear,
+    #closingQuarter {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* 年次締め処理 */
+    #closingYearYear {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 経費入力フォーム - 3列レイアウト維持 === */
+    #expense-section-input div[style*="grid-template-columns: 1fr 2fr 1fr"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1.5fr 1fr !important;
+        gap: 8px !important;
+    }
+    
+    /* 2行目（単発、説明、メモ、ボタン）も3列に */
+    #expense-section-input div[style*="grid-template-columns: 0.8fr"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1.5fr 1fr !important;
+        gap: 8px !important;
+    }
+    
+    #expense-section-input input,
+    #expense-section-input select {
+        padding: 6px !important;
+        font-size: 0.75rem !important;
+        min-width: 0 !important;
+    }
+    
+    #expense-section-input input[type="date"] {
+        font-size: 0.7rem !important;
+    }
+    
+    /* 経費を追加ボタン - 3列全体に広げる */
+    #expense-section-input button.btn-primary {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+        padding: 12px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* === 経費一覧カード最適化 === */
+    .expense-card {
+        display: grid !important;
+        grid-template-columns: 85px 1fr auto auto !important;
+        grid-template-rows: auto auto !important;
+        gap: 2px 8px !important;
+        padding: 10px !important;
+        margin-bottom: 8px !important;
+        align-items: center !important;
+    }
+    
+    .expense-card .card-header {
+        display: contents !important;
+    }
+    
+    .expense-card .card-date {
+        font-size: 0.75rem !important;
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        white-space: nowrap !important;
+    }
+    
+    .expense-card .card-amount {
+        font-size: 0.85rem !important;
+        font-weight: bold !important;
+        grid-column: 3 !important;
+        grid-row: 1 !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+    }
+    
+    .expense-card .card-body {
+        display: contents !important;
+    }
+    
+    .expense-card .card-description {
+        font-size: 0.75rem !important;
+        grid-column: 1 / 3 !important;
+        grid-row: 2 !important;
+        color: #888 !important;
+    }
+    
+    .expense-card .card-footer {
+        display: contents !important;
+    }
+    
+    .expense-card .btn-delete {
+        font-size: 0.65rem !important;
+        padding: 4px 8px !important;
+        grid-column: 4 !important;
+        grid-row: 1 / 3 !important;
+        align-self: center !important;
+    }
+    
+    /* カテゴリグループヘッダー */
+    .expense-category-group .category-header {
+        padding: 10px !important;
+    }
+    
+    .expense-category-group .category-name {
+        font-size: 0.85rem !important;
+        max-width: none !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        white-space: normal !important;
+    }
+    
+    .expense-category-group .category-summary {
+        font-size: 0.75rem !important;
+        gap: 6px !important;
+    }
+    
+    .expense-category-group .category-count,
+    .expense-category-group .category-total {
+        font-size: 0.75rem !important;
+    }
+    
+    /* === 最近の経費リスト（経費入力タブ下部）=== */
+    #recentExpenses .expense-item {
+        display: grid !important;
+        grid-template-columns: 75px 140px 1fr auto !important;
+        grid-template-rows: auto auto !important;
+        gap: 4px 8px !important;
+        padding: 10px !important;
+        align-items: center !important;
+    }
+    
+    #recentExpenses .expense-date {
+        font-size: 0.75rem !important;
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+    }
+    
+    #recentExpenses .expense-category {
+        font-size: 0.7rem !important;
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        min-width: 140px !important;
+        max-width: 140px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+    
+    #recentExpenses .expense-amount {
+        font-size: 0.8rem !important;
+        font-weight: bold !important;
+        grid-column: 3 !important;
+        grid-row: 1 !important;
+        text-align: right !important;
+    }
+    
+    #recentExpenses .expense-description {
+        font-size: 0.7rem !important;
+        color: #888 !important;
+        grid-column: 1 / 3 !important;
+        grid-row: 2 !important;
+    }
+    
+    #recentExpenses .btn-delete {
+        font-size: 0.65rem !important;
+        padding: 3px 6px !important;
+        grid-column: 4 !important;
+        grid-row: 1 / 3 !important;
+        align-self: center !important;
+    }
+    
+    /* === データ出力セクション最適化 === */
+    #expense-section-export h3 {
+        font-size: 1.1rem !important;
+        margin-bottom: 10px !important;
+    }
+    
+    #expense-section-export > p {
+        font-size: 0.8rem !important;
+        margin-bottom: 15px !important;
+    }
+    
+    #expense-section-export label {
+        font-size: 0.7rem !important;
+    }
+    
+    #expense-section-export button {
+        padding: 6px 10px !important;
+        font-size: 0.65rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* 月別CSV出力のセレクト */
+    #csvExportYear {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    #csvExportMonth {
+        min-width: 60px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* 年次CSV出力の年セレクト */
+    #yearlyExportYear {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* 年次CSV出力のボタン群を2段グリッドに */
+    #expense-section-export div:has(button[onclick*="exportTrades"]) {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    
+    #expense-section-export button[onclick*="exportTrades"],
+    #expense-section-export button[onclick*="exportExpenses"] {
+        flex: 0 0 calc(50% - 4px) !important;
+    }
+    
+    #expense-section-export button[onclick*="exportSummary"] {
+        flex: 0 0 100% !important;
+    }
+    
+    /* === 経費一覧フィルターを2列×2行に === */
+    #expense-section-list div[style*="grid-template-columns"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+    
+    #expense-section-list div[style*="grid-template-columns"] label {
+        font-size: 0.7rem !important;
+        margin-bottom: 3px !important;
+    }
+    
+    #expense-section-list div[style*="grid-template-columns"] select {
+        padding: 6px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* フィルターリセットボタン */
+    #expense-section-list button[onclick*="reset"] {
+        font-size: 0.7rem !important;
+        padding: 5px 12px !important;
+    }
+    
+    /* === 入出金管理セクション最適化 === */
+    #expense-section-capital h3 {
+        font-size: 1rem !important;
+        margin-bottom: 15px !important;
+    }
+    
+    #expense-section-capital h4 {
+        font-size: 0.9rem !important;
+    }
+    
+    /* 新規入出金フォームを2列に */
+    #expense-section-capital div[style*="grid-template-columns: repeat(2"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+    }
+    
+    #expense-section-capital .add-capital-record label {
+        font-size: 0.75rem !important;
+    }
+    
+    #expense-section-capital .add-capital-record input {
+        padding: 6px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    /* 入出金を追加ボタン */
+    #expense-section-capital .add-capital-record button {
+        padding: 10px !important;
+        font-size: 0.85rem !important;
+    }
 }
 
 /* =====================================================
