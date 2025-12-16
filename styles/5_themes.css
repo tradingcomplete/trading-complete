@@ -1128,6 +1128,54 @@ body.light-mode .expense-item * {
     color: #333333 !important;
 }
 
+/* 収支管理タブ - サブタブ（ダークモード） */
+.expense-tabs {
+    background: rgba(40, 40, 40, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.expense-tab-btn {
+    background: rgba(60, 60, 60, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 6px;
+    margin: 2px;
+    transition: all 0.2s ease;
+}
+
+.expense-tab-btn:hover {
+    background: rgba(80, 80, 80, 1);
+    border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.expense-tab-btn[style*="border-bottom: 3px solid"] {
+    background: rgba(0, 123, 255, 0.3);
+    border-color: #007bff !important;
+}
+
+/* ライトモード用 */
+body.light-mode .expense-tabs {
+    background: #f0f0f0;
+    border: 2px solid #999999;
+}
+
+body.light-mode .expense-tab-btn {
+    background: #ffffff;
+    border: 2px solid #bbbbbb !important;
+    color: #333333;
+}
+
+body.light-mode .expense-tab-btn:hover {
+    background: #e8f5e9;
+    border-color: #00aa5a !important;
+}
+
+body.light-mode .expense-tab-btn[style*="border-bottom: 3px solid"] {
+    background: #d4edff;
+    border-color: #007bff !important;
+}
+
 /* 分析タブ - 統計セル */
 body.light-mode .overall-stat-item,
 body.light-mode .period-stat-item {

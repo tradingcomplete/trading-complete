@@ -1291,6 +1291,12 @@
         padding: 10px !important;
         font-size: 0.85rem !important;
     }
+    
+    /* === 分析タブ - 期間を変更ボタンを全幅に === */
+    #changePeriodBtn {
+        width: 100% !important;
+        margin-top: 10px !important;
+    }
 }
 
 /* =====================================================
