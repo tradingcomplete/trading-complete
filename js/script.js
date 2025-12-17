@@ -3063,8 +3063,13 @@ window.updateConditionDisplay = updateConditionDisplay;
                     }
                     
                     if (window.showToast) {
-                        window.showToast('データをインポートしました', 'success');
+                        window.showToast('データをインポートしました。ページをリロードします...', 'success');
                     }
+                    
+                    // インポート完了後にページをリロード（トースト表示のため少し遅延）
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
                 } catch (error) {
                     if (window.showToast) {
                         window.showToast('インポートに失敗しました。ファイルを確認してください。', 'error');
