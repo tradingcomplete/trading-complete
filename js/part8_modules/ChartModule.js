@@ -41,14 +41,16 @@ class ChartModule {
             requestAnimationFrame(() => {
                 // Canvas設定（親要素の幅に合わせる）
                 const parentWidth = canvas.parentElement.clientWidth;
-                const parentHeight = canvas.parentElement.clientHeight;
+                
+                // 高さは固定値を使用（親要素の高さを使うとタブ切り替え時に拡大する問題を回避）
+                const CHART_HEIGHT = 500;
 
                 // CSSで表示サイズを設定
                 canvas.style.width = parentWidth + 'px';
                 
                 // 全期間表示でモバイルの場合は高さを拡大
                 const isMobileView = parentWidth < 500;
-                const requiredHeight = (isMobileView && window.currentChartView === 'allTime') ? 500 : parentHeight;
+                const requiredHeight = (isMobileView && window.currentChartView === 'allTime') ? 500 : CHART_HEIGHT;
                 canvas.style.height = requiredHeight + 'px';
 
                 // 内部解像度も同じサイズに設定（高DPI対応なし）

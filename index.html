@@ -1110,10 +1110,15 @@
         // 期間選択UI - JavaScript
         // ==========================================
         
-        // 現在の選択状態
+        // 現在の選択状態（windowにエクスポートしてタブ切り替え時に参照可能にする）
         let currentPeriodType = 'monthly';
         let currentYear = new Date().getFullYear();
         let currentPeriod = new Date().getMonth() + 1;
+
+        // windowにエクスポート（script.jsのswitchTabから参照するため）
+        window.currentPeriodType = currentPeriodType;
+        window.currentYear = currentYear;
+        window.currentPeriod = currentPeriod;
         
         /**
          * 期間タイプを切り替え
@@ -1332,6 +1337,11 @@
             }
             
             year = parseInt(year);
+            
+            // window変数を更新（タブ切り替え時の期間保持用）
+            window.currentPeriodType = currentPeriodType;
+            window.currentYear = year;
+            window.currentPeriod = period;
             
             // StatisticsModuleから期間統計を取得
             const pipsStats = window.StatisticsModule.getPeriodStats(
@@ -2247,20 +2257,14 @@
 /* ======================================
    画像追加モーダル - リニューアルスタイル
    ====================================== */
-
-/* モーダルコンテンツ */
 .image-add-modal-content {
     max-width: 480px;
     border-radius: 12px;
     overflow: hidden;
 }
-
-/* モーダルボディ */
 .image-add-body {
     padding: 24px;
 }
-
-/* ドラッグ＆ドロップゾーン */
 .drop-zone {
     position: relative;
     border: 2px dashed #4a4a4a;
@@ -2271,26 +2275,21 @@
     background: #2a2a2a;
     cursor: pointer;
 }
-
 .drop-zone:hover {
     border-color: #4ade80;
     background: #2f3a2f;
 }
-
 .drop-zone.drag-over {
     border-color: #4ade80;
     background: #2f3a2f;
     transform: scale(1.02);
 }
-
 .drop-zone-content {
     transition: opacity 0.2s ease;
 }
-
 .drop-zone.drag-over .drop-zone-content {
     opacity: 0;
 }
-
 .drop-zone-hover {
     position: absolute;
     top: 50%;
@@ -2300,61 +2299,49 @@
     transition: opacity 0.2s ease;
     pointer-events: none;
 }
-
 .drop-zone.drag-over .drop-zone-hover {
     opacity: 1;
 }
-
 .drop-zone-icon {
     font-size: 48px;
     margin-bottom: 16px;
 }
-
 .drop-zone-text {
     font-size: 16px;
     color: #ccc;
     margin-bottom: 8px;
 }
-
 .drop-zone-or {
     font-size: 14px;
     color: #888;
     margin-bottom: 16px;
 }
-
 .drop-zone-hint {
     font-size: 12px;
     color: #666;
     margin-top: 16px;
 }
-
-/* 区切り線 */
 .divider-with-text {
     display: flex;
     align-items: center;
     margin: 24px 0;
     color: #666;
 }
-
 .divider-with-text::before,
 .divider-with-text::after {
     content: '';
     flex: 1;
     border-bottom: 1px solid #444;
 }
-
 .divider-with-text span {
     padding: 0 16px;
     font-size: 14px;
 }
-
-/* URL入力セクション */
 .url-input-section {
     background: #2a2a2a;
     border-radius: 8px;
     padding: 16px;
 }
-
 .url-input-label {
     display: flex;
     align-items: center;
@@ -2363,16 +2350,13 @@
     color: #ccc;
     margin-bottom: 12px;
 }
-
 .url-icon {
     font-size: 16px;
 }
-
 .url-input-group {
     display: flex;
     gap: 8px;
 }
-
 .url-input {
     flex: 1;
     padding: 10px 12px;
@@ -2382,23 +2366,18 @@
     color: #fff;
     font-size: 14px;
 }
-
 .url-input:focus {
     outline: none;
     border-color: #4ade80;
 }
-
 .url-input::placeholder {
     color: #666;
 }
-
 .url-hint {
     font-size: 12px;
     color: #666;
     margin-top: 8px;
 }
-
-/* ボタンスタイル（画像追加モーダル専用） */
 .image-add-modal-content .btn {
     padding: 10px 20px;
     border-radius: 6px;
@@ -2407,51 +2386,35 @@
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
 .image-add-modal-content .btn-primary {
     background: #4ade80;
     color: #000;
     border: none;
 }
-
 .image-add-modal-content .btn-primary:hover {
     background: #22c55e;
     transform: translateY(-1px);
 }
-
 .image-add-modal-content .btn-secondary {
     background: transparent;
     color: #4ade80;
     border: 1px solid #4ade80;
 }
-
 .image-add-modal-content .btn-secondary:hover {
     background: rgba(74, 222, 128, 0.1);
 }
-
-/* モーダルヘッダー調整 */
 .image-add-modal-content .modal-header {
     padding: 16px 24px;
     border-bottom: 1px solid #333;
 }
-
 .image-add-modal-content .modal-header h2 {
     font-size: 18px;
     margin: 0;
 }
-
-/* アニメーション */
 @keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
-
 .image-add-modal-content {
     animation: modalFadeIn 0.2s ease-out;
 }

@@ -871,13 +871,27 @@ window.switchTab = function(tabName, evt) {
             if (document.getElementById('calendarDates')) {
                 if (typeof updateCalendar === 'function') updateCalendar();
             }
-            // 月次レポートを自動生成
+            // レポートを生成（保存された期間があればそれを使用、なければ現在月）
             if (typeof generateReport === 'function') {
                 setTimeout(() => {
-                    const now = new Date();
-                    const year = now.getFullYear();
-                    const month = now.getMonth() + 1;
-                    generateReport('monthly', year, month);
+                    // 保存された期間選択状態を使用（なければデフォルト値）
+                    const periodType = window.currentPeriodType || 'monthly';
+                    const year = window.currentYear || new Date().getFullYear();
+                    const period = window.currentPeriod || new Date().getMonth() + 1;
+                    
+                    // 期間タイプに応じてレポート生成
+                    if (periodType === 'quarterly') {
+                        // 四半期の場合、月に変換（Q1→1, Q2→4, Q3→7, Q4→10）
+                        const month = (period - 1) * 3 + 1;
+                        generateReport(periodType, year, month);
+                    } else if (periodType === 'yearly') {
+                        generateReport(periodType, year, null);
+                    } else {
+                        // monthly または weekly
+                        generateReport(periodType, year, period);
+                    }
+                    
+                    console.log('分析タブ: 期間復元', { periodType, year, period });
                 }, 100);
             }
             break;
@@ -2793,11 +2807,72 @@ window.updateConditionDisplay = updateConditionDisplay;
 
     // データエクスポート
     window.exportAllData = function() {
+        // 経費データを取得
+        let expenses = [];
+        const expensesRaw = window.storage.getItem('tc_expenses');
+        if (expensesRaw) {
+            try {
+                expenses = JSON.parse(expensesRaw);
+            } catch(e) {
+                console.error('経費データのパースエラー:', e);
+            }
+        }
+        
+        // 入出金データを取得
+        let depositWithdrawals = [];
+        const dwRaw = window.storage.getItem('depositWithdrawals');
+        if (dwRaw) {
+            try {
+                depositWithdrawals = JSON.parse(dwRaw);
+            } catch(e) {
+                console.error('入出金データのパースエラー:', e);
+            }
+        }
+        
+        // 月間メモを取得
+        let monthlyMemos = {};
+        const memosRaw = window.storage.getItem('monthlyMemos');
+        if (memosRaw) {
+            try {
+                monthlyMemos = JSON.parse(memosRaw);
+            } catch(e) {
+                console.error('月間メモのパースエラー:', e);
+            }
+        }
+        
+        // お気に入りペアを取得
+        let favoritePairs = [];
+        const pairsRaw = window.storage.getItem('favoritePairs');
+        if (pairsRaw) {
+            try {
+                favoritePairs = JSON.parse(pairsRaw);
+            } catch(e) {
+                console.error('お気に入りペアのパースエラー:', e);
+            }
+        }
+        
+        // ブローカーを取得
+        let brokers = [];
+        const brokersRaw = window.storage.getItem('brokers');
+        if (brokersRaw) {
+            try {
+                brokers = JSON.parse(brokersRaw);
+            } catch(e) {
+                console.error('ブローカーのパースエラー:', e);
+            }
+        }
+        
         const exportData = {
-            version: 'v6.0-rarity',
+            version: 'v7.0-complete',
             exportDate: new Date().toISOString(),
             trades: window.trades,
             notes: window.notes,
+            expenses: expenses,
+            depositWithdrawals: depositWithdrawals,
+            monthlyMemos: monthlyMemos,
+            favoritePairs: favoritePairs,
+            brokers: brokers,
+            theme: window.storage.getItem('theme') || 'dark',
             userIcon: window.storage.getItem('userIcon') || window.defaultUserIcon,
             siteTitle: window.storage.getItem('siteTitle') || '',
             siteSubtitle: window.storage.getItem('siteSubtitle') || '',
@@ -2927,11 +3002,44 @@ window.updateConditionDisplay = updateConditionDisplay;
                         document.getElementById('userIcon').src = importData.userIcon;
                     }
                     
+                    // 経費データのインポート
+                    if (importData.expenses && Array.isArray(importData.expenses)) {
+                        window.storage.setItem('tc_expenses', JSON.stringify(importData.expenses));
+                        console.log('経費データをインポート:', importData.expenses.length, '件');
+                    }
                     
+                    // 入出金データのインポート
+                    if (importData.depositWithdrawals && Array.isArray(importData.depositWithdrawals)) {
+                        window.storage.setItem('depositWithdrawals', JSON.stringify(importData.depositWithdrawals));
+                        console.log('入出金データをインポート:', importData.depositWithdrawals.length, '件');
+                    }
                     
+                    // 月間メモのインポート
+                    if (importData.monthlyMemos) {
+                        window.storage.setItem('monthlyMemos', JSON.stringify(importData.monthlyMemos));
+                        console.log('月間メモをインポート');
+                    }
                     
+                    // お気に入りペアのインポート
+                    if (importData.favoritePairs && Array.isArray(importData.favoritePairs)) {
+                        window.storage.setItem('favoritePairs', JSON.stringify(importData.favoritePairs));
+                        console.log('お気に入りペアをインポート:', importData.favoritePairs.length, '件');
+                    }
                     
+                    // ブローカーのインポート
+                    if (importData.brokers && Array.isArray(importData.brokers)) {
+                        window.storage.setItem('brokers', JSON.stringify(importData.brokers));
+                        console.log('ブローカーをインポート:', importData.brokers.length, '件');
+                    }
                     
+                    // テーマのインポート
+                    if (importData.theme) {
+                        window.storage.setItem('theme', importData.theme);
+                        if (typeof window.applyTheme === 'function') {
+                            window.applyTheme(importData.theme);
+                        }
+                        console.log('テーマをインポート:', importData.theme);
+                    }
                     
                     if (window.updateQuickStats) window.updateQuickStats();
                     if (window.displayAllTrades) window.displayAllTrades();
