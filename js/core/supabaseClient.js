@@ -15,7 +15,7 @@
 // ⚠️ 以下の2つの値を自分のSupabaseプロジェクトの値に置き換えてください
 // ============================================
 
-const SUPABASE_URL = 'https://apqerhksogpscdtktjwd.supabase.co';
+const SUPABASE_URL = 'https://apqmrhksogpscdtktjwd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwcW1yaGtzb2dwc2NkdGt0andkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NjI3NTQsImV4cCI6MjA4MTUzODc1NH0.qiOpIYA-IZEOhZmn1z6v7YvlUK8QxIWAezbD7XiPU-4';
 
 // ============================================
