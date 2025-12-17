@@ -13,8 +13,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trading Complete</title>
     <link rel="stylesheet" href="styles/styles.css">
+    <!-- 認証用CSS -->
+    <link rel="stylesheet" href="styles/7_auth.css">
 </head>
 <body>
+    <!-- ============================================
+         認証モーダル
+         ============================================ -->
+    <div id="auth-modal" class="auth-modal">
+        <div class="auth-container">
+            <!-- ヘッダー -->
+            <div class="auth-header">
+                <div class="auth-logo">
+                <img src="images/logo.png" alt="Trading Complete" width="60" height="60">
+            </div>
+                <h2>Trading Complete</h2>
+                <p>すべてのトレードを、この一つで</p>
+            </div>
+
+            <!-- タブ -->
+            <div class="auth-tabs">
+                <button id="login-tab" class="auth-tab active">ログイン</button>
+                <button id="register-tab" class="auth-tab">新規登録</button>
+            </div>
+
+            <!-- フォーム -->
+            <div class="auth-body">
+                <!-- ログインフォーム -->
+                <form id="login-form" class="auth-form active">
+                    <div id="login-error" class="auth-error"></div>
+                    
+                    <div class="form-group">
+                        <label for="login-email">メールアドレス</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="login-email" placeholder="example@email.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-password">パスワード</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="login-password" placeholder="パスワードを入力" required>
+                            <button type="button" class="toggle-password">👁</button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-submit">ログイン</button>
+                </form>
+
+                <!-- 登録フォーム -->
+                <form id="register-form" class="auth-form">
+                    <div id="register-error" class="auth-error"></div>
+                    <div id="register-success" class="auth-success"></div>
+                    
+                    <div class="form-group">
+                        <label for="register-email">メールアドレス</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="register-email" placeholder="example@email.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="register-password">パスワード</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="register-password" placeholder="8文字以上（大文字・小文字・数字必須）" required minlength="8">
+                            <button type="button" class="toggle-password">👁</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="register-password-confirm">パスワード（確認）</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="register-password-confirm" placeholder="もう一度入力" required minlength="8">
+                            <button type="button" class="toggle-password">👁</button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-submit">新規登録</button>
+                </form>
+            </div>
+
+            <!-- フッター -->
+            <div class="auth-footer">
+                <p>登録することで、<a href="#">利用規約</a>と<a href="#">プライバシーポリシー</a>に同意したものとみなされます。</p>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- ヘッダー（目標表示追加） -->
         <div class="header">
@@ -2109,6 +2194,15 @@
     </div>
 
     <!-- ========== JavaScript ========== -->
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Supabase Client -->
+    <script src="js/core/supabaseClient.js"></script>
+    
+    <!-- Auth Module -->
+    <script src="js/auth/AuthModule.js"></script>
+    
     <!-- Chart.js（外部ライブラリ） -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
