@@ -525,13 +525,13 @@ class TradeList {
                 plLeft.style.cssText = 'display: flex; align-items: center; gap: 8px;';
                 
                 const plLabel = document.createElement('span');
-                plLabel.style.cssText = 'color: rgba(255,255,255,0.6);';
+                plLabel.className = 'yen-label';
                 plLabel.textContent = '損益:';
                 plLeft.appendChild(plLabel);
                 
                 const plValue = document.createElement('span');
                 const yenPL = trade.yenProfitLoss ? (trade.yenProfitLoss.profitLoss || 0) : 0;
-                plValue.style.cssText = `color: ${yenPL >= 0 ? '#4caf50' : '#f44336'}; font-weight: bold; font-size: 1.1rem;`;
+                plValue.className = yenPL >= 0 ? 'yen-value positive' : 'yen-value negative';
                 plValue.textContent = `¥${yenPL.toLocaleString('ja-JP')}`;
                 
                 plRow.appendChild(plLeft);
@@ -544,8 +544,8 @@ class TradeList {
                     const swapRow = document.createElement('div');
                     swapRow.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1rem;';
                     swapRow.innerHTML = `
-                        <span style="color: rgba(255,255,255,0.6);">スワップ:</span>
-                        <span style="color: white; font-size: 1.1rem;">¥${swapValue.toLocaleString('ja-JP')}</span>
+                        <span class="yen-label">スワップ:</span>
+                        <span class="yen-value swap">¥${swapValue.toLocaleString('ja-JP')}</span>
                     `;
                     profitSection.appendChild(swapRow);
                 }
@@ -556,10 +556,9 @@ class TradeList {
                 
                 const netRow = document.createElement('div');
                 netRow.className = 'net-profit-row';
-                netRow.style.cssText = 'display: flex; justify-content: space-between; padding-top: 8px; font-size: 1rem;';
                 netRow.innerHTML = `
-                    <span style="color: rgba(255,255,255,0.6);">純損益:</span>
-                    <span style="color: ${netPL >= 0 ? '#4caf50' : '#f44336'}; font-weight: bold; font-size: 1.1rem;">¥${netPL.toLocaleString('ja-JP')}</span>
+                    <span class="yen-label">純損益:</span>
+                    <span class="yen-value ${netPL >= 0 ? 'positive' : 'negative'}">¥${netPL.toLocaleString('ja-JP')}</span>
                 `;
                 profitSection.appendChild(netRow);
                 

@@ -1176,6 +1176,57 @@ body.light-mode .expense-tab-btn[style*="border-bottom: 3px solid"] {
     border-color: #007bff !important;
 }
 
+/* トレード記録 - 円建て損益（ダークモード・共通） */
+.yen-label {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.yen-value {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.yen-value.positive {
+    color: #4caf50;
+}
+
+.yen-value.negative {
+    color: #f44336;
+}
+
+.yen-value.swap {
+    color: white;
+}
+
+.net-profit-row {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 1rem;
+}
+
+/* トレード記録 - 円建て損益（ライトモード） */
+body.light-mode .yen-label {
+    color: #666666;
+}
+
+body.light-mode .yen-value.positive {
+    color: #00995a;
+}
+
+body.light-mode .yen-value.negative {
+    color: #dd3333;
+}
+
+body.light-mode .yen-value.swap {
+    color: #333333;
+}
+
+body.light-mode .net-profit-row {
+    border-top: 1px solid #cccccc;
+}
+
 /* 分析タブ - 統計セル */
 body.light-mode .overall-stat-item,
 body.light-mode .period-stat-item {
