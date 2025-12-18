@@ -5,8 +5,9 @@
  * - ログイン / 登録 / ログアウト
  * - 認証状態の監視
  * - 認証モーダルの制御
+ * - ユーザー名の管理
  * 
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2025-12-17
  */
 
@@ -213,6 +214,7 @@ const AuthModule = (function() {
     async function handleRegister(e) {
         e.preventDefault();
         
+        const username = document.getElementById('register-username')?.value.trim() || '';
         const email = document.getElementById('register-email').value.trim();
         const password = document.getElementById('register-password').value;
         const passwordConfirm = document.getElementById('register-password-confirm').value;
@@ -223,6 +225,17 @@ const AuthModule = (function() {
         // バリデーション
         if (!email || !password || !passwordConfirm) {
             showError(errorDiv, 'すべての項目を入力してください');
+            return;
+        }
+
+        // ユーザー名のバリデーション（任意入力だが、入力された場合はチェック）
+        if (username && username.length < 2) {
+            showError(errorDiv, 'ユーザー名は2文字以上で入力してください');
+            return;
+        }
+
+        if (username && username.length > 20) {
+            showError(errorDiv, 'ユーザー名は20文字以内で入力してください');
             return;
         }
 
@@ -255,7 +268,13 @@ const AuthModule = (function() {
         try {
             const { data, error } = await supabase.auth.signUp({
                 email: email,
-                password: password
+                password: password,
+                options: {
+                    data: {
+                        username: username || null,
+                        display_name: username || email.split('@')[0]
+                    }
+                }
             });
 
             if (error) {
@@ -384,8 +403,8 @@ const AuthModule = (function() {
         hideAuthModal();
         updateUserDisplay();
         
-        // EventBusで通知
-        if (typeof EventBus !== 'undefined') {
+        // EventBusで通知（存在する場合のみ）
+        if (typeof EventBus !== 'undefined' && typeof EventBus.emit === 'function') {
             EventBus.emit('auth:login', { user: currentUser });
         }
     }
@@ -397,8 +416,8 @@ const AuthModule = (function() {
         showAuthModal();
         updateUserDisplay();
         
-        // EventBusで通知
-        if (typeof EventBus !== 'undefined') {
+        // EventBusで通知（存在する場合のみ）
+        if (typeof EventBus !== 'undefined' && typeof EventBus.emit === 'function') {
             EventBus.emit('auth:logout');
         }
     }
@@ -407,15 +426,27 @@ const AuthModule = (function() {
      * ユーザー表示を更新
      */
     function updateUserDisplay() {
+        const userDisplayName = document.getElementById('user-display-name');
         const userEmail = document.getElementById('user-email');
         const logoutBtn = document.getElementById('logout-btn');
+        const userInfoContainer = document.getElementById('user-info');
 
         if (currentUser) {
+            // 表示名を取得（ユーザー名 > display_name > メールアドレスの@前）
+            const displayName = currentUser.user_metadata?.username 
+                || currentUser.user_metadata?.display_name 
+                || currentUser.email?.split('@')[0] 
+                || 'ユーザー';
+            
+            if (userDisplayName) userDisplayName.textContent = displayName;
             if (userEmail) userEmail.textContent = currentUser.email;
-            if (logoutBtn) logoutBtn.style.display = 'block';
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            if (userInfoContainer) userInfoContainer.style.display = 'flex';
         } else {
+            if (userDisplayName) userDisplayName.textContent = '';
             if (userEmail) userEmail.textContent = '';
             if (logoutBtn) logoutBtn.style.display = 'none';
+            if (userInfoContainer) userInfoContainer.style.display = 'none';
         }
     }
 
@@ -508,6 +539,16 @@ const AuthModule = (function() {
         return messages[error.message] || error.message || '認証エラーが発生しました';
     }
 
+    /**
+     * 現在のユーザー名を取得
+     */
+    function getUsername() {
+        if (!currentUser) return null;
+        return currentUser.user_metadata?.username 
+            || currentUser.user_metadata?.display_name 
+            || currentUser.email?.split('@')[0];
+    }
+
     // ============================================
     // Public API
     // ============================================
@@ -515,6 +556,7 @@ const AuthModule = (function() {
     return {
         init: init,
         getCurrentUser: function() { return currentUser; },
+        getUsername: getUsername,
         isLoggedIn: function() { return currentUser !== null; },
         showAuthModal: showAuthModal,
         hideAuthModal: hideAuthModal,

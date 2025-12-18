@@ -80,6 +80,7 @@ body.light-mode .theme-btn {
 body.light-mode {
     background: #f0f0f0;
     color: #000000;
+    -webkit-text-fill-color: unset;
 }
 
 body.light-mode .section {
@@ -1209,18 +1210,22 @@ body.light-mode .expense-tab-btn[style*="border-bottom: 3px solid"] {
 /* トレード記録 - 円建て損益（ライトモード） */
 body.light-mode .yen-label {
     color: #666666;
+    -webkit-text-fill-color: #666666;
 }
 
 body.light-mode .yen-value.positive {
     color: #00995a;
+    -webkit-text-fill-color: #00995a;
 }
 
 body.light-mode .yen-value.negative {
     color: #dd3333;
+    -webkit-text-fill-color: #dd3333;
 }
 
 body.light-mode .yen-value.swap {
     color: #333333;
+    -webkit-text-fill-color: #333333;
 }
 
 body.light-mode .net-profit-row {
