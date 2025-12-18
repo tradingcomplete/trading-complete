@@ -600,12 +600,12 @@ class SettingsModule {
     
     /**
      * サブタブを切り替える
-     * @param {string} subtabName - サブタブ名（'basic' | 'trading' | 'data'）
+     * @param {string} subtabName - サブタブ名（'basic' | 'trading' | 'data' | 'mypage'）
      * @returns {boolean} 成功/失敗
      */
     switchSubtab(subtabName) {
         try {
-            const validSubtabs = ['basic', 'trading', 'data'];
+            const validSubtabs = ['basic', 'trading', 'data', 'mypage'];
             if (!validSubtabs.includes(subtabName)) {
                 throw new Error(`Invalid subtab: ${subtabName}`);
             }

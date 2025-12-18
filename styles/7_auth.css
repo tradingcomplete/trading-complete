@@ -328,3 +328,76 @@
         font-size: 1.3rem;
     }
 }
+
+/* ========================================
+   マイページスタイル（Phase 3.5）
+   ======================================== */
+
+.mypage-item {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mypage-item label {
+    display: block;
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.mypage-value-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.mypage-value {
+    font-size: 1.1em;
+    color: #e0e0e0;
+    word-break: break-all;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+
+.mypage-logout-section {
+    text-align: center;
+    padding: 20px;
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, #ff4757, #c0392b);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background: linear-gradient(135deg, #ff6b7a, #e74c3c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+}
+
+/* ライトモード対応 */
+body.light-mode .mypage-item {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .mypage-value {
+    color: #333;
+}
+
+body.light-mode .mypage-item label {
+    color: #666;
+}

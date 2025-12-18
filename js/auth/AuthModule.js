@@ -329,6 +329,15 @@ const AuthModule = (function() {
         }
     }
 
+    /**
+     * 確認ダイアログ付きログアウト
+     */
+    async function logoutWithConfirm() {
+        if (confirm('ログアウトしますか？\n\n再度ログインが必要になります。')) {
+            await handleLogout();
+        }
+    }
+
     // ============================================
     // UI制御
     // ============================================
@@ -402,6 +411,7 @@ const AuthModule = (function() {
     function onLoginSuccess() {
         hideAuthModal();
         updateUserDisplay();
+        updateMyPageDisplay();
         
         // EventBusで通知（存在する場合のみ）
         if (typeof EventBus !== 'undefined' && typeof EventBus.emit === 'function') {
@@ -447,6 +457,33 @@ const AuthModule = (function() {
             if (userEmail) userEmail.textContent = '';
             if (logoutBtn) logoutBtn.style.display = 'none';
             if (userInfoContainer) userInfoContainer.style.display = 'none';
+        }
+    }
+
+    /**
+     * マイページのユーザー情報を更新
+     */
+    function updateMyPageDisplay() {
+        const usernameEl = document.getElementById('mypage-username');
+        const emailEl = document.getElementById('mypage-email');
+
+        if (currentUser) {
+            // ユーザーネーム（未設定の場合は「(未設定)」）
+            if (usernameEl) {
+                const username = currentUser.user_metadata?.username;
+                usernameEl.textContent = username || '(未設定)';
+            }
+            
+            // メールアドレス
+            if (emailEl) {
+                emailEl.textContent = currentUser.email || '-';
+            }
+            
+            console.log('[Auth] マイページ表示を更新しました');
+        } else {
+            // 未ログイン時
+            if (usernameEl) usernameEl.textContent = '-';
+            if (emailEl) emailEl.textContent = '-';
         }
     }
 
@@ -560,7 +597,9 @@ const AuthModule = (function() {
         isLoggedIn: function() { return currentUser !== null; },
         showAuthModal: showAuthModal,
         hideAuthModal: hideAuthModal,
-        logout: handleLogout
+        logout: handleLogout,
+        logoutWithConfirm: logoutWithConfirm,
+        updateMyPageDisplay: updateMyPageDisplay
     };
 
 })();

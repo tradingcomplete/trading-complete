@@ -1737,6 +1737,9 @@
                     <button class="settings-subtab-btn" data-subtab="data" onclick="window.SettingsModule.switchSubtab('data')">
                         💾 データ
                     </button>
+                    <button class="settings-subtab-btn" data-subtab="mypage" onclick="window.SettingsModule.switchSubtab('mypage')">
+                        👤 マイページ
+                    </button>
                 </div>
                 
                 <!-- ========================================
@@ -1913,6 +1916,62 @@
                         <button class="btn btn-delete-all" onclick="deleteAllData()">
                             🗑️ 全データを削除する
                         </button>
+                    </div>
+                </div>
+
+                <!-- ========================================
+                     マイページタブ（新規）
+                     ======================================== -->
+                <div id="settings-mypage" class="settings-subtab-content">
+                    <h3>👤 アカウント情報</h3>
+                    
+                    <!-- ユーザーネーム -->
+                    <div class="mypage-item">
+                        <label>ユーザーネーム</label>
+                        <div class="mypage-value-row">
+                            <span id="mypage-username" class="mypage-value">-</span>
+                            <button class="btn btn-secondary btn-small" onclick="openChangeUsernameModal()" disabled>
+                                変更
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- メールアドレス -->
+                    <div class="mypage-item">
+                        <label>メールアドレス</label>
+                        <div class="mypage-value-row">
+                            <span id="mypage-email" class="mypage-value">-</span>
+                            <button class="btn btn-secondary btn-small" onclick="openChangeEmailModal()" disabled>
+                                変更
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- パスワード -->
+                    <div class="mypage-item">
+                        <label>パスワード</label>
+                        <div class="mypage-value-row">
+                            <span class="mypage-value">••••••••</span>
+                            <button class="btn btn-secondary btn-small" onclick="openChangePasswordModal()" disabled>
+                                変更
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p style="color: #888; font-size: 0.85em; margin-top: 10px;">
+                        ※ 変更機能は今後のアップデートで有効になります
+                    </p>
+                    
+                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
+                    
+                    <!-- ログアウトボタン -->
+                    <div class="mypage-logout-section">
+                        <button class="btn btn-logout" onclick="AuthModule.logoutWithConfirm()">
+                            🚪 ログアウト
+                        </button>
+                        <p style="color: #888; font-size: 0.85em; margin-top: 10px;">
+                            ログアウトすると、再度ログインが必要になります。
+                        </p>
                     </div>
                 </div>
             </div>
