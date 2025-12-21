@@ -2876,17 +2876,42 @@ window.updateConditionDisplay = updateConditionDisplay;
             userIcon: window.storage.getItem('userIcon') || window.defaultUserIcon,
             siteTitle: window.storage.getItem('siteTitle') || '',
             siteSubtitle: window.storage.getItem('siteSubtitle') || '',
-            goals: {
-                text1: window.storage.getItem('goalText1') || '',
-                text2: window.storage.getItem('goalText2') || '',
-                text3: window.storage.getItem('goalText3') || '',
-                deadline1: window.storage.getItem('goalDeadline1') || '',
-                deadline2: window.storage.getItem('goalDeadline2') || '',
-                deadline3: window.storage.getItem('goalDeadline3') || '',
-                achieved1: window.storage.getItem('goalAchieved1') === 'true',
-                achieved2: window.storage.getItem('goalAchieved2') === 'true',
-                achieved3: window.storage.getItem('goalAchieved3') === 'true'
-            }
+            goals: (function() {
+                // goalsDataから取得（新形式）
+                const goalsDataRaw = window.storage.getItem('goalsData');
+                if (goalsDataRaw) {
+                    try {
+                        const goalsData = JSON.parse(goalsDataRaw);
+                        if (goalsData.goals && Array.isArray(goalsData.goals)) {
+                            return {
+                                text1: goalsData.goals[0]?.text || '',
+                                text2: goalsData.goals[1]?.text || '',
+                                text3: goalsData.goals[2]?.text || '',
+                                deadline1: goalsData.goals[0]?.deadline || '',
+                                deadline2: goalsData.goals[1]?.deadline || '',
+                                deadline3: goalsData.goals[2]?.deadline || '',
+                                achieved1: goalsData.goals[0]?.achieved || false,
+                                achieved2: goalsData.goals[1]?.achieved || false,
+                                achieved3: goalsData.goals[2]?.achieved || false
+                            };
+                        }
+                    } catch(e) {
+                        console.error('goalsDataパースエラー:', e);
+                    }
+                }
+                // フォールバック（旧形式）
+                return {
+                    text1: window.storage.getItem('goalText1') || '',
+                    text2: window.storage.getItem('goalText2') || '',
+                    text3: window.storage.getItem('goalText3') || '',
+                    deadline1: window.storage.getItem('goalDeadline1') || '',
+                    deadline2: window.storage.getItem('goalDeadline2') || '',
+                    deadline3: window.storage.getItem('goalDeadline3') || '',
+                    achieved1: window.storage.getItem('goalAchieved1') === 'true',
+                    achieved2: window.storage.getItem('goalAchieved2') === 'true',
+                    achieved3: window.storage.getItem('goalAchieved3') === 'true'
+                };
+            })()
         };
         
         const dataStr = JSON.stringify(exportData, null, 2);

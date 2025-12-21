@@ -91,7 +91,7 @@
         "深夜の薄商い時間帯でのトレード。スプレッド拡大と流動性低下に対応できず。東京・ロンドン・NY の3大セッション以外のトレードは原則禁止とする。"
     ];
     
-    const brokers = ['XMTrading', 'TitanFX', 'Exness', 'AXIORY', 'BigBoss', 'ThreeTrader'];
+    const brokers = ['DMM FX', 'GMOクリック証券', 'SBI FXトレード'];
     
     // ========================================
     // トレードデータ生成
