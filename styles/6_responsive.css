@@ -1297,6 +1297,36 @@
         width: 100% !important;
         margin-top: 10px !important;
     }
+    
+    /* === 設定タブ - マイページ最適化 === */
+    #settings-mypage .mypage-item {
+        padding: 10px !important;
+    }
+    
+    #settings-mypage .mypage-item label {
+        font-size: 0.75rem !important;
+        margin-bottom: 5px !important;
+    }
+    
+    #settings-mypage .mypage-value-row {
+        display: grid !important;
+        grid-template-columns: 1fr auto !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+    
+    #settings-mypage .mypage-value {
+        font-size: 0.8rem !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+    
+    #settings-mypage .btn-small {
+        padding: 4px 10px !important;
+        font-size: 0.65rem !important;
+        white-space: nowrap !important;
+    }
 }
 
 /* =====================================================
@@ -2230,14 +2260,16 @@
     #settings-data .toolbar {
         display: flex !important;
         flex-direction: row !important;
+        flex-wrap: nowrap !important;
         gap: 10px !important;
         margin-bottom: 20px !important;
     }
     
     #settings-data .tool-btn {
-        flex: 1 !important;
-        padding: 12px 10px !important;
-        font-size: 0.8rem !important;
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        padding: 10px 15px !important;
+        font-size: 0.75rem !important;
         white-space: nowrap !important;
     }
     

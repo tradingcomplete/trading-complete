@@ -520,11 +520,51 @@ body.light-mode .editor-btn.green-btn {
     background: #e8f5e9 !important;
     border-color: #66bb6a !important;
     color: var(--editor-color-green) !important;
+    font-weight: bold;
 }
 
 body.light-mode .editor-btn.green-btn:hover {
     background: #c8e6c9 !important;
     border-color: #4caf50 !important;
+}
+
+/* 赤ボタン（ライトモード） */
+body.light-mode .editor-btn.red-btn {
+    background: #ffe0e0 !important;
+    border-color: #ff6666 !important;
+    color: var(--editor-color-red) !important;
+    font-weight: bold;
+}
+
+body.light-mode .editor-btn.red-btn:hover {
+    background: #ffcccc !important;
+    border-color: #ff4444 !important;
+}
+
+/* 青ボタン（ライトモード） */
+body.light-mode .editor-btn.blue-btn {
+    background: #e0e8ff !important;
+    border-color: #6688ff !important;
+    color: var(--editor-color-blue) !important;
+    font-weight: bold;
+}
+
+body.light-mode .editor-btn.blue-btn:hover {
+    background: #ccd9ff !important;
+    border-color: #4466ff !important;
+}
+
+/* 黄ボタン（ライトモード） */
+body.light-mode .editor-btn.yellow-btn {
+    background: var(--editor-highlight-bg) !important;
+    border-color: #ffcc00 !important;
+    color: var(--editor-highlight-text) !important;
+    font-weight: bold;
+}
+
+body.light-mode .editor-btn.yellow-btn:hover {
+    background: #fff4a3 !important;
+    border-color: #ffaa00 !important;
 }
 
 /* サイズプルダウン */
@@ -729,6 +769,11 @@ body.light-mode .toolbar {
     background: #f5f5f5 !important;
     border: 2px solid #999999 !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ライトモード: 設定タブパディング修正 */
+body.light-mode #settings-data {
+    padding: 0 !important;
 }
 
 body.light-mode .filter-row {
@@ -2175,6 +2220,37 @@ body.light-mode .monthly-memo-textarea:focus {
 .editor-btn.green-btn:hover {
     background: rgba(129, 199, 132, 0.3) !important;
     border-color: #a5d6a7 !important;
+}
+
+/* 赤ボタン（ダークモード） */
+.editor-btn.red-btn {
+    color: var(--editor-color-red) !important;
+    font-weight: bold;
+}
+
+.editor-btn.red-btn:hover {
+    background: rgba(239, 83, 80, 0.2) !important;
+}
+
+/* 青ボタン（ダークモード） */
+.editor-btn.blue-btn {
+    color: var(--editor-color-blue) !important;
+    font-weight: bold;
+}
+
+.editor-btn.blue-btn:hover {
+    background: rgba(100, 181, 246, 0.2) !important;
+}
+
+/* 黄ボタン（ダークモード） */
+.editor-btn.yellow-btn {
+    background: var(--editor-highlight-bg) !important;
+    color: var(--editor-highlight-text) !important;
+    font-weight: bold;
+}
+
+.editor-btn.yellow-btn:hover {
+    filter: brightness(1.1);
 }
 
 /* サイズプルダウン（ダークモード） */

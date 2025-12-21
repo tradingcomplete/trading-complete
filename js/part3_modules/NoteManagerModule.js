@@ -111,6 +111,58 @@ class NoteManagerModule {
         localStorage.setItem('monthlyMemoCollapseState', JSON.stringify(this.#monthlyMemoCollapseState));
     }
 
+    /**
+     * 要素のスタイルを正規化（色・サイズ・取消線をCSS変数に統一）
+     * @param {HTMLElement} el - 対象要素
+     * @private
+     */
+    #normalizeElementStyle(el) {
+        const color = el.style.color;
+        const bgColor = el.style.backgroundColor;
+        const fontSize = el.style.fontSize;
+        const tagName = el.tagName;
+        const textDeco = el.style.textDecoration || el.style.textDecorationLine;
+        
+        let newStyle = '';
+        
+        // 赤系（red, #EF5350, #F44336, rgb(239,83,80), rgb(244,67,54), rgb(255,0,0)）
+        if (color === 'red' || 
+            (color && (color.includes('239, 83, 80') || color.includes('244, 67, 54') || color.includes('255, 0, 0')))) {
+            newStyle += 'color: var(--editor-color-red);';
+        }
+        // 青系（blue, #64B5F6, #1976D2, rgb(100,181,246), rgb(25,118,210), rgb(0,0,255)）
+        else if (color === 'blue' || 
+                 (color && (color.includes('100, 181, 246') || color.includes('25, 118, 210') || color.includes('0, 0, 255')))) {
+            newStyle += 'color: var(--editor-color-blue);';
+        }
+        // 緑系（green, #81C784, #388E3C, rgb(129,199,132), rgb(56,142,60), rgb(0,128,0)）
+        else if (color === 'green' || 
+                 (color && (color.includes('129, 199, 132') || color.includes('56, 142, 60') || color.includes('0, 128, 0')))) {
+            newStyle += 'color: var(--editor-color-green);';
+        }
+        
+        // 黄マーカー（yellow, #FFD54F, #FFF59D, rgb(255,213,79), rgb(255,245,157)）
+        if (bgColor && (bgColor.includes('yellow') || bgColor.includes('255, 213, 79') || bgColor.includes('255, 245, 157'))) {
+            newStyle += 'background: var(--editor-highlight-bg); color: var(--editor-highlight-text);';
+        }
+        
+        // フォントサイズ（0.9em, 1.1em, 1.3em）
+        if (fontSize) {
+            newStyle += `font-size: ${fontSize};`;
+        }
+        
+        // 取り消し線（<s>, <strike>タグ、または text-decoration: line-through）
+        if (tagName === 'S' || tagName === 'STRIKE' || (textDeco && textDeco.includes('line-through'))) {
+            newStyle += 'text-decoration: line-through;';
+        }
+        
+        if (newStyle) {
+            el.setAttribute('style', newStyle);
+        } else {
+            el.removeAttribute('style');
+        }
+    }
+
     // ================
     // Public API - データアクセス
     // ================
@@ -1708,17 +1760,7 @@ class NoteManagerModule {
                 const cleanDiv = document.createElement('div');
                 cleanDiv.innerHTML = textContent;
                 
-                cleanDiv.querySelectorAll('*').forEach(el => {
-                    if (el.style.color === 'red' || el.style.color === 'rgb(255, 0, 0)') {
-                        el.setAttribute('style', 'color: red;');
-                    } else if (el.style.color === 'blue' || el.style.color === 'rgb(0, 0, 255)') {
-                        el.setAttribute('style', 'color: blue;');
-                    } else if (el.style.backgroundColor && el.style.backgroundColor.includes('yellow')) {
-                        el.setAttribute('style', 'background: yellow;');
-                    } else {
-                        el.removeAttribute('style');
-                    }
-                });
+                cleanDiv.querySelectorAll('*').forEach(el => this.#normalizeElementStyle(el));
                 
                 // 空行も保持（空行は &nbsp; に変換）
                 const lines = cleanDiv.innerHTML.split('\n').map(line => line.trim() === '' ? '&nbsp;' : line);
@@ -1903,17 +1945,7 @@ class NoteManagerModule {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = text;
         
-        tempDiv.querySelectorAll('*').forEach(el => {
-            if (el.style.color === 'red' || el.style.color === 'rgb(255, 0, 0)') {
-                el.setAttribute('style', 'color: red;');
-            } else if (el.style.color === 'blue' || el.style.color === 'rgb(0, 0, 255)') {
-                el.setAttribute('style', 'color: blue;');
-            } else if (el.style.backgroundColor && el.style.backgroundColor.includes('yellow')) {
-                el.setAttribute('style', 'background: yellow;');
-            } else {
-                el.removeAttribute('style');
-            }
-        });
+        tempDiv.querySelectorAll('*').forEach(el => this.#normalizeElementStyle(el));
         
         text = tempDiv.innerHTML;
         
