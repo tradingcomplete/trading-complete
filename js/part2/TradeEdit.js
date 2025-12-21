@@ -1090,16 +1090,16 @@ class TradeEdit {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        const tradePL = parseFloat(this.#getFieldValue('yenTradePL')) || 0;
-        const swapPoints = parseFloat(this.#getFieldValue('yenSwapPoints')) || 0;
+        const profitLoss = parseFloat(this.#getFieldValue('yenTradePL')) || 0;
+        const swap = parseFloat(this.#getFieldValue('yenSwapPoints')) || 0;
         const commission = parseFloat(this.#getFieldValue('yenCommission')) || 0;
-        const netProfitLoss = tradePL + swapPoints + commission;
+        const netProfit = profitLoss + swap + commission;
         
         const yenProfitLoss = {
-            tradePL,
-            swapPoints,
+            profitLoss,
+            swap,
             commission,
-            netProfitLoss
+            netProfit
         };
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, {

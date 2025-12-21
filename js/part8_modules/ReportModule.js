@@ -1484,7 +1484,7 @@ class ReportModule {
                                 <tr style="cursor: pointer; transition: background 0.2s;"
                                     onmouseover="this.style.background='rgba(255, 255, 255, 0.05)'"
                                     onmouseout="this.style.background='transparent'"
-                                    onclick="showTradeDetail(window.TradeManager.getInstance().getAllTrades().find(t => t.id === ${trade.id}))">
+                                    onclick="showTradeDetail(window.TradeManager.getInstance().getAllTrades().find(t => t.id === '${trade.id}'))">
                                     <td>${window.formatDateTimeForDisplay(displayDate)}</td>
                                     <td>${trade.pair}</td>
                                     <td>
@@ -1714,7 +1714,7 @@ class ReportModule {
                      cursor: pointer; transition: background 0.2s;"
                      onmouseover="this.style.background='${hoverBg}'"
                      onmouseout="this.style.background='transparent'"
-                     onclick="window.showTradeDetail(window.trades.find(t => t.id === ${trade.id}))">
+                     onclick="window.showTradeDetail(window.trades.find(t => t.id === '${trade.id}'))">
                     <span style="color: ${color}; font-weight: bold; font-size: 0.95em;">
                         📅 ${month}月${day}日 | ${trade.pair}
                     </span>

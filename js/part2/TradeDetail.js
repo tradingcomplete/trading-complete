@@ -157,10 +157,10 @@ class TradeDetail {
         return `
             <p>ブローカー: ${yenProfitLoss.broker || '未設定'}</p>
             <p>損益: ¥${(yenProfitLoss.profitLoss || 0).toLocaleString()}</p>
-            <p>スワップ: ¥${(yenProfitLoss.swapPoints || 0).toLocaleString()}</p>
+            <p>スワップ: ¥${(yenProfitLoss.swap || 0).toLocaleString()}</p>
             <p>手数料: ¥${(yenProfitLoss.commission || 0).toLocaleString()}</p>
             <p>決済時レート: ${yenProfitLoss.exchangeRate || '-'}</p>
-            <p class="net-profit">実損益: ¥${(yenProfitLoss.netProfitLoss || 0).toLocaleString()}</p>
+            <p class="net-profit">実損益: ¥${(yenProfitLoss.netProfit || 0).toLocaleString()}</p>
         `;
     }
 

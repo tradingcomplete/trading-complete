@@ -143,10 +143,21 @@ class ChartModule {
             const displayWidth = canvas.clientWidth || canvas.width;
             const isMobileChart = displayWidth < 500;
             
+            // 累積Pips計算（スケール決定用に先に計算）
+            let tempCumulative = 0;
+            const cumulativeData = monthlyData.map(pips => {
+                tempCumulative += pips;
+                return tempCumulative;
+            });
+            
+            // 月間Pipsと累積Pipsの両方を考慮してスケールを決定
+            const maxMonthly = Math.max(...monthlyData.map(Math.abs), 100);
+            const maxCumulative = Math.max(...cumulativeData.map(Math.abs), 100);
+            const maxValue = Math.max(maxMonthly, maxCumulative);
+            
             // グラフ描画（モバイルは余白を減らす）
             const padding = isMobileChart ? 35 : 60;
             const pointSpacing = (canvas.width - padding * 2) / (monthlyData.length - 1);
-            const maxValue = Math.max(...monthlyData.map(Math.abs), 100);
             const scale = (canvas.height - padding * 2) / (maxValue * 2);
             const centerY = canvas.height / 2;
             
@@ -167,13 +178,6 @@ class ChartModule {
             ctx.lineTo(canvas.width - padding, centerY);
             ctx.stroke();
             ctx.setLineDash([]);
-            
-            // 累積Pips計算
-            let cumulativePips = 0;
-            const cumulativeData = monthlyData.map(pips => {
-                cumulativePips += pips;
-                return cumulativePips;
-            });
             
             // 月別バー（モバイルはバー幅を調整）
             monthlyData.forEach((pips, i) => {
@@ -826,37 +830,38 @@ class ChartModule {
             expectancyYen: 0
         };
         
-        // YenProfitLossManagerから円建て統計を取得
-        if (window.YenProfitLossManager) {
-            const yenManager = window.YenProfitLossManager.getInstance();
-            let totalWinAmount = 0;
-            let totalLossAmount = 0;
-            let maxWinAmount = 0;
-            let maxLossAmount = 0;
-            
-            sortedTrades.forEach(trade => {
-                const yenData = yenManager.getYenProfitLoss(trade.id);
-                if (yenData && yenData.totalProfitLoss !== undefined) {
-                    const amount = yenData.totalProfitLoss;
-                    yenStats.totalProfit += amount;
-                    
-                    if (amount > 0) {
-                        totalWinAmount += amount;
-                        if (amount > maxWinAmount) maxWinAmount = amount;
-                    } else if (amount < 0) {
-                        totalLossAmount += Math.abs(amount);
-                        if (Math.abs(amount) > maxLossAmount) maxLossAmount = Math.abs(amount);
-                    }
+        // trade.yenProfitLoss から直接取得（MODULES.md準拠）
+        let totalWinAmount = 0;
+        let totalLossAmount = 0;
+        let maxWinAmount = 0;
+        let maxLossAmount = 0;
+        let yenWinCount = 0;
+        let yenLossCount = 0;
+        
+        sortedTrades.forEach(trade => {
+            const yenData = trade.yenProfitLoss;
+            if (yenData && yenData.netProfit !== null && yenData.netProfit !== undefined) {
+                const netProfit = parseFloat(yenData.netProfit) || 0;
+                yenStats.totalProfit += netProfit;
+                
+                if (netProfit > 0) {
+                    totalWinAmount += netProfit;
+                    yenWinCount++;
+                    if (netProfit > maxWinAmount) maxWinAmount = netProfit;
+                } else if (netProfit < 0) {
+                    totalLossAmount += Math.abs(netProfit);
+                    yenLossCount++;
+                    if (Math.abs(netProfit) > maxLossAmount) maxLossAmount = Math.abs(netProfit);
                 }
-            });
-            
-            yenStats.avgWinAmount = wins > 0 ? totalWinAmount / wins : 0;
-            yenStats.avgLossAmount = losses > 0 ? totalLossAmount / losses : 0;
-            yenStats.maxWinAmount = maxWinAmount;
-            yenStats.maxLossAmount = maxLossAmount;
-            yenStats.profitRate = totalWinAmount > 0 ? (yenStats.totalProfit / totalWinAmount * 100) : 0;
-            yenStats.expectancyYen = (yenStats.avgWinAmount * winRate / 100) - (yenStats.avgLossAmount * lossRate / 100);
-        }
+            }
+        });
+        
+        yenStats.avgWinAmount = yenWinCount > 0 ? totalWinAmount / yenWinCount : 0;
+        yenStats.avgLossAmount = yenLossCount > 0 ? totalLossAmount / yenLossCount : 0;
+        yenStats.maxWinAmount = maxWinAmount;
+        yenStats.maxLossAmount = maxLossAmount;
+        yenStats.profitRate = totalWinAmount > 0 ? (yenStats.totalProfit / totalWinAmount * 100) : 0;
+        yenStats.expectancyYen = (yenStats.avgWinAmount * winRate / 100) - (yenStats.avgLossAmount * lossRate / 100);
         
         return {
             totalTrades: sortedTrades.length,

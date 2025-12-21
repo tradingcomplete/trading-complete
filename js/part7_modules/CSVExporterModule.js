@@ -94,20 +94,20 @@ class CSVExporterModule {
                 trade.quantity || trade.lots || '',
                 trade.entryPrice || '',
                 trade.exitPrice || '',
-                trade.profitLoss || trade.profit || '0',
-                trade.swap || '0',
-                trade.commission || '0',
-                trade.netProfitLoss || trade.netProfit || '0',
+                trade.yenProfitLoss?.profitLoss || '0',
+                trade.yenProfitLoss?.swap || '0',
+                trade.yenProfitLoss?.commission || '0',
+                trade.yenProfitLoss?.netProfit || '0',
                 trade.memo || ''
             ];
             rows.push(row);
         });
 
         // 合計行を追加
-        const totalProfit = yearTrades.reduce((sum, t) => sum + (parseFloat(t.profitLoss || t.profit || 0)), 0);
-        const totalSwap = yearTrades.reduce((sum, t) => sum + (parseFloat(t.swap || 0)), 0);
-        const totalCommission = yearTrades.reduce((sum, t) => sum + (parseFloat(t.commission || 0)), 0);
-        const totalNet = yearTrades.reduce((sum, t) => sum + (parseFloat(t.netProfitLoss || t.netProfit || 0)), 0);
+        const totalProfit = yearTrades.reduce((sum, t) => sum + (parseFloat(t.yenProfitLoss?.profitLoss || 0)), 0);
+        const totalSwap = yearTrades.reduce((sum, t) => sum + (parseFloat(t.yenProfitLoss?.swap || 0)), 0);
+        const totalCommission = yearTrades.reduce((sum, t) => sum + (parseFloat(t.yenProfitLoss?.commission || 0)), 0);
+        const totalNet = yearTrades.reduce((sum, t) => sum + (parseFloat(t.yenProfitLoss?.netProfit || 0)), 0);
 
         rows.push([]);  // 空行
         rows.push(['合計', '', '', '', '', '', totalProfit, totalSwap, totalCommission, totalNet, '']);
@@ -267,7 +267,7 @@ class CSVExporterModule {
         });
 
         const totalProfit = yearTrades.reduce((sum, t) => 
-            sum + parseFloat(t.netProfitLoss || t.netProfit || 0), 0
+            sum + parseFloat(t.yenProfitLoss?.netProfit || 0), 0
         );
 
         // 経費集計
@@ -417,7 +417,7 @@ class CSVExporterModule {
                 date: trade.date,
                 type: 'トレード',
                 detail: `${trade.symbol || trade.pair} ${trade.direction}`,
-                amount: parseFloat(trade.netProfitLoss || trade.netProfit || 0)
+                amount: parseFloat(trade.yenProfitLoss?.netProfit || 0)
             });
         });
 
@@ -440,7 +440,7 @@ class CSVExporterModule {
 
         // 月間集計
         const totalIncome = monthTrades.reduce((sum, t) => 
-            sum + parseFloat(t.netProfitLoss || t.netProfit || 0), 0
+            sum + parseFloat(t.yenProfitLoss?.netProfit || 0), 0
         );
         const totalExpense = monthExpenses.reduce((sum, e) => 
             sum + parseFloat(e.amount || 0), 0

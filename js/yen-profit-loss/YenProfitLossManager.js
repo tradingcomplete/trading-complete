@@ -53,7 +53,7 @@ class YenValidator {
         }
         
         // 数値検証
-        const fields = ['tradePL', 'swapPoints', 'commission'];
+        const fields = ['profitLoss', 'swap', 'commission'];
         for (const field of fields) {
             if (data[field] !== undefined && data[field] !== null) {
                 const value = Number(data[field]);
@@ -91,18 +91,18 @@ class YenCalculator {
      * @returns {Object} 計算済みデータ
      */
     calculate(data) {
-        const tradePL = Number(data.tradePL) || 0;
-        const swapPoints = Number(data.swapPoints) || 0;
+        const profitLoss = Number(data.profitLoss) || 0;
+        const swap = Number(data.swap) || 0;
         const commission = Number(data.commission) || 0;
         
         // 手数料は通常負の値として扱う
         const normalizedCommission = commission > 0 ? -commission : commission;
         
         return {
-            tradePL,
-            swapPoints,
+            profitLoss,
+            swap,
             commission: normalizedCommission,
-            netProfitLoss: tradePL + swapPoints + normalizedCommission,
+            netProfit: profitLoss + swap + normalizedCommission,
             timestamp: new Date().toISOString()
         };
     }
@@ -182,13 +182,13 @@ class YenFormatter {
      */
     formatStatistics(stats) {
         return {
-            totalPL: this.formatYen(stats.tradePL, true),
-            totalSwap: this.formatYen(stats.swapPoints, true),
+            totalPL: this.formatYen(stats.profitLoss, true),
+            totalSwap: this.formatYen(stats.swap, true),
             totalCommission: this.formatYen(stats.commission),
-            netProfit: this.formatYen(stats.netProfitLoss, true),
+            netProfit: this.formatYen(stats.netProfit, true),
             tradeCount: stats.count,
             averageProfit: this.formatYen(
-                stats.count > 0 ? Math.round(stats.netProfitLoss / stats.count) : 0
+                stats.count > 0 ? Math.round(stats.netProfit / stats.count) : 0
             )
         };
     }
@@ -297,10 +297,10 @@ class YenProfitLossManager {
      */
     calculateTotal(tradeIds = []) {
         const totals = {
-            tradePL: 0,
-            swapPoints: 0,
+            profitLoss: 0,
+            swap: 0,
             commission: 0,
-            netProfitLoss: 0,
+            netProfit: 0,
             count: 0,
             winCount: 0,
             lossCount: 0
@@ -309,15 +309,15 @@ class YenProfitLossManager {
         for (const tradeId of tradeIds) {
             const data = this.getYenProfitLoss(tradeId);
             if (data) {
-                totals.tradePL += data.tradePL || 0;
-                totals.swapPoints += data.swapPoints || 0;
+                totals.profitLoss += data.profitLoss || 0;
+                totals.swap += data.swap || 0;
                 totals.commission += data.commission || 0;
-                totals.netProfitLoss += data.netProfitLoss || 0;
+                totals.netProfit += data.netProfit || 0;
                 totals.count++;
                 
-                if (data.netProfitLoss > 0) {
+                if (data.netProfit > 0) {
                     totals.winCount++;
-                } else if (data.netProfitLoss < 0) {
+                } else if (data.netProfit < 0) {
                     totals.lossCount++;
                 }
             }

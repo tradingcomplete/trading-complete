@@ -494,16 +494,16 @@ function repairTradeData() {
             trade.tradePL = null;
             needsRepair = true;
         }
-        if (trade.swapPoints === undefined) {
-            trade.swapPoints = null;
+        if (trade.swap === undefined) {
+            trade.swap = null;
             needsRepair = true;
         }
         if (trade.commission === undefined) {
             trade.commission = null;
             needsRepair = true;
         }
-        if (trade.netProfitLoss === undefined) {
-            trade.netProfitLoss = null;
+        if (trade.netProfit === undefined) {
+            trade.netProfit = null;
             needsRepair = true;
         }
         
@@ -567,10 +567,10 @@ function migrateYenProfitLossData() {
         if (!trade.yenProfitLoss) {
             // デフォルト値を設定（後で手動修正可能）
             trade.yenProfitLoss = {
-                tradePL: 0,
-                swapPoints: 0,
+                profitLoss: 0,
+                swap: 0,
                 commission: 0,
-                netProfitLoss: 0,
+                netProfit: 0,
                 timestamp: new Date().toISOString()
             };
             migrated++;
@@ -1979,8 +1979,8 @@ function updateQuickStats() {
         }
         
         // 円建て損益の集計
-        if (trade.yenProfitLoss && trade.yenProfitLoss.netProfitLoss) {
-            monthlyYenPL += trade.yenProfitLoss.netProfitLoss;
+        if (trade.yenProfitLoss && trade.yenProfitLoss.netProfit) {
+            monthlyYenPL += trade.yenProfitLoss.netProfit;
         }
     });
     
@@ -2324,12 +2324,12 @@ function editYenProfitLoss(tradeId) {
             <div class="input-grid" style="gap: 15px;">
                 <div class="input-group">
                     <label>トレード損益（必須）</label>
-                    <input type="number" id="yenTradePL" value="${yenPL.tradePL || 0}" step="1">
+                    <input type="number" id="yenTradePL" value="${yenPL.profitLoss || 0}" step="1">
                 </div>
                 
                 <div class="input-group">
                     <label>スワップポイント</label>
-                    <input type="number" id="yenSwapPoints" value="${yenPL.swapPoints || 0}" step="1">
+                    <input type="number" id="yenSwapPoints" value="${yenPL.swap || 0}" step="1">
                 </div>
                 
                 <div class="input-group">
@@ -2415,10 +2415,10 @@ function saveYenProfitLoss(tradeId) {
     
     // 保存
     trade.yenProfitLoss = {
-        tradePL,
-        swapPoints,
+        profitLoss: tradePL,
+        swap: swapPoints,
         commission,
-        netProfitLoss: tradePL + swapPoints - commission,
+        netProfit: tradePL + swapPoints + commission,
         broker,
         lastModified: new Date().toISOString()
     };
