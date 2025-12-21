@@ -776,6 +776,53 @@ body.light-mode #settings-data {
     padding: 0 !important;
 }
 
+/* トレード詳細モーダル - チェックリスト */
+body.light-mode .checklist-label {
+    color: #333333 !important;
+    -webkit-text-fill-color: #333333 !important;
+}
+
+body.light-mode .checklist-value {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+/* トレード詳細モーダル - 円建て損益セクション */
+body.light-mode .yen-profit-loss-section {
+    color: #333333 !important;
+    -webkit-text-fill-color: #333333 !important;
+}
+
+body.light-mode .yen-profit-loss-section p {
+    color: #333333 !important;
+    -webkit-text-fill-color: #333333 !important;
+}
+
+body.light-mode .yen-profit-loss-section .net-profit {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+body.light-mode .yen-profit-loss-section .loss {
+    color: #dd3333 !important;
+    -webkit-text-fill-color: #dd3333 !important;
+}
+
+body.light-mode .yen-profit-loss-section .profit {
+    color: #00995a !important;
+    -webkit-text-fill-color: #00995a !important;
+}
+
+body.light-mode .note-detail {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+body.light-mode .note-detail * {
+    color: inherit;
+    -webkit-text-fill-color: inherit;
+}
+
 body.light-mode .filter-row {
     background: transparent !important;
 }
