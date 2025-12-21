@@ -680,7 +680,7 @@ class NoteManagerModule {
         let cleaned = html
             .replace(/<span><\/span>/gi, '') // 空のspan
             .replace(/<span\s*style=""[^>]*><\/span>/gi, '') // スタイルが空のspan
-            .replace(/(<br\s*\/?>){2,}/gi, '') // 連続するBR
+            .replace(/(<br\s*\/?>){3,}/gi, '<br><br>') // 3つ以上の連続BRは2つに統一（空行1つ保持）
             .replace(/^<br\s*\/?>|<br\s*\/?>$/gi, ''); // 先頭・末尾のBR
         
         return cleaned.trim();
@@ -931,7 +931,7 @@ class NoteManagerModule {
                 });
                 
                 let cleanedHTML = tempDiv.innerHTML;
-                cleanedHTML = cleanedHTML.replace(/(<br\s*\/?>){2,}/gi, '<br>');
+                cleanedHTML = cleanedHTML.replace(/(<br\s*\/?>){3,}/gi, '<br><br>');
                 cleanedHTML = cleanedHTML.replace(/(<br\s*\/?>|<span><\/span>)+$/gi, '');
                 
                 return cleanedHTML;
@@ -1069,6 +1069,8 @@ class NoteManagerModule {
         this.#notes[noteDate] = noteData;
         this.#save();
         this.updateWeeklyPreview();
+        this.displayNoteDetail(noteDate);
+        this.selectNoteDate(noteDate);
         
         const date = new Date(noteDate);
         const month = date.getMonth() + 1;
@@ -1305,6 +1307,13 @@ class NoteManagerModule {
         this.#save();
         this.updateWeeklyPreview();
         
+        // 編集画面（入力欄）もクリア
+        const memoElement = document.getElementById('noteMemo');
+        const marketViewElement = document.getElementById('noteMarketView');
+        if (memoElement) memoElement.innerHTML = '';
+        if (marketViewElement) marketViewElement.innerHTML = '';
+        this.restoreNoteImages([]);
+        
         document.getElementById('noteDetail').innerHTML = `
             <div class="detail-placeholder">
                 <p>📝 日付を選択してノートを表示</p>
@@ -1360,6 +1369,9 @@ class NoteManagerModule {
         
         document.execCommand('styleWithCSS', false, true);
         
+        // CSS変数から色を取得
+        const styles = getComputedStyle(document.documentElement);
+        
         switch(format) {
             case 'bold':
                 document.execCommand('bold', false, null);
@@ -1367,14 +1379,24 @@ class NoteManagerModule {
             case 'underline':
                 document.execCommand('underline', false, null);
                 break;
+            case 'strikethrough':
+                document.execCommand('strikeThrough', false, null);
+                break;
             case 'red':
-                document.execCommand('foreColor', false, 'red');
+                const redColor = styles.getPropertyValue('--editor-color-red').trim() || '#EF5350';
+                document.execCommand('foreColor', false, redColor);
                 break;
             case 'blue':
-                document.execCommand('foreColor', false, 'blue');
+                const blueColor = styles.getPropertyValue('--editor-color-blue').trim() || '#64B5F6';
+                document.execCommand('foreColor', false, blueColor);
+                break;
+            case 'green':
+                const greenColor = styles.getPropertyValue('--editor-color-green').trim() || '#81C784';
+                document.execCommand('foreColor', false, greenColor);
                 break;
             case 'highlight':
-                document.execCommand('hiliteColor', false, 'yellow');
+                const highlightColor = styles.getPropertyValue('--editor-highlight-bg').trim() || '#FFD54F';
+                document.execCommand('hiliteColor', false, highlightColor);
                 break;
             case 'default':
                 document.execCommand('removeFormat', false, null);
@@ -1382,6 +1404,9 @@ class NoteManagerModule {
         }
         
         editor.focus();
+        
+        // EventBus発火（デバッグ用）
+        this.#eventBus?.emit('note:formatApplied', { editorId, format });
     }
 
     /**
@@ -1389,6 +1414,75 @@ class NoteManagerModule {
      */
     applyFormatting(editorId, format) {
         this.applyNoteFormat(editorId, format);
+    }
+
+    /**
+     * フォントサイズ適用
+     * @param {string} editorId - エディタID
+     * @param {string} size - 'small'|'medium'|'large'
+     */
+    applyFontSize(editorId, size) {
+        let editorElementId;
+        
+        switch(editorId) {
+            case 'memo':
+                editorElementId = 'noteMemo';
+                break;
+            case 'marketView':
+                editorElementId = 'noteMarketView';
+                break;
+            case 'editMemo':
+                editorElementId = 'editNoteMemo';
+                break;
+            case 'editMarketView':
+                editorElementId = 'editNoteMarketView';
+                break;
+            default:
+                return;
+        }
+        
+        const editor = document.getElementById(editorElementId);
+        if (!editor) return;
+        
+        const sizeMap = {
+            'small': '0.9em',
+            'medium': '1.1em',
+            'large': '1.3em'
+        };
+        
+        const fontSize = sizeMap[size] || '0.9em';
+        
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        if (range.collapsed) return; // 選択範囲がない場合は何もしない
+        
+        // 選択範囲をspanで囲む
+        const span = document.createElement('span');
+        span.style.fontSize = fontSize;
+        
+        try {
+            range.surroundContents(span);
+        } catch (e) {
+            // 複雑な選択範囲の場合はexecCommandを使用
+            document.execCommand('styleWithCSS', false, true);
+            document.execCommand('fontSize', false, '7');
+            
+            // 適用された要素を探してfont-sizeを上書き
+            const fontElements = editor.querySelectorAll('font[size="7"]');
+            fontElements.forEach(el => {
+                const newSpan = document.createElement('span');
+                newSpan.style.fontSize = fontSize;
+                newSpan.innerHTML = el.innerHTML;
+                el.parentNode.replaceChild(newSpan, el);
+            });
+        }
+        
+        editor.focus();
+        
+        // EventBus発火
+        this.#eventBus?.emit('note:fontSizeApplied', { editorId, size });
     }
 
     // ================
@@ -1465,7 +1559,7 @@ class NoteManagerModule {
         
         this.#notes[noteDate] = noteData;
         this.#save();
-        this.updateWeeklyPreview();
+        // 週間プレビューは手動保存時のみ更新（自動保存では更新しない）
     }
 
     // ================
@@ -1626,7 +1720,8 @@ class NoteManagerModule {
                     }
                 });
                 
-                const lines = cleanDiv.innerHTML.split('\n').filter(line => line.trim());
+                // 空行も保持（空行は &nbsp; に変換）
+                const lines = cleanDiv.innerHTML.split('\n').map(line => line.trim() === '' ? '&nbsp;' : line);
                 
                 if (i < lines.length) {
                     lineDiv.innerHTML = lines[i];
@@ -2428,6 +2523,7 @@ class NoteManagerModule {
         
         // フォーマット
         window.applyNoteFormat = (e, f) => this.applyNoteFormat(e, f);
+        window.applyFontSize = (e, s) => this.applyFontSize(e, s);
         window.applyFormatting = (e, f) => this.applyFormatting(e, f);
         window.setupNoteAutoSave = () => this.setupNoteAutoSave();
         window.autoSaveNoteQuietly = () => this.autoSaveNoteQuietly();

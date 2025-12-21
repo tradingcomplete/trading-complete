@@ -450,23 +450,34 @@
                     <div class="form-group">
                         <label>メモ</label>
                         <div class="editor-toolbar">
+                            <select class="size-select" onchange="applyFontSize('memo', this.value)" title="文字サイズ">
+                                <option value="small" selected>小</option>
+                                <option value="medium">中</option>
+                                <option value="large">大</option>
+                            </select>
                             <button class="editor-btn" onclick="applyNoteFormat('memo', 'bold')" title="太字">
                                 <b>B</b>
                             </button>
                             <button class="editor-btn" onclick="applyNoteFormat('memo', 'underline')" title="下線">
                                 <u>U</u>
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'red')" title="赤文字">
-                                <span style="color: red">赤</span>
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'strikethrough')" title="取り消し線">
+                                <s>S</s>
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'blue')" title="青文字">
-                                <span style="color: blue">青</span>
+                            <button class="editor-btn red-btn" onclick="applyNoteFormat('memo', 'red')" title="赤文字">
+                                赤
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'highlight')" title="黄色マーカー">
-                                <span style="background: yellow">黄</span>
+                            <button class="editor-btn blue-btn" onclick="applyNoteFormat('memo', 'blue')" title="青文字">
+                                青
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'default')" title="デフォルト色">
-                                <span style="color: inherit">元</span>
+                            <button class="editor-btn green-btn" onclick="applyNoteFormat('memo', 'green')" title="緑文字">
+                                緑
+                            </button>
+                            <button class="editor-btn yellow-btn" onclick="applyNoteFormat('memo', 'highlight')" title="黄色マーカー">
+                                黄
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('memo', 'default')" title="書式解除">
+                                元
                             </button>
                         </div>
                         <div id="noteMemo" contenteditable="true" class="note-editor textarea-style" data-placeholder="経済指標、要人発言、その他イベント（複数行入力可能）" style="min-height: 120px; resize: vertical; overflow: auto;"></div>
@@ -475,23 +486,34 @@
                     <div class="form-group">
                         <label>今日の相場観</label>
                         <div class="editor-toolbar">
+                            <select class="size-select" onchange="applyFontSize('marketView', this.value)" title="文字サイズ">
+                                <option value="small" selected>小</option>
+                                <option value="medium">中</option>
+                                <option value="large">大</option>
+                            </select>
                             <button class="editor-btn" onclick="applyNoteFormat('marketView', 'bold')" title="太字">
                                 <b>B</b>
                             </button>
                             <button class="editor-btn" onclick="applyNoteFormat('marketView', 'underline')" title="下線">
                                 <u>U</u>
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'red')" title="赤文字">
-                                <span style="color: red">赤</span>
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'strikethrough')" title="取り消し線">
+                                <s>S</s>
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'blue')" title="青文字">
-                                <span style="color: blue">青</span>
+                            <button class="editor-btn red-btn" onclick="applyNoteFormat('marketView', 'red')" title="赤文字">
+                                赤
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'highlight')" title="黄色マーカー">
-                                <span style="background: yellow">黄</span>
+                            <button class="editor-btn blue-btn" onclick="applyNoteFormat('marketView', 'blue')" title="青文字">
+                                青
                             </button>
-                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'default')" title="デフォルト色">
-                                <span style="color: inherit">元</span>
+                            <button class="editor-btn green-btn" onclick="applyNoteFormat('marketView', 'green')" title="緑文字">
+                                緑
+                            </button>
+                            <button class="editor-btn yellow-btn" onclick="applyNoteFormat('marketView', 'highlight')" title="黄色マーカー">
+                                黄
+                            </button>
+                            <button class="editor-btn" onclick="applyNoteFormat('marketView', 'default')" title="書式解除">
+                                元
                             </button>
                         </div>
                         <div id="noteMarketView" contenteditable="true" class="note-editor textarea-style" data-placeholder="今日の相場の動き、出来事、気づいたことなど（複数行入力可能）" style="min-height: 400px; resize: vertical; overflow: auto;"></div>
@@ -1916,62 +1938,6 @@
                         <button class="btn btn-delete-all" onclick="deleteAllData()">
                             🗑️ 全データを削除する
                         </button>
-                    </div>
-                </div>
-
-                <!-- ========================================
-                     マイページタブ（新規）
-                     ======================================== -->
-                <div id="settings-mypage" class="settings-subtab-content">
-                    <h3>👤 アカウント情報</h3>
-                    
-                    <!-- ユーザーネーム -->
-                    <div class="mypage-item">
-                        <label>ユーザーネーム</label>
-                        <div class="mypage-value-row">
-                            <span id="mypage-username" class="mypage-value">-</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangeUsernameModal()" disabled>
-                                変更
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- メールアドレス -->
-                    <div class="mypage-item">
-                        <label>メールアドレス</label>
-                        <div class="mypage-value-row">
-                            <span id="mypage-email" class="mypage-value">-</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangeEmailModal()" disabled>
-                                変更
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- パスワード -->
-                    <div class="mypage-item">
-                        <label>パスワード</label>
-                        <div class="mypage-value-row">
-                            <span class="mypage-value">••••••••</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangePasswordModal()" disabled>
-                                変更
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <p style="color: #888; font-size: 0.85em; margin-top: 10px;">
-                        ※ 変更機能は今後のアップデートで有効になります
-                    </p>
-                    
-                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
-                    
-                    <!-- ログアウトボタン -->
-                    <div class="mypage-logout-section">
-                        <button class="btn btn-logout" onclick="AuthModule.logoutWithConfirm()">
-                            🚪 ログアウト
-                        </button>
-                        <p style="color: #888; font-size: 0.85em; margin-top: 10px;">
-                            ログアウトすると、再度ログインが必要になります。
-                        </p>
                     </div>
                 </div>
             </div>

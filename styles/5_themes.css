@@ -36,6 +36,28 @@
    ===================================================== */
 
 /* =====================================================
+   エディタ色変数（テーマ対応）
+   ===================================================== */
+
+/* ダークモード（デフォルト） */
+:root {
+    --editor-color-red: #EF5350;
+    --editor-color-blue: #64B5F6;
+    --editor-color-green: #81C784;
+    --editor-highlight-bg: #FFD54F;
+    --editor-highlight-text: #000000;
+}
+
+/* ライトモード */
+body.light-mode {
+    --editor-color-red: #F44336;
+    --editor-color-blue: #1976D2;
+    --editor-color-green: #388E3C;
+    --editor-highlight-bg: #FFF59D;
+    --editor-highlight-text: #000000;
+}
+
+/* =====================================================
    テーマ切り替え
    ===================================================== */
 
@@ -490,6 +512,33 @@ body.light-mode .editor-btn[onclick*="underline"] {
 body.light-mode .editor-btn[onclick*="bold"]:hover,
 body.light-mode .editor-btn[onclick*="underline"]:hover {
     background: #e8e8e8 !important;
+    border-color: #666666 !important;
+}
+
+/* 緑ボタン */
+body.light-mode .editor-btn.green-btn {
+    background: #e8f5e9 !important;
+    border-color: #66bb6a !important;
+    color: var(--editor-color-green) !important;
+}
+
+body.light-mode .editor-btn.green-btn:hover {
+    background: #c8e6c9 !important;
+    border-color: #4caf50 !important;
+}
+
+/* サイズプルダウン */
+body.light-mode .size-select {
+    background: #f8f8f8 !important;
+    color: #000000 !important;
+    border: 2px solid #999999 !important;
+    padding: 4px !important;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+body.light-mode .size-select:hover {
     border-color: #666666 !important;
 }
 
@@ -2112,4 +2161,35 @@ body.light-mode .monthly-memo-textarea:focus {
     border-color: #007744;
 }
 
-/* ========== 5_themes.css 終了 ========== */
+/* =====================================================
+   ダークモード エディタスタイル
+   ===================================================== */
+
+/* 緑ボタン（ダークモード） */
+.editor-btn.green-btn {
+    background: rgba(129, 199, 132, 0.2) !important;
+    border-color: #81C784 !important;
+    color: var(--editor-color-green) !important;
+}
+
+.editor-btn.green-btn:hover {
+    background: rgba(129, 199, 132, 0.3) !important;
+    border-color: #a5d6a7 !important;
+}
+
+/* サイズプルダウン（ダークモード） */
+.size-select {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    padding: 4px !important;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.size-select:hover {
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ========== 5_themes.css 終了 ==========*/
