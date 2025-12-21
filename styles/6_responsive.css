@@ -1298,6 +1298,36 @@
         margin-top: 10px !important;
     }
     
+    /* === 相場ノート - 日付入力と検索ボタン最適化 === */
+    #notes .date-selector {
+        gap: 8px !important;
+    }
+    
+    #notes #noteDate {
+        width: 140px !important;
+        padding: 6px 8px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* ライトモード時のカレンダーアイコン表示 */
+    body.light-mode #notes #noteDate {
+        color-scheme: light !important;
+    }
+    
+    #notes .note-search-btn {
+        background: linear-gradient(135deg, #5bc0de, #46b8da) !important;
+        color: #000 !important;
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+        border: none !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 4px rgba(91, 192, 222, 0.3) !important;
+    }
+    
+    #notes .note-search-btn .search-btn-text {
+        display: inline !important;
+    }
+    
     /* === 設定タブ - マイページ最適化 === */
     #settings-mypage .mypage-item {
         padding: 10px !important;
