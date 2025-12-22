@@ -154,7 +154,23 @@ class SettingsModule {
         const stored = localStorage.getItem(SettingsModule.STORAGE_KEYS.BROKERS);
         if (stored) {
             try {
-                this.#brokers = JSON.parse(stored);
+                const parsed = JSON.parse(stored);
+                // データ形式を検証（{ list: [], nextId: number } の形式か確認）
+                if (parsed && typeof parsed === 'object' && Array.isArray(parsed.list)) {
+                    this.#brokers = parsed;
+                } else if (Array.isArray(parsed)) {
+                    // 古い形式（配列のみ）の場合は変換
+                    console.log('SettingsModule: Converting old brokers format');
+                    this.#brokers = { 
+                        list: parsed, 
+                        nextId: parsed.length > 0 ? Math.max(...parsed.map(b => b.id || 0)) + 1 : 1 
+                    };
+                    this.#saveBrokers(); // 新形式で保存し直す
+                } else {
+                    // 不正な形式の場合はデフォルト値
+                    console.warn('SettingsModule: Invalid brokers format, using default');
+                    this.#brokers = { list: [], nextId: 1 };
+                }
             } catch (e) {
                 console.error('SettingsModule: Failed to parse brokers', e);
                 this.#brokers = { list: [], nextId: 1 };
@@ -778,6 +794,11 @@ class SettingsModule {
      * @returns {Array} ブローカー配列
      */
     getAllBrokers() {
+        // 安全対策: listが配列でない場合は空配列を返す
+        if (!this.#brokers || !Array.isArray(this.#brokers.list)) {
+            console.warn('SettingsModule: #brokers.list is not valid, returning empty array');
+            return [];
+        }
         return [...this.#brokers.list];
     }
     
