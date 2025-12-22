@@ -860,7 +860,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('✅ Price step event listeners added to #pair');
     } else {
-        console.warn(⚠️ #pair element not found');
+        console.warn('⚠️ #pair element not found');
     }
 });
 
