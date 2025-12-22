@@ -80,6 +80,110 @@ class StatisticsModule {
     }
     
     /**
+     * 期間統計UIを更新
+     * @public
+     * @param {Object} pipsStats - Pips統計
+     * @param {Object} yenStats - 円建て統計
+     * @param {string} periodText - 期間テキスト
+     * @returns {void}
+     */
+    updatePeriodStatsUI(pipsStats, yenStats, periodText) {
+        // タイトル更新（モバイル用改行対応）
+        document.getElementById('periodStatsTitle').innerHTML = `📊 ${periodText.replace('（', '<br class="mobile-break">（')}`;
+        
+        // Pips統計更新
+        if (pipsStats) {
+            document.getElementById('periodTotalTrades').textContent = pipsStats.totalTrades;
+            document.getElementById('periodWinLoss').textContent = pipsStats.winLossRecord;
+            document.getElementById('periodWinRate').textContent = pipsStats.winRate;
+            
+            // 総獲得Pips - 色付け追加
+            const totalPipsElement = document.getElementById('periodTotalPips');
+            totalPipsElement.textContent = Math.abs(parseFloat(pipsStats.totalPips)).toFixed(1);
+            totalPipsElement.className = 'stat-value ' + (parseFloat(pipsStats.totalPips) >= 0 ? 'positive' : 'negative');
+            
+            document.getElementById('periodAvgHoldTime').textContent = pipsStats.avgHoldTime;
+            document.getElementById('periodRR').textContent = pipsStats.rrRatio;
+            document.getElementById('periodMaxWinStreak').textContent = pipsStats.maxWinStreak + '回';
+            document.getElementById('periodMaxLoseStreak').textContent = pipsStats.maxLoseStreak + '回';
+            
+            // 平均利益pips - 色付け追加
+            const periodAvgProfitPipsElem = document.getElementById('periodAvgProfitPips');
+            const avgProfitPipsValue = parseFloat(pipsStats.avgProfitPips) || 0;
+            periodAvgProfitPipsElem.textContent = Math.abs(avgProfitPipsValue).toFixed(1);
+            periodAvgProfitPipsElem.className = 'stat-value ' + (avgProfitPipsValue >= 0 ? 'positive' : 'negative');
+            
+            // 平均損失pips - 色付け追加＋絶対値化
+            const periodAvgLossPipsElem = document.getElementById('periodAvgLossPips');
+            const avgLossPipsValue = parseFloat(pipsStats.avgLossPips) || 0;
+            periodAvgLossPipsElem.textContent = Math.abs(avgLossPipsValue).toFixed(1);
+            periodAvgLossPipsElem.className = 'stat-value negative';
+            
+            // 最大獲得pips - 色付け追加
+            const periodMaxWinPipsElem = document.getElementById('periodMaxWinPips');
+            const maxWinPipsValue = parseFloat(pipsStats.maxWinPips) || 0;
+            periodMaxWinPipsElem.textContent = Math.abs(maxWinPipsValue).toFixed(1);
+            periodMaxWinPipsElem.className = 'stat-value ' + (maxWinPipsValue >= 0 ? 'positive' : 'negative');
+            
+            // 最大損失pips - 色付け追加＋絶対値化
+            const periodMaxLossPipsElem = document.getElementById('periodMaxLossPips');
+            const maxLossPipsValue = parseFloat(pipsStats.maxLossPips) || 0;
+            periodMaxLossPipsElem.textContent = Math.abs(maxLossPipsValue).toFixed(1);
+            periodMaxLossPipsElem.className = 'stat-value negative';
+        }
+        
+        // 円建て統計更新
+        if (yenStats) {
+            document.getElementById('periodYenRegistration').textContent = yenStats.registrationStatus;
+            document.getElementById('periodYenWinRate').textContent = yenStats.winRate;
+            
+            // 総損益 - 符号削除
+            document.getElementById('periodYenTotalPL').textContent = `¥${Math.abs(yenStats.totalProfitLoss).toLocaleString()}`;
+            document.getElementById('periodYenTotalPL').className = 'stat-value ' + (yenStats.totalProfitLoss >= 0 ? 'positive' : 'negative');
+            
+            document.getElementById('periodYenPF').textContent = yenStats.profitFactor;
+            
+            // 期待値 - 符号削除
+            document.getElementById('periodYenExpectedValue').textContent = `¥${Math.abs(yenStats.expectedValue).toLocaleString()}`;
+            document.getElementById('periodYenExpectedValue').className = 'stat-value ' + (yenStats.expectedValue >= 0 ? 'positive' : 'negative');
+            
+            // 平均利益 - 色付け追加＋記号削除
+            const periodYenAvgProfitElem = document.getElementById('periodYenAvgProfit');
+            periodYenAvgProfitElem.textContent = `¥${Math.abs(yenStats.avgProfit).toLocaleString()}`;
+            periodYenAvgProfitElem.className = 'stat-value ' + (yenStats.avgProfit >= 0 ? 'positive' : 'negative');
+            
+            // 平均損失 - 色付け追加＋記号削除
+            const periodYenAvgLossElem = document.getElementById('periodYenAvgLoss');
+            periodYenAvgLossElem.textContent = `¥${Math.abs(yenStats.avgLoss).toLocaleString()}`;
+            periodYenAvgLossElem.className = 'stat-value negative';
+            
+            // 最大利益 - 色付け追加＋記号削除
+            const periodYenMaxProfitElem = document.getElementById('periodYenMaxProfit');
+            periodYenMaxProfitElem.textContent = `¥${Math.abs(yenStats.maxProfit).toLocaleString()}`;
+            periodYenMaxProfitElem.className = 'stat-value ' + (yenStats.maxProfit >= 0 ? 'positive' : 'negative');
+            
+            // 最大損失 - 色付け追加＋記号削除
+            const periodYenMaxLossElem = document.getElementById('periodYenMaxLoss');
+            periodYenMaxLossElem.textContent = `¥${Math.abs(yenStats.maxLoss).toLocaleString()}`;
+            periodYenMaxLossElem.className = 'stat-value negative';
+            
+            // 最大DD - 符号削除 + 赤色追加
+            const maxDDElement = document.getElementById('periodYenMaxDD');
+            maxDDElement.textContent = `¥${yenStats.maxDrawdown.toLocaleString()}`;
+            maxDDElement.className = 'stat-value negative';
+            
+            // スワップ損益 - 符号削除
+            document.getElementById('periodYenSwap').textContent = `¥${Math.abs(yenStats.swapTotal).toLocaleString()}`;
+            document.getElementById('periodYenSwap').className = 'stat-value ' + (yenStats.swapTotal >= 0 ? 'positive' : 'negative');
+            
+            // 手数料合計 - 赤色追加
+            const commissionElement = document.getElementById('periodYenCommission');
+            commissionElement.textContent = `¥${Math.abs(yenStats.commissionTotal).toLocaleString()}`;
+            commissionElement.className = 'stat-value negative';
+        }
+    }
+    
+    /**
      * デバッグ用：モジュールの状態を取得
      * @public
      * @returns {Object} モジュールの状態
