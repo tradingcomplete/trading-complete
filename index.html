@@ -1491,21 +1491,9 @@
                 updatePeriodStatsUI(pipsStats, yenStats, selectedText);
             }
             
-            // レポート詳細も期間に連動して更新
-            if (window.ReportModule && typeof window.ReportModule.generateReport === 'function') {
-                // 四半期の場合は最初の月を計算（Q1→1月, Q2→4月, Q3→7月, Q4→10月）
-                let reportMonth = period;
-                if (currentPeriodType === 'quarterly') {
-                    reportMonth = (period - 1) * 3 + 1;
-                }
-                
-                console.log('レポート詳細更新:', {
-                    type: currentPeriodType,
-                    year: year,
-                    month: reportMonth
-                });
-                
-                window.ReportModule.generateReport(currentPeriodType, year, reportMonth);
+            // レポート詳細も期間に連動して更新（ReportModuleに委譲）
+            if (window.ReportModule && typeof window.ReportModule.handlePeriodChange === 'function') {
+                window.ReportModule.handlePeriodChange(currentPeriodType, year, period);
             }
         }
         

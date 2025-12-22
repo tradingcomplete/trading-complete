@@ -809,16 +809,39 @@ class ReportModule {
                 break;
                 
             case 'isoWeek':
-                // ISO週処理
-                const isoWeeks = this.#getISOWeeksInMonth(year, month);
-                if (window.currentWeekNumber <= isoWeeks.length) {
-                    const isoWeek = isoWeeks[window.currentWeekNumber - 1];
-                    weekDates = {
-                        start: this.#getISOWeekStart(year, isoWeek.week),
-                        end: new Date(this.#getISOWeekStart(year, isoWeek.week).getTime() + 6 * 24 * 60 * 60 * 1000)
-                    };
-                    periodText = `${year}年 第${isoWeek.week}週（ISO週）`;
-                }
+                // ISO週処理 - currentWeekNumberを直接ISO週番号として使用
+                const isoWeekNumber = window.currentWeekNumber;
+                
+                // ISO週番号から週の開始日を計算
+                const jan4 = new Date(year, 0, 4);
+                const dayOfWeek = jan4.getDay() || 7;
+                const firstMondayOfYear = new Date(jan4);
+                firstMondayOfYear.setDate(jan4.getDate() - dayOfWeek + 1);
+                
+                const isoWeekStart = new Date(firstMondayOfYear);
+                isoWeekStart.setDate(firstMondayOfYear.getDate() + (isoWeekNumber - 1) * 7);
+                
+                const isoWeekEnd = new Date(isoWeekStart);
+                isoWeekEnd.setDate(isoWeekStart.getDate() + 6);
+                isoWeekEnd.setHours(23, 59, 59, 999);
+                
+                weekDates = {
+                    start: isoWeekStart,
+                    end: isoWeekEnd
+                };
+                
+                // 日付範囲をテキストで表示
+                const startMonth = isoWeekStart.getMonth() + 1;
+                const startDay = isoWeekStart.getDate();
+                const endMonth = isoWeekEnd.getMonth() + 1;
+                const endDay = isoWeekEnd.getDate();
+                periodText = `${year}年第${isoWeekNumber}週（${startMonth}/${startDay}-${endMonth}/${endDay}）`;
+                
+                console.log('ReportModule isoWeek:', {
+                    weekNumber: isoWeekNumber,
+                    start: isoWeekStart.toISOString().split('T')[0],
+                    end: isoWeekEnd.toISOString().split('T')[0]
+                });
                 break;
         }
         
@@ -887,6 +910,63 @@ class ReportModule {
     toggleSortOrder() {
         window.currentSortOrder = window.currentSortOrder === 'desc' ? 'asc' : 'desc';
         this.generateReport(window.currentReportType);
+    }
+    
+    /**
+     * 期間変更時のレポート更新（index.htmlのchangePeriodから呼ばれる）
+     * @public
+     * @param {string} periodType - 期間タイプ（'weekly'/'monthly'/'quarterly'/'yearly'）
+     * @param {number} year - 年
+     * @param {number} period - 期間（週番号/月/四半期）
+     * @returns {void}
+     */
+    handlePeriodChange(periodType, year, period) {
+        try {
+            let reportMonth = period;
+            
+            // 四半期の場合は最初の月を計算（Q1→1月, Q2→4月, Q3→7月, Q4→10月）
+            if (periodType === 'quarterly') {
+                reportMonth = (period - 1) * 3 + 1;
+            }
+            
+            // 週次の場合は週番号とcurrentReportDateを正しく設定
+            if (periodType === 'weekly') {
+                window.currentWeekNumber = period;
+                window.currentWeekMode = 'isoWeek';
+                
+                // ISO週から月を計算（週の木曜日が属する月）
+                const jan4 = new Date(year, 0, 4);
+                const dayOfWeek = jan4.getDay() || 7;
+                const firstMonday = new Date(jan4);
+                firstMonday.setDate(jan4.getDate() - dayOfWeek + 1);
+                
+                const weekStart = new Date(firstMonday);
+                weekStart.setDate(firstMonday.getDate() + (period - 1) * 7);
+                
+                // 週の木曜日で月を決定（ISO週の定義）
+                const thursday = new Date(weekStart);
+                thursday.setDate(weekStart.getDate() + 3);
+                reportMonth = thursday.getMonth() + 1;
+                
+                console.log('ReportModule.handlePeriodChange 週次設定:', {
+                    weekNumber: period,
+                    weekStart: weekStart.toISOString().split('T')[0],
+                    reportMonth: reportMonth
+                });
+            }
+            
+            console.log('ReportModule.handlePeriodChange:', {
+                type: periodType,
+                year: year,
+                month: reportMonth,
+                weekNumber: window.currentWeekNumber
+            });
+            
+            this.generateReport(periodType, year, reportMonth);
+            
+        } catch (error) {
+            console.error('ReportModule.handlePeriodChange error:', error);
+        }
     }
     
     /**
