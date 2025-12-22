@@ -1356,15 +1356,6 @@
         display: inline !important;
     }
     
-    /* === トレード詳細モーダル - iOS対応 === */
-    #tradeDetailModal .detail-edit-btn {
-        min-height: 36px !important;
-        min-width: 50px !important;
-        padding: 8px 12px !important;
-        touch-action: manipulation !important;
-        -webkit-tap-highlight-color: rgba(0, 255, 136, 0.3) !important;
-    }
-    
     /* === 設定タブ - マイページ最適化 === */
     #settings-mypage .mypage-item {
         padding: 10px !important;
