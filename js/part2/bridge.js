@@ -590,6 +590,7 @@ window.editTradeReasons = function(tradeId) {
 };
 
 window.editBasicInfo = function(tradeId) {
+    alert('editBasicInfo呼ばれた！ tradeId: ' + tradeId);  // デバッグ用
     console.log('editBasicInfo called via bridge');
     tradeEdit.editBasicInfo(tradeId);
 };
@@ -860,7 +861,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('✅ Price step event listeners added to #pair');
     } else {
-        console.warn('⚠️ #pair element not found');
+        console.warn(⚠️ #pair element not found');
     }
 });
 
