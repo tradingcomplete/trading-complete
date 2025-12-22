@@ -3428,6 +3428,12 @@
         max-width: 50px !important;
         white-space: nowrap !important;
         flex-shrink: 0 !important;
+        /* iPhone Safari タップ問題修正 */
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: rgba(0, 255, 136, 0.3) !important;
+        cursor: pointer !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
     }
     
     /* 既存のインラインスタイル上書き用 */
@@ -3449,6 +3455,12 @@
         min-width: 40px !important;
         max-width: 50px !important;
         flex-shrink: 0 !important;
+        /* iPhone Safari タップ問題修正 */
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: rgba(0, 255, 136, 0.3) !important;
+        cursor: pointer !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
     }
     
     /* チェックリストのラベル・値（モバイル用サイズ調整） */
