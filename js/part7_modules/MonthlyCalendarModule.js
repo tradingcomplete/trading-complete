@@ -492,13 +492,33 @@ class MonthlyCalendarModule {
             </div>
         `;
         
-        // ツールチップの位置を設定
-        const x = event.clientX + 10;
-        const y = event.clientY + 10;
+        // ツールチップの位置を設定（画面端で切れないように調整）
+        tooltip.style.display = 'block';  // 先に表示してサイズを取得
+        
+        const tooltipWidth = tooltip.offsetWidth;
+        const tooltipHeight = tooltip.offsetHeight;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        let x = event.clientX + 10;
+        let y = event.clientY + 10;
+        
+        // 右端で切れる場合は左側に表示
+        if (x + tooltipWidth > viewportWidth - 10) {
+            x = event.clientX - tooltipWidth - 10;
+        }
+        
+        // 下端で切れる場合は上側に表示
+        if (y + tooltipHeight > viewportHeight - 10) {
+            y = event.clientY - tooltipHeight - 10;
+        }
+        
+        // 左端・上端のガード（負の値にならないように）
+        x = Math.max(10, x);
+        y = Math.max(10, y);
         
         tooltip.style.left = `${x}px`;
         tooltip.style.top = `${y}px`;
-        tooltip.style.display = 'block';
         
         // 他の場所をクリックしたら閉じる
         const closeTooltip = (e) => {

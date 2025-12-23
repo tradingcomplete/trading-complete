@@ -717,6 +717,17 @@ body.light-mode .modal-header {
     border-bottom: 2px solid #999999;
 }
 
+/* =====================================================
+   編集モーダル - ラベル色（ライトモード）
+   眩しい緑 → 落ち着いたグレーに変更
+   ===================================================== */
+
+/* エントリー情報編集モーダル */
+body.light-mode .modal-content .form-group label {
+    color: #555555 !important;
+    font-weight: 600;
+}
+
 /* カレンダー */
 body.light-mode .calendar-grid > div {
     background: #f8f8f8;
