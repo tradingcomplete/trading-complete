@@ -761,6 +761,20 @@ body.light-mode ::-webkit-scrollbar-thumb:hover {
     background: #00995a;
 }
 
+/* 収支管理タブ サブタブ スクロールバー（ライトモード） */
+body.light-mode .expense-tabs::-webkit-scrollbar-track {
+    background: #e8e8e8;
+}
+
+body.light-mode .expense-tabs::-webkit-scrollbar-thumb {
+    background: #00bb5f;
+    border-radius: 3px;
+}
+
+body.light-mode .expense-tabs::-webkit-scrollbar-thumb:hover {
+    background: #00995a;
+}
+
 /* AIプロンプト表示 */
 body.light-mode .ai-prompt-display,
 body.light-mode #aiPromptDisplay {

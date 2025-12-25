@@ -2044,7 +2044,7 @@
     
     #yearSelectContainer {
         flex: 0 0 auto !important;
-        display: flex !important;
+        /* display: flex !important; は削除 - JSで表示/非表示を制御するため */
         align-items: center !important;
         gap: 5px !important;
     }
@@ -2336,7 +2336,25 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         flex-wrap: nowrap !important;
-        padding-bottom: 5px;
+        padding-bottom: 8px;
+    }
+    
+    .expense-tabs::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .expense-tabs::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+    }
+    
+    .expense-tabs::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 3px;
+    }
+    
+    .expense-tabs::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.6);
     }
     
     .expense-tab-btn {
