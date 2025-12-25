@@ -2343,31 +2343,34 @@
         height: 6px;
     }
     
-    .expense-tabs::-webkit-scrollbar-track {
+    /* ダークモード専用 */
+    body:not(.light-mode) .expense-tabs::-webkit-scrollbar-track {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 3px;
     }
     
-    .expense-tabs::-webkit-scrollbar-thumb {
+    body:not(.light-mode) .expense-tabs::-webkit-scrollbar-thumb {
         background: rgba(255, 255, 255, 0.4);
         border-radius: 3px;
     }
     
-    .expense-tabs::-webkit-scrollbar-thumb:hover {
+    body:not(.light-mode) .expense-tabs::-webkit-scrollbar-thumb:hover {
         background: rgba(255, 255, 255, 0.6);
     }
     
-    /* ライトモード時は緑色で強制適用（iOS対応） */
+    /* ライトモード専用 */
     body.light-mode .expense-tabs::-webkit-scrollbar-track {
-        background: #c0c0c0 !important;
+        background: #c0c0c0;
+        border-radius: 3px;
     }
     
     body.light-mode .expense-tabs::-webkit-scrollbar-thumb {
-        background: #007a45 !important;
+        background: #007a45;
+        border-radius: 3px;
     }
     
     body.light-mode .expense-tabs::-webkit-scrollbar-thumb:hover {
-        background: #005530 !important;
+        background: #005530;
     }
     
     .expense-tab-btn {
