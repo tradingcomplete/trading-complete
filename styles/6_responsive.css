@@ -2332,29 +2332,11 @@
     }
     
     /* === 収支管理タブ: サブタブ === */
-    /* 収支管理タブ: サブタブ親要素にフェード効果 */
-    .expense-tabs-container {
-        position: relative;
-    }
-    
-    .expense-tabs-container::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 40px;
-        height: calc(100% - 8px);
-        background: linear-gradient(to right, transparent, rgba(30, 30, 30, 0.95));
-        pointer-events: none;
-        z-index: 1;
-    }
-    
     .expense-tabs {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         flex-wrap: nowrap !important;
         padding-bottom: 8px;
-        padding-right: 30px;
     }
     
     .expense-tabs::-webkit-scrollbar {

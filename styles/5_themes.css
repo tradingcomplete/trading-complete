@@ -775,11 +775,6 @@ body.light-mode .expense-tabs::-webkit-scrollbar-thumb:hover {
     background: #00995a;
 }
 
-/* 収支管理タブ: サブタブフェード効果（ライトモード） */
-body.light-mode .expense-tabs-container::after {
-    background: linear-gradient(to right, transparent, rgba(245, 245, 245, 0.95));
-}
-
 /* AIプロンプト表示 */
 body.light-mode .ai-prompt-display,
 body.light-mode #aiPromptDisplay {

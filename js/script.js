@@ -3290,7 +3290,6 @@ function displayExpenseTab() {
             </div>
             
             <!-- タブメニュー -->
-            <div class="expense-tabs-container">
             <div class="expense-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #dee2e6;">
                 <button onclick="showExpenseSection('calendar')" id="expense-tab-calendar" class="expense-tab-btn" 
                     style="padding: 10px 20px; background: none; border: none; cursor: pointer; border-bottom: 3px solid #007bff; font-weight: bold;">
@@ -3316,7 +3315,6 @@ function displayExpenseTab() {
                     style="padding: 10px 20px; background: none; border: none; cursor: pointer;">
                     💰 入出金管理
                 </button>
-            </div>
             </div>
             
             <!-- 月次カレンダーセクション -->
