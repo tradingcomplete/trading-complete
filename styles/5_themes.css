@@ -782,17 +782,22 @@ body.light-mode ::-webkit-scrollbar-thumb:hover {
 }
 
 /* 収支管理タブ サブタブ スクロールバー（ライトモード） */
+body.light-mode .expense-tabs::-webkit-scrollbar {
+    height: 8px;
+}
+
 body.light-mode .expense-tabs::-webkit-scrollbar-track {
-    background: #e8e8e8;
+    background: #c0c0c0;
+    border-radius: 4px;
 }
 
 body.light-mode .expense-tabs::-webkit-scrollbar-thumb {
-    background: #00bb5f;
-    border-radius: 3px;
+    background: #007a45;
+    border-radius: 4px;
 }
 
 body.light-mode .expense-tabs::-webkit-scrollbar-thumb:hover {
-    background: #00995a;
+    background: #005530;
 }
 
 /* AIプロンプト表示 */
