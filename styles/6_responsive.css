@@ -2357,17 +2357,17 @@
         background: rgba(255, 255, 255, 0.6);
     }
     
-    /* ライトモード時はダークグリーンで視認性確保 */
+    /* ライトモード時は緑色で強制適用（iOS対応） */
     body.light-mode .expense-tabs::-webkit-scrollbar-track {
-        background: #c0c0c0;
+        background: #c0c0c0 !important;
     }
     
     body.light-mode .expense-tabs::-webkit-scrollbar-thumb {
-        background: #007a45;
+        background: #007a45 !important;
     }
     
     body.light-mode .expense-tabs::-webkit-scrollbar-thumb:hover {
-        background: #005530;
+        background: #005530 !important;
     }
     
     .expense-tab-btn {
