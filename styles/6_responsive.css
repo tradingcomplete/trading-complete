@@ -2357,6 +2357,19 @@
         background: rgba(255, 255, 255, 0.6);
     }
     
+    /* ライトモード時はダークグリーンで視認性確保 */
+    body.light-mode .expense-tabs::-webkit-scrollbar-track {
+        background: #c0c0c0;
+    }
+    
+    body.light-mode .expense-tabs::-webkit-scrollbar-thumb {
+        background: #007a45;
+    }
+    
+    body.light-mode .expense-tabs::-webkit-scrollbar-thumb:hover {
+        background: #005530;
+    }
+    
     .expense-tab-btn {
         flex-shrink: 0;
         padding: 8px 12px !important;
