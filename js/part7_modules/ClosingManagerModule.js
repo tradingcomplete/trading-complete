@@ -54,7 +54,7 @@ class ClosingManagerModule {
                 closedAt: new Date().toISOString(),
                 summary: {
                     tradeCount: trades.length,
-                    totalProfit: trades.reduce((sum, t) => sum + (t.yenProfitLoss?.netProfit || 0), 0),
+                    totalProfit: trades.reduce((sum, t) => sum + (t.netProfit || 0), 0),
                     totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
                     netIncome: 0
                 }
@@ -146,7 +146,7 @@ class ClosingManagerModule {
                 closedAt: new Date().toISOString(),
                 summary: {
                     tradeCount: totalTrades.length,
-                    totalProfit: totalTrades.reduce((sum, t) => sum + (t.yenProfitLoss?.netProfit || 0), 0),
+                    totalProfit: totalTrades.reduce((sum, t) => sum + (t.netProfit || 0), 0),
                     totalExpenses: totalExpenses.reduce((sum, e) => sum + e.amount, 0),
                     netIncome: 0
                 }
@@ -232,7 +232,7 @@ class ClosingManagerModule {
                 closedAt: new Date().toISOString(),
                 summary: {
                     tradeCount: totalTrades.length,
-                    totalProfit: totalTrades.reduce((sum, t) => sum + (t.yenProfitLoss?.netProfit || 0), 0),
+                    totalProfit: totalTrades.reduce((sum, t) => sum + (t.netProfit || 0), 0),
                     totalExpenses: totalExpenses.reduce((sum, e) => sum + e.amount, 0),
                     netIncome: 0
                 }
@@ -310,16 +310,13 @@ class ClosingManagerModule {
     }
     
     #loadClosedPeriods() {
-        try {
-            const stored = localStorage.getItem('tc_closed_periods');
-            if (stored) {
-                this.#closedPeriods = JSON.parse(stored);
-                console.log(`ClosingManagerModule: ${this.#closedPeriods.length}件の締めデータを読み込み`);
-            }
-        } catch (error) {
-            console.error('ClosingManagerModule.#loadClosedPeriods error:', error);
-            this.#closedPeriods = [];
-        }
+        // StorageValidatorで安全に読み込み
+        this.#closedPeriods = StorageValidator.safeLoad(
+            'tc_closed_periods',
+            [],
+            StorageValidator.isClosedPeriodsFormat
+        );
+        console.log(`ClosingManagerModule: ${this.#closedPeriods.length}件の締めデータを読み込み`);
     }
     
     #saveClosedPeriods() {

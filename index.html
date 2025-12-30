@@ -451,7 +451,7 @@
                         <label>メモ</label>
                         <div class="editor-toolbar">
                             <select class="size-select" onchange="applyFontSize('memo', this.value)" title="文字サイズ">
-                                <option value="">小</option>
+                                <option value="small" selected>小</option>
                                 <option value="medium">中</option>
                                 <option value="large">大</option>
                             </select>
@@ -487,7 +487,7 @@
                         <label>今日の相場観</label>
                         <div class="editor-toolbar">
                             <select class="size-select" onchange="applyFontSize('marketView', this.value)" title="文字サイズ">
-                                <option value="">小</option>
+                                <option value="small" selected>小</option>
                                 <option value="medium">中</option>
                                 <option value="large">大</option>
                             </select>
@@ -1487,13 +1487,25 @@
             });
             
             // 期間統計UIを更新
-            if (window.StatisticsModule) {
-                window.StatisticsModule.updatePeriodStatsUI(pipsStats, yenStats, selectedText);
+            if (typeof updatePeriodStatsUI === 'function') {
+                updatePeriodStatsUI(pipsStats, yenStats, selectedText);
             }
             
-            // レポート詳細も期間に連動して更新（ReportModuleに委譲）
-            if (window.ReportModule && typeof window.ReportModule.handlePeriodChange === 'function') {
-                window.ReportModule.handlePeriodChange(currentPeriodType, year, period);
+            // レポート詳細も期間に連動して更新
+            if (window.ReportModule && typeof window.ReportModule.generateReport === 'function') {
+                // 四半期の場合は最初の月を計算（Q1→1月, Q2→4月, Q3→7月, Q4→10月）
+                let reportMonth = period;
+                if (currentPeriodType === 'quarterly') {
+                    reportMonth = (period - 1) * 3 + 1;
+                }
+                
+                console.log('レポート詳細更新:', {
+                    type: currentPeriodType,
+                    year: year,
+                    month: reportMonth
+                });
+                
+                window.ReportModule.generateReport(currentPeriodType, year, reportMonth);
             }
         }
         
@@ -1539,6 +1551,104 @@
             });
         }
         
+        /**
+         * 期間統計UIを更新
+         */
+        function updatePeriodStatsUI(pipsStats, yenStats, periodText) {
+            // タイトル更新
+            document.getElementById('periodStatsTitle').textContent = `📊 ${periodText}`;
+            
+            // Pips統計更新
+            if (pipsStats) {
+                document.getElementById('periodTotalTrades').textContent = pipsStats.totalTrades;
+                document.getElementById('periodWinLoss').textContent = pipsStats.winLossRecord;
+                document.getElementById('periodWinRate').textContent = pipsStats.winRate;
+                
+                // 総獲得Pips - 色付け追加
+                const totalPipsElement = document.getElementById('periodTotalPips');
+                totalPipsElement.textContent = Math.abs(parseFloat(pipsStats.totalPips)).toFixed(1);
+                totalPipsElement.className = 'stat-value ' + (parseFloat(pipsStats.totalPips) >= 0 ? 'positive' : 'negative');
+                
+                document.getElementById('periodAvgHoldTime').textContent = pipsStats.avgHoldTime;
+                document.getElementById('periodRR').textContent = pipsStats.rrRatio;
+                document.getElementById('periodMaxWinStreak').textContent = pipsStats.maxWinStreak + '回';
+                document.getElementById('periodMaxLoseStreak').textContent = pipsStats.maxLoseStreak + '回';
+                
+                // 平均利益pips - 色付け追加
+                const periodAvgProfitPipsElem = document.getElementById('periodAvgProfitPips');
+                const avgProfitPipsValue = parseFloat(pipsStats.avgProfitPips) || 0;
+                periodAvgProfitPipsElem.textContent = Math.abs(avgProfitPipsValue).toFixed(1);
+                periodAvgProfitPipsElem.className = 'stat-value ' + (avgProfitPipsValue >= 0 ? 'positive' : 'negative');
+                
+                // 平均損失pips - 色付け追加＋絶対値化
+                const periodAvgLossPipsElem = document.getElementById('periodAvgLossPips');
+                const avgLossPipsValue = parseFloat(pipsStats.avgLossPips) || 0;
+                periodAvgLossPipsElem.textContent = Math.abs(avgLossPipsValue).toFixed(1);
+                periodAvgLossPipsElem.className = 'stat-value negative';
+                
+                // 最大獲得pips - 色付け追加
+                const periodMaxWinPipsElem = document.getElementById('periodMaxWinPips');
+                const maxWinPipsValue = parseFloat(pipsStats.maxWinPips) || 0;
+                periodMaxWinPipsElem.textContent = Math.abs(maxWinPipsValue).toFixed(1);
+                periodMaxWinPipsElem.className = 'stat-value ' + (maxWinPipsValue >= 0 ? 'positive' : 'negative');
+                
+                // 最大損失pips - 色付け追加＋絶対値化
+                const periodMaxLossPipsElem = document.getElementById('periodMaxLossPips');
+                const maxLossPipsValue = parseFloat(pipsStats.maxLossPips) || 0;
+                periodMaxLossPipsElem.textContent = Math.abs(maxLossPipsValue).toFixed(1);
+                periodMaxLossPipsElem.className = 'stat-value negative';
+            }
+            
+            // 円建て統計更新
+            if (yenStats) {
+                document.getElementById('periodYenRegistration').textContent = yenStats.registrationStatus;
+                document.getElementById('periodYenWinRate').textContent = yenStats.winRate;
+                
+                // 総損益 - 符号削除
+                document.getElementById('periodYenTotalPL').textContent = `¥${Math.abs(yenStats.totalProfitLoss).toLocaleString()}`;
+                document.getElementById('periodYenTotalPL').className = 'stat-value ' + (yenStats.totalProfitLoss >= 0 ? 'positive' : 'negative');
+                
+                document.getElementById('periodYenPF').textContent = yenStats.profitFactor;
+                
+                // 期待値 - 符号削除
+                document.getElementById('periodYenExpectedValue').textContent = `¥${Math.abs(yenStats.expectedValue).toLocaleString()}`;
+                document.getElementById('periodYenExpectedValue').className = 'stat-value ' + (yenStats.expectedValue >= 0 ? 'positive' : 'negative');
+                
+                // 平均利益 - 色付け追加＋記号削除
+                const periodYenAvgProfitElem = document.getElementById('periodYenAvgProfit');
+                periodYenAvgProfitElem.textContent = `¥${Math.abs(yenStats.avgProfit).toLocaleString()}`;
+                periodYenAvgProfitElem.className = 'stat-value ' + (yenStats.avgProfit >= 0 ? 'positive' : 'negative');
+                
+                // 平均損失 - 色付け追加＋記号削除
+                const periodYenAvgLossElem = document.getElementById('periodYenAvgLoss');
+                periodYenAvgLossElem.textContent = `¥${Math.abs(yenStats.avgLoss).toLocaleString()}`;
+                periodYenAvgLossElem.className = 'stat-value negative';
+                
+                // 最大利益 - 色付け追加＋記号削除
+                const periodYenMaxProfitElem = document.getElementById('periodYenMaxProfit');
+                periodYenMaxProfitElem.textContent = `¥${Math.abs(yenStats.maxProfit).toLocaleString()}`;
+                periodYenMaxProfitElem.className = 'stat-value ' + (yenStats.maxProfit >= 0 ? 'positive' : 'negative');
+                
+                // 最大損失 - 色付け追加＋記号削除
+                const periodYenMaxLossElem = document.getElementById('periodYenMaxLoss');
+                periodYenMaxLossElem.textContent = `¥${Math.abs(yenStats.maxLoss).toLocaleString()}`;
+                periodYenMaxLossElem.className = 'stat-value negative';
+                
+                // 最大DD - 符号削除 + 赤色追加
+                const maxDDElement = document.getElementById('periodYenMaxDD');
+                maxDDElement.textContent = `¥${yenStats.maxDrawdown.toLocaleString()}`;
+                maxDDElement.className = 'stat-value negative';
+                
+                // スワップ損益 - 符号削除
+                document.getElementById('periodYenSwap').textContent = `¥${Math.abs(yenStats.swapTotal).toLocaleString()}`;
+                document.getElementById('periodYenSwap').className = 'stat-value ' + (yenStats.swapTotal >= 0 ? 'positive' : 'negative');
+                
+                // 手数料合計 - 赤色追加
+                const commissionElement = document.getElementById('periodYenCommission');
+                commissionElement.textContent = `¥${Math.abs(yenStats.commissionTotal).toLocaleString()}`;
+                commissionElement.className = 'stat-value negative';
+            }
+        }
         
         // 初期化
         document.addEventListener('DOMContentLoaded', function() {
@@ -1828,58 +1938,6 @@
                         <button class="btn btn-delete-all" onclick="deleteAllData()">
                             🗑️ 全データを削除する
                         </button>
-                    </div>
-                </div>
-
-                <!-- ========================================
-                     マイページタブ（新規）
-                     ======================================== -->
-                <div id="settings-mypage" class="settings-subtab-content">
-                    <h3>👤 アカウント情報</h3>
-                    
-                    <!-- ユーザーネーム -->
-                    <div class="mypage-item">
-                        <label>ユーザーネーム</label>
-                        <div class="mypage-value-row">
-                            <span id="mypage-username" class="mypage-value">-</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangeUsernameModal()" disabled>
-                                変更
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- メールアドレス -->
-                    <div class="mypage-item">
-                        <label>メールアドレス</label>
-                        <div class="mypage-value-row">
-                            <span id="mypage-email" class="mypage-value">-</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangeEmailModal()" disabled>
-                                変更
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- パスワード -->
-                    <div class="mypage-item">
-                        <label>パスワード</label>
-                        <div class="mypage-value-row">
-                            <span class="mypage-value">••••••••</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangePasswordModal()" disabled>
-                                変更
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
-                    
-                    <!-- ログアウトボタン -->
-                    <div class="mypage-logout-section">
-                        <button class="btn btn-logout" onclick="AuthModule.logoutWithConfirm()">
-                            🚪 ログアウト
-                        </button>
-                        <p style="color: #888; font-size: 0.85em; margin-top: 10px;">
-                            ログアウトすると、再度ログインが必要になります。
-                        </p>
                     </div>
                 </div>
             </div>
@@ -2184,6 +2242,9 @@
 
     <!-- EventBus - 基盤なので早い段階で -->
     <script src="js/core/EventBus.js"></script>
+    
+    <!-- Security - セキュリティユーティリティ -->
+    <script src="js/core/security.js"></script>
     
     <!-- 2. 設定管理 -->
     <script src="js/config.js"></script>
@@ -2728,6 +2789,24 @@
         </div>
     </div>
 
+
+    <!-- セッション切れモーダル（Phase 3.6追加） -->
+    <div id="sessionExpiredModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+                <h3 style="margin: 0 auto;">⏰ セッションが切れました</h3>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="margin-bottom: 10px;">セキュリティのため、24時間で自動ログアウトされます。</p>
+                <p style="margin-bottom: 20px;">続けるには再度ログインしてください。</p>
+            </div>
+            <div class="modal-footer" style="border-top: none; justify-content: center;">
+                <button id="sessionExpiredLoginBtn" class="btn btn-primary" style="min-width: 120px;">
+                    ログイン
+                </button>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>

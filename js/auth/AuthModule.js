@@ -5,10 +5,13 @@
  * - ログイン / 登録 / ログアウト
  * - 認証状態の監視
  * - 認証モーダルの制御
- * - ユーザー名の管理
+ * - セッションタイムアウト監視（24時間）
  * 
  * @version 1.1.0
- * @date 2025-12-17
+ * @date 2025-12-29
+ * @changelog
+ *   v1.1.0 (2025-12-29) - セッション監視機能追加、SecureError統合
+ *   v1.0.0 (2025-12-17) - 初版
  */
 
 const AuthModule = (function() {
@@ -20,7 +23,15 @@ const AuthModule = (function() {
     
     let currentUser = null;
     let authModal = null;
+    let sessionExpiredModal = null;
     let isInitialized = false;
+    
+    // セッション監視用
+    let sessionCheckInterval = null;
+    let loginTimestamp = null;
+    const SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
+    const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5分ごとにチェック
+    const SESSION_STORAGE_KEY = 'tc_session_login_time';
 
     // ============================================
     // 初期化
@@ -39,6 +50,7 @@ const AuthModule = (function() {
 
         // モーダル要素を取得
         authModal = document.getElementById('auth-modal');
+        sessionExpiredModal = document.getElementById('sessionExpiredModal');
         
         if (!authModal) {
             console.error('[Auth] auth-modal要素が見つかりません');
@@ -99,6 +111,15 @@ const AuthModule = (function() {
         togglePasswordBtns.forEach(btn => {
             btn.addEventListener('click', togglePasswordVisibility);
         });
+        
+        // セッション切れモーダルのログインボタン
+        const sessionExpiredLoginBtn = document.getElementById('sessionExpiredLoginBtn');
+        if (sessionExpiredLoginBtn) {
+            sessionExpiredLoginBtn.addEventListener('click', () => {
+                hideSessionExpiredModal();
+                showAuthModal();
+            });
+        }
     }
 
     /**
@@ -122,6 +143,112 @@ const AuthModule = (function() {
     }
 
     // ============================================
+    // セッション監視
+    // ============================================
+
+    /**
+     * セッション監視を開始
+     */
+    function startSessionMonitor() {
+        // 既存のインターバルをクリア
+        if (sessionCheckInterval) {
+            clearInterval(sessionCheckInterval);
+        }
+        
+        // ログイン時刻を記録
+        loginTimestamp = Date.now();
+        localStorage.setItem(SESSION_STORAGE_KEY, loginTimestamp.toString());
+        
+        console.log('[Auth] セッション監視開始（24時間タイムアウト）');
+        
+        // 定期的にセッションをチェック
+        sessionCheckInterval = setInterval(checkSessionTimeout, SESSION_CHECK_INTERVAL_MS);
+    }
+
+    /**
+     * セッション監視を停止
+     */
+    function stopSessionMonitor() {
+        if (sessionCheckInterval) {
+            clearInterval(sessionCheckInterval);
+            sessionCheckInterval = null;
+        }
+        loginTimestamp = null;
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        console.log('[Auth] セッション監視停止');
+    }
+
+    /**
+     * セッションタイムアウトをチェック
+     */
+    function checkSessionTimeout() {
+        // ログイン時刻を取得（メモリまたはlocalStorageから）
+        const storedTimestamp = loginTimestamp || parseInt(localStorage.getItem(SESSION_STORAGE_KEY), 10);
+        
+        if (!storedTimestamp) {
+            console.log('[Auth] ログイン時刻が不明です');
+            return;
+        }
+        
+        const elapsedMs = Date.now() - storedTimestamp;
+        const remainingMs = SESSION_TIMEOUT_MS - elapsedMs;
+        
+        // デバッグログ（開発環境のみ）
+        if (isDevelopment()) {
+            const remainingHours = Math.floor(remainingMs / (60 * 60 * 1000));
+            const remainingMinutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+            console.log(`[Auth] セッション残り時間: ${remainingHours}時間${remainingMinutes}分`);
+        }
+        
+        // タイムアウト
+        if (elapsedMs >= SESSION_TIMEOUT_MS) {
+            console.log('[Auth] セッションタイムアウト（24時間経過）');
+            handleSessionExpired();
+        }
+        // 残り30分で警告（オプション - 将来実装用）
+        // else if (remainingMs <= 30 * 60 * 1000 && remainingMs > 29 * 60 * 1000) {
+        //     console.log('[Auth] セッション残り30分');
+        // }
+    }
+
+    /**
+     * セッション切れ時の処理
+     */
+    async function handleSessionExpired() {
+        // 監視を停止
+        stopSessionMonitor();
+        
+        // ログアウト処理
+        const supabase = getSupabase();
+        if (supabase) {
+            try {
+                await supabase.auth.signOut();
+            } catch (err) {
+                logError(err, 'セッション切れログアウト');
+            }
+        }
+        
+        currentUser = null;
+        
+        // セッション切れモーダルを表示
+        showSessionExpiredModal();
+        
+        // EventBusで通知
+        if (window.eventBus) {
+            window.eventBus.emit('auth:sessionExpired');
+        }
+    }
+
+    /**
+     * 開発環境かどうかをチェック
+     */
+    function isDevelopment() {
+        return location.hostname === 'localhost' || 
+               location.hostname === '127.0.0.1' ||
+               location.hostname.includes('192.168.');
+    }
+
+    // ============================================
     // 認証処理
     // ============================================
 
@@ -136,20 +263,37 @@ const AuthModule = (function() {
             const { data: { session }, error } = await supabase.auth.getSession();
             
             if (error) {
-                console.error('[Auth] セッション確認エラー:', error.message);
+                logError(error, 'セッション確認');
                 return;
             }
 
             if (session) {
                 currentUser = session.user;
                 console.log('[Auth] ログイン中:', currentUser.email);
+                
+                // 既存のログイン時刻を復元、またはセッション開始時刻を使用
+                const storedTimestamp = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (storedTimestamp) {
+                    loginTimestamp = parseInt(storedTimestamp, 10);
+                    // タイムアウトチェック
+                    if (Date.now() - loginTimestamp >= SESSION_TIMEOUT_MS) {
+                        console.log('[Auth] 保存されたセッションがタイムアウト');
+                        handleSessionExpired();
+                        return;
+                    }
+                } else {
+                    // セッション作成時刻を使用
+                    loginTimestamp = new Date(session.created_at || Date.now()).getTime();
+                    localStorage.setItem(SESSION_STORAGE_KEY, loginTimestamp.toString());
+                }
+                
                 onLoginSuccess();
             } else {
                 console.log('[Auth] 未ログイン');
                 showAuthModal();
             }
         } catch (err) {
-            console.error('[Auth] セッション確認失敗:', err);
+            logError(err, 'セッション確認');
         }
     }
 
@@ -190,7 +334,7 @@ const AuthModule = (function() {
             });
 
             if (error) {
-                console.error('[Auth] ログインエラー:', error.message);
+                logError(error, 'ログイン');
                 showError(errorDiv, getErrorMessage(error));
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'ログイン';
@@ -201,8 +345,8 @@ const AuthModule = (function() {
             // onAuthStateChangeで処理される
 
         } catch (err) {
-            console.error('[Auth] ログイン失敗:', err);
-            showError(errorDiv, '予期しないエラーが発生しました');
+            logError(err, 'ログイン');
+            showError(errorDiv, getSecureErrorMessage(err));
             submitBtn.disabled = false;
             submitBtn.textContent = 'ログイン';
         }
@@ -214,7 +358,6 @@ const AuthModule = (function() {
     async function handleRegister(e) {
         e.preventDefault();
         
-        const username = document.getElementById('register-username')?.value.trim() || '';
         const email = document.getElementById('register-email').value.trim();
         const password = document.getElementById('register-password').value;
         const passwordConfirm = document.getElementById('register-password-confirm').value;
@@ -225,17 +368,6 @@ const AuthModule = (function() {
         // バリデーション
         if (!email || !password || !passwordConfirm) {
             showError(errorDiv, 'すべての項目を入力してください');
-            return;
-        }
-
-        // ユーザー名のバリデーション（任意入力だが、入力された場合はチェック）
-        if (username && username.length < 2) {
-            showError(errorDiv, 'ユーザー名は2文字以上で入力してください');
-            return;
-        }
-
-        if (username && username.length > 20) {
-            showError(errorDiv, 'ユーザー名は20文字以内で入力してください');
             return;
         }
 
@@ -268,17 +400,11 @@ const AuthModule = (function() {
         try {
             const { data, error } = await supabase.auth.signUp({
                 email: email,
-                password: password,
-                options: {
-                    data: {
-                        username: username || null,
-                        display_name: username || email.split('@')[0]
-                    }
-                }
+                password: password
             });
 
             if (error) {
-                console.error('[Auth] 登録エラー:', error.message);
+                logError(error, '登録');
                 showError(errorDiv, getErrorMessage(error));
                 submitBtn.disabled = false;
                 submitBtn.textContent = '新規登録';
@@ -299,8 +425,8 @@ const AuthModule = (function() {
             }
 
         } catch (err) {
-            console.error('[Auth] 登録失敗:', err);
-            showError(errorDiv, '予期しないエラーが発生しました');
+            logError(err, '登録');
+            showError(errorDiv, getSecureErrorMessage(err));
             submitBtn.disabled = false;
             submitBtn.textContent = '新規登録';
         }
@@ -314,10 +440,13 @@ const AuthModule = (function() {
         if (!supabase) return;
 
         try {
+            // セッション監視を停止
+            stopSessionMonitor();
+            
             const { error } = await supabase.auth.signOut();
             
             if (error) {
-                console.error('[Auth] ログアウトエラー:', error.message);
+                logError(error, 'ログアウト');
                 return;
             }
 
@@ -325,16 +454,7 @@ const AuthModule = (function() {
             // onAuthStateChangeで処理される
 
         } catch (err) {
-            console.error('[Auth] ログアウト失敗:', err);
-        }
-    }
-
-    /**
-     * 確認ダイアログ付きログアウト
-     */
-    async function logoutWithConfirm() {
-        if (confirm('ログアウトしますか？\n\n再度ログインが必要になります。')) {
-            await handleLogout();
+            logError(err, 'ログアウト');
         }
     }
 
@@ -358,6 +478,33 @@ const AuthModule = (function() {
     function hideAuthModal() {
         if (authModal) {
             authModal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    }
+
+    /**
+     * セッション切れモーダルを表示
+     */
+    function showSessionExpiredModal() {
+        if (sessionExpiredModal) {
+            sessionExpiredModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        } else {
+            // モーダルがない場合は認証モーダルを表示
+            showAuthModal();
+            // トースト通知
+            if (typeof showToast === 'function') {
+                showToast('セッションが切れました。再度ログインしてください。', 'warning');
+            }
+        }
+    }
+
+    /**
+     * セッション切れモーダルを非表示
+     */
+    function hideSessionExpiredModal() {
+        if (sessionExpiredModal) {
+            sessionExpiredModal.style.display = 'none';
             document.body.style.overflow = '';
         }
     }
@@ -410,12 +557,15 @@ const AuthModule = (function() {
      */
     function onLoginSuccess() {
         hideAuthModal();
+        hideSessionExpiredModal();
         updateUserDisplay();
-        updateMyPageDisplay();
         
-        // EventBusで通知（存在する場合のみ）
-        if (typeof EventBus !== 'undefined' && typeof EventBus.emit === 'function') {
-            EventBus.emit('auth:login', { user: currentUser });
+        // セッション監視を開始
+        startSessionMonitor();
+        
+        // EventBusで通知
+        if (window.eventBus) {
+            window.eventBus.emit('auth:login', { user: currentUser });
         }
     }
 
@@ -423,12 +573,15 @@ const AuthModule = (function() {
      * ログアウト時の処理
      */
     function onLogout() {
+        // セッション監視を停止
+        stopSessionMonitor();
+        
         showAuthModal();
         updateUserDisplay();
         
-        // EventBusで通知（存在する場合のみ）
-        if (typeof EventBus !== 'undefined' && typeof EventBus.emit === 'function') {
-            EventBus.emit('auth:logout');
+        // EventBusで通知
+        if (window.eventBus) {
+            window.eventBus.emit('auth:logout');
         }
     }
 
@@ -436,54 +589,15 @@ const AuthModule = (function() {
      * ユーザー表示を更新
      */
     function updateUserDisplay() {
-        const userDisplayName = document.getElementById('user-display-name');
         const userEmail = document.getElementById('user-email');
         const logoutBtn = document.getElementById('logout-btn');
-        const userInfoContainer = document.getElementById('user-info');
 
         if (currentUser) {
-            // 表示名を取得（ユーザー名 > display_name > メールアドレスの@前）
-            const displayName = currentUser.user_metadata?.username 
-                || currentUser.user_metadata?.display_name 
-                || currentUser.email?.split('@')[0] 
-                || 'ユーザー';
-            
-            if (userDisplayName) userDisplayName.textContent = displayName;
             if (userEmail) userEmail.textContent = currentUser.email;
-            if (logoutBtn) logoutBtn.style.display = 'inline-block';
-            if (userInfoContainer) userInfoContainer.style.display = 'flex';
+            if (logoutBtn) logoutBtn.style.display = 'block';
         } else {
-            if (userDisplayName) userDisplayName.textContent = '';
             if (userEmail) userEmail.textContent = '';
             if (logoutBtn) logoutBtn.style.display = 'none';
-            if (userInfoContainer) userInfoContainer.style.display = 'none';
-        }
-    }
-
-    /**
-     * マイページのユーザー情報を更新
-     */
-    function updateMyPageDisplay() {
-        const usernameEl = document.getElementById('mypage-username');
-        const emailEl = document.getElementById('mypage-email');
-
-        if (currentUser) {
-            // ユーザーネーム（未設定の場合は「(未設定)」）
-            if (usernameEl) {
-                const username = currentUser.user_metadata?.username;
-                usernameEl.textContent = username || '(未設定)';
-            }
-            
-            // メールアドレス
-            if (emailEl) {
-                emailEl.textContent = currentUser.email || '-';
-            }
-            
-            console.log('[Auth] マイページ表示を更新しました');
-        } else {
-            // 未ログイン時
-            if (usernameEl) usernameEl.textContent = '-';
-            if (emailEl) emailEl.textContent = '-';
         }
     }
 
@@ -577,13 +691,24 @@ const AuthModule = (function() {
     }
 
     /**
-     * 現在のユーザー名を取得
+     * SecureErrorを使用してエラーメッセージを取得
      */
-    function getUsername() {
-        if (!currentUser) return null;
-        return currentUser.user_metadata?.username 
-            || currentUser.user_metadata?.display_name 
-            || currentUser.email?.split('@')[0];
+    function getSecureErrorMessage(error) {
+        if (typeof SecureError !== 'undefined') {
+            return SecureError.toUserMessage(error);
+        }
+        return 'エラーが発生しました';
+    }
+
+    /**
+     * エラーをログ出力（SecureError統合）
+     */
+    function logError(error, context) {
+        if (typeof SecureError !== 'undefined') {
+            SecureError.log(error, `Auth:${context}`);
+        } else {
+            console.error(`[Auth:${context}]`, error);
+        }
     }
 
     // ============================================
@@ -593,13 +718,21 @@ const AuthModule = (function() {
     return {
         init: init,
         getCurrentUser: function() { return currentUser; },
-        getUsername: getUsername,
         isLoggedIn: function() { return currentUser !== null; },
         showAuthModal: showAuthModal,
         hideAuthModal: hideAuthModal,
+        showLoginModal: function() {
+            hideSessionExpiredModal();
+            showAuthModal();
+        },
         logout: handleLogout,
-        logoutWithConfirm: logoutWithConfirm,
-        updateMyPageDisplay: updateMyPageDisplay
+        // セッション関連（デバッグ用）
+        getSessionInfo: function() {
+            return {
+                loginTimestamp: loginTimestamp,
+                remainingMs: loginTimestamp ? SESSION_TIMEOUT_MS - (Date.now() - loginTimestamp) : null
+            };
+        }
     };
 
 })();

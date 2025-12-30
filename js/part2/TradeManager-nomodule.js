@@ -219,18 +219,19 @@
         }
         
         _loadFromStorage() {
-            try {
-                const saved = localStorage.getItem('trades');
-                this._trades = saved ? JSON.parse(saved) : [];
-                
-                // グローバルのtrades配列も更新
-                if (!window.trades) {
-                    window.trades = [...this._trades];
-                }
-            } catch (error) {
-                console.error('読み込みエラー:', error);
-                this._trades = [];
+            // StorageValidatorで安全に読み込み
+            this._trades = StorageValidator.safeLoad(
+                'trades',
+                [],
+                StorageValidator.isTradesFormat
+            );
+            
+            // グローバルのtrades配列も更新
+            if (!window.trades) {
+                window.trades = [...this._trades];
             }
+            
+            console.log(`TradeManager: ${this._trades.length}件のトレードを読み込み`);
         }
         
         // 既存コードとの互換性メソッド

@@ -54,18 +54,14 @@ class ExpenseManagerModule {
      * @returns {Array} 経費配列
      */
     loadExpenses() {
-        try {
-            const stored = localStorage.getItem(this.#storageKey);
-            if (stored) {
-                this.#expenses = JSON.parse(stored);
-                console.log(`Loaded ${this.#expenses.length} expenses from storage`);
-            }
-            return this.#expenses;
-        } catch (error) {
-            console.error('ExpenseManagerModule.loadExpenses error:', error);
-            this.#expenses = [];
-            return [];
-        }
+        // StorageValidatorで安全に読み込み
+        this.#expenses = StorageValidator.safeLoad(
+            this.#storageKey,
+            [],
+            StorageValidator.isArray
+        );
+        console.log(`ExpenseManagerModule: ${this.#expenses.length}件の経費を読み込み`);
+        return this.#expenses;
     }
     
     /**
@@ -915,13 +911,12 @@ class ExpenseManagerModule {
      * @private
      */
     #loadAccordionState() {
-        try {
-            const stored = localStorage.getItem('tc_expense_accordion_state');
-            return stored ? JSON.parse(stored) : {};
-        } catch (error) {
-            console.error('Failed to load accordion state:', error);
-            return {};
-        }
+        // StorageValidatorで安全に読み込み
+        return StorageValidator.safeLoad(
+            'tc_expense_accordion_state',
+            {},
+            StorageValidator.isObject
+        );
     }
     
     /**

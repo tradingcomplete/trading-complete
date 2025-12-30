@@ -57,44 +57,34 @@ class NoteManagerModule {
     }
 
     #load() {
-        // localStorage優先
-        const stored = localStorage.getItem('notes');
-        if (stored) {
-            try {
-                this.#notes = JSON.parse(stored);
-            } catch (e) {
-                console.error('NoteManagerModule: Failed to parse notes', e);
-                this.#notes = {};
-            }
-        }
+        // StorageValidatorで安全に読み込み - notes
+        this.#notes = StorageValidator.safeLoad(
+            'notes',
+            {},
+            StorageValidator.isObject
+        );
         
         // グローバルにも反映（互換性）
         window.notes = this.#notes;
         
-        // 月メモデータの読込
-        const storedMonthlyMemos = localStorage.getItem('monthlyMemos');
-        if (storedMonthlyMemos) {
-            try {
-                this.#monthlyMemos = JSON.parse(storedMonthlyMemos);
-                // 構造の保証
-                if (!this.#monthlyMemos.anomaly) this.#monthlyMemos.anomaly = {};
-                if (!this.#monthlyMemos.monthly) this.#monthlyMemos.monthly = {};
-            } catch (e) {
-                console.error('NoteManagerModule: Failed to parse monthlyMemos', e);
-                this.#monthlyMemos = { anomaly: {}, monthly: {} };
-            }
-        }
+        // StorageValidatorで安全に読み込み - monthlyMemos
+        this.#monthlyMemos = StorageValidator.safeLoad(
+            'monthlyMemos',
+            { anomaly: {}, monthly: {} },
+            StorageValidator.isMonthlyMemosFormat
+        );
+        // 構造の保証
+        if (!this.#monthlyMemos.anomaly) this.#monthlyMemos.anomaly = {};
+        if (!this.#monthlyMemos.monthly) this.#monthlyMemos.monthly = {};
         
-        // 折りたたみ状態の読込
-        const storedCollapseState = localStorage.getItem('monthlyMemoCollapseState');
-        if (storedCollapseState) {
-            try {
-                this.#monthlyMemoCollapseState = JSON.parse(storedCollapseState);
-            } catch (e) {
-                console.error('NoteManagerModule: Failed to parse collapseState', e);
-                this.#monthlyMemoCollapseState = { anomaly: false, monthly: false };
-            }
-        }
+        // StorageValidatorで安全に読み込み - collapseState
+        this.#monthlyMemoCollapseState = StorageValidator.safeLoad(
+            'monthlyMemoCollapseState',
+            { anomaly: false, monthly: false },
+            StorageValidator.isObject
+        );
+        
+        console.log(`NoteManagerModule: ${Object.keys(this.#notes).length}件のノートを読み込み`);
     }
 
     #save() {

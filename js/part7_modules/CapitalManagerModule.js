@@ -177,16 +177,13 @@ class CapitalManagerModule {
     }
     
     #load() {
-        try {
-            const stored = localStorage.getItem('depositWithdrawals');
-            if (stored) {
-                const data = JSON.parse(stored);
-                this.#records = Array.isArray(data) ? data : [];
-            }
-        } catch (error) {
-            console.error('CapitalManagerModule.load error:', error);
-            this.#records = [];
-        }
+        // StorageValidatorで安全に読み込み
+        this.#records = StorageValidator.safeLoad(
+            'depositWithdrawals',
+            [],
+            StorageValidator.isArray
+        );
+        console.log(`CapitalManagerModule: ${this.#records.length}件の入出金記録を読み込み`);
     }
     
     #save() {

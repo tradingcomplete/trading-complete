@@ -124,13 +124,14 @@ class SettingsModule {
         this.#theme = localStorage.getItem(SettingsModule.STORAGE_KEYS.THEME) || 'dark';
         
         // 目標データの読み込み
-        const storedGoals = localStorage.getItem(SettingsModule.STORAGE_KEYS.GOALS);
-        if (storedGoals) {
-            try {
-                this.#goals = JSON.parse(storedGoals);
-            } catch (e) {
-                console.warn('SettingsModule: Failed to parse goals, loading from individual keys');
-            }
+        // StorageValidatorで安全に読み込み
+        const loadedGoals = StorageValidator.safeLoad(
+            SettingsModule.STORAGE_KEYS.GOALS,
+            null,
+            StorageValidator.isGoalsFormat
+        );
+        if (loadedGoals) {
+            this.#goals = loadedGoals;
         }
         
         // 個別キーからも読み込み（後方互換性）
@@ -151,43 +152,39 @@ class SettingsModule {
     }
     
     #loadBrokers() {
-        const stored = localStorage.getItem(SettingsModule.STORAGE_KEYS.BROKERS);
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                // データ形式を検証（{ list: [], nextId: number } の形式か確認）
-                if (parsed && typeof parsed === 'object' && Array.isArray(parsed.list)) {
-                    this.#brokers = parsed;
-                } else if (Array.isArray(parsed)) {
-                    // 古い形式（配列のみ）の場合は変換
-                    console.log('SettingsModule: Converting old brokers format');
-                    this.#brokers = { 
-                        list: parsed, 
-                        nextId: parsed.length > 0 ? Math.max(...parsed.map(b => b.id || 0)) + 1 : 1 
-                    };
-                    this.#saveBrokers(); // 新形式で保存し直す
-                } else {
-                    // 不正な形式の場合はデフォルト値
-                    console.warn('SettingsModule: Invalid brokers format, using default');
-                    this.#brokers = { list: [], nextId: 1 };
-                }
-            } catch (e) {
-                console.error('SettingsModule: Failed to parse brokers', e);
-                this.#brokers = { list: [], nextId: 1 };
+        // StorageValidatorで安全に読み込み
+        const parsed = StorageValidator.safeLoad(
+            SettingsModule.STORAGE_KEYS.BROKERS,
+            null,
+            StorageValidator.isBrokersFormat
+        );
+        
+        if (parsed) {
+            // 新形式: { list: [], nextId: number }
+            if (parsed.list && Array.isArray(parsed.list)) {
+                this.#brokers = parsed;
+            }
+            // 旧形式: 配列のみ（互換性維持）
+            else if (Array.isArray(parsed)) {
+                this.#brokers = {
+                    list: parsed,
+                    nextId: parsed.length > 0 ? Math.max(...parsed.map(b => b.id || 0)) + 1 : 1
+                };
+                // 新形式で保存し直す
+                this.#saveBrokers();
             }
         }
+        console.log(`SettingsModule: ${this.#brokers.list.length}件のブローカーを読み込み`);
     }
     
     #loadFavoritePairs() {
-        const stored = localStorage.getItem(SettingsModule.STORAGE_KEYS.FAVORITE_PAIRS);
-        if (stored) {
-            try {
-                this.#favoritePairs = JSON.parse(stored);
-            } catch (e) {
-                console.error('SettingsModule: Failed to parse favorite pairs', e);
-                this.#favoritePairs = [];
-            }
-        }
+        // StorageValidatorで安全に読み込み
+        this.#favoritePairs = StorageValidator.safeLoad(
+            SettingsModule.STORAGE_KEYS.FAVORITE_PAIRS,
+            [],
+            StorageValidator.isFavoritePairsFormat
+        );
+        console.log(`SettingsModule: ${this.#favoritePairs.length}件のお気に入り通貨ペアを読み込み`);
     }
     
     #loadCurrentSubtab() {
