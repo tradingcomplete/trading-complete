@@ -138,6 +138,10 @@
             this._trades.push(normalizedTrade);
             this._saveToStorage();
             this._notifyListeners('add', normalizedTrade);
+            
+            // Supabase同期（バックグラウンド）
+            this._syncToCloud(normalizedTrade);
+            
             return normalizedTrade;
         }
         
@@ -150,6 +154,10 @@
             this._trades[index] = normalizedUpdates;
             this._saveToStorage();
             this._notifyListeners('update', this._trades[index]);
+            
+            // Supabase同期（バックグラウンド）
+            this._syncToCloud(this._trades[index]);
+            
             return this._trades[index];
         }
         
@@ -161,6 +169,10 @@
             const deleted = this._trades.splice(index, 1)[0];
             this._saveToStorage();
             this._notifyListeners('delete', deleted);
+            
+            // Supabase同期（バックグラウンド）
+            this._deleteFromCloud(id);
+            
             return true;
         }
         
@@ -180,6 +192,10 @@
             
             this._saveToStorage();
             this._notifyListeners('bulk-add', addedTrades);
+            
+            // Supabase同期（バックグラウンド・一括）
+            this._bulkSyncToCloud(addedTrades);
+            
             return addedTrades;
         }
         
@@ -215,6 +231,59 @@
                 }
             } catch (error) {
                 console.error('保存エラー:', error);
+            }
+        }
+        
+        // ========== Supabase同期メソッド ==========
+        
+        /**
+         * トレードをSupabaseに同期（バックグラウンド）
+         * @param {Object} trade - 同期するトレード
+         */
+        _syncToCloud(trade) {
+            // SyncModuleが初期化されていれば同期
+            if (window.SyncModule?.isInitialized?.()) {
+                window.SyncModule.saveTrade(trade)
+                    .then(result => {
+                        if (!result.success) {
+                            console.warn('[TradeManager] クラウド同期失敗:', result.error);
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('[TradeManager] クラウド同期エラー:', err);
+                    });
+            }
+        }
+        
+        /**
+         * トレードをSupabaseから削除（バックグラウンド）
+         * @param {string} tradeId - 削除するトレードID
+         */
+        _deleteFromCloud(tradeId) {
+            // SyncModuleが初期化されていれば削除
+            if (window.SyncModule?.isInitialized?.()) {
+                window.SyncModule.deleteTrade(tradeId)
+                    .then(result => {
+                        if (!result.success) {
+                            console.warn('[TradeManager] クラウド削除失敗:', result.error);
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('[TradeManager] クラウド削除エラー:', err);
+                    });
+            }
+        }
+        
+        /**
+         * 複数トレードをSupabaseに同期（バックグラウンド）
+         * @param {Array} trades - 同期するトレード配列
+         */
+        _bulkSyncToCloud(trades) {
+            // SyncModuleが初期化されていれば同期
+            if (window.SyncModule?.isInitialized?.()) {
+                trades.forEach(trade => {
+                    this._syncToCloud(trade);
+                });
             }
         }
         
