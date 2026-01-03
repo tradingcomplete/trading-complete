@@ -1940,6 +1940,56 @@
                         </button>
                     </div>
                 </div>
+                
+                <!-- ==========================================
+                     サブタブ4: マイページ
+                     Supabase導入でログイン機能とデータ同期を実装。
+                ========================================== -->
+                <div id="settings-mypage" class="settings-subtab-content">
+                    <h3>👤 アカウント情報</h3>
+                    
+                    <!-- ユーザーネーム -->
+                    <div class="mypage-item">
+                        <label>ユーザーネーム</label>
+                        <div class="mypage-value-row">
+                            <span id="mypage-username" class="mypage-value">(未設定)</span>
+                            <button class="btn btn-secondary btn-small" onclick="openChangeUsernameModal()" disabled>
+                                変更
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- メールアドレス -->
+                    <div class="mypage-item">
+                        <label>メールアドレス</label>
+                        <div class="mypage-value-row">
+                            <span id="mypage-email" class="mypage-value">-</span>
+                            <button class="btn btn-secondary btn-small" onclick="openChangeEmailModal()" disabled>
+                                変更
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- パスワード -->
+                    <div class="mypage-item">
+                        <label>パスワード</label>
+                        <div class="mypage-value-row">
+                            <span class="mypage-value">••••••••</span>
+                            <button class="btn btn-secondary btn-small" onclick="openChangePasswordModal()" disabled>
+                                変更
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
+                    
+                    <!-- ログアウトボタン -->
+                    <div class="mypage-logout-section">
+                        <button class="btn btn-logout" onclick="AuthModule.logout()">
+                            🚪 ログアウト
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
