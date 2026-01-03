@@ -3,8 +3,11 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.0.1
+ * @version 1.1.0
  * @date 2025-12-30
+ * @changelog
+ *   v1.0.1 - trades同期実装
+ *   v1.1.0 - notes同期追加
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -288,7 +291,236 @@
             }
         }
         
-        // ========== Private Methods: データ変換 ==========
+        // ========== Notes 同期 ==========
+        
+        /**
+         * ノートをSupabaseに保存（upsert）
+         * @param {string} dateStr - 日付文字列（YYYY-MM-DD）
+         * @param {Object} noteData - ノートデータ { content, ... }
+         * @returns {Promise<Object>} { success, data, error }
+         */
+        async saveNote(dateStr, noteData) {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const supabaseData = this.#localNoteToSupabase(dateStr, noteData);
+                
+                // user_id + date でupsert（UNIQUE制約を利用）
+                const { data, error } = await this.#supabase
+                    .from('notes')
+                    .upsert(supabaseData, { 
+                        onConflict: 'user_id,date',
+                        ignoreDuplicates: false 
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('[SyncModule] ノート保存エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error) };
+                }
+                
+                console.log('[SyncModule] ノート保存成功:', dateStr);
+                this.#eventBus?.emit('sync:note:saved', { date: dateStr });
+                
+                return { success: true, data };
+                
+            } catch (error) {
+                console.error('[SyncModule] saveNote例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * ノートを削除
+         * @param {string} dateStr - 日付文字列（YYYY-MM-DD）
+         * @returns {Promise<Object>} { success, error }
+         */
+        async deleteNote(dateStr) {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const userId = this.#getCurrentUserId();
+                if (!userId) {
+                    return { success: false, error: 'ユーザーIDが取得できません' };
+                }
+                
+                const { error } = await this.#supabase
+                    .from('notes')
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('date', dateStr);
+                
+                if (error) {
+                    console.error('[SyncModule] ノート削除エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error) };
+                }
+                
+                console.log('[SyncModule] ノート削除成功:', dateStr);
+                this.#eventBus?.emit('sync:note:deleted', { date: dateStr });
+                
+                return { success: true };
+                
+            } catch (error) {
+                console.error('[SyncModule] deleteNote例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * Supabaseから全ノートを取得
+         * @returns {Promise<Object>} { success, data, error }
+         *   data は localStorage形式（日付キーのオブジェクト）
+         */
+        async fetchAllNotes() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化', data: {} };
+            }
+            
+            try {
+                const { data, error } = await this.#supabase
+                    .from('notes')
+                    .select('*')
+                    .order('date', { ascending: false });
+                
+                if (error) {
+                    console.error('[SyncModule] ノート取得エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error), data: {} };
+                }
+                
+                // Supabase形式 → localStorage形式に変換
+                const localNotes = this.#supabaseNotesToLocal(data);
+                
+                console.log(`[SyncModule] ${data.length}件のノートを取得`);
+                
+                return { success: true, data: localNotes };
+                
+            } catch (error) {
+                console.error('[SyncModule] fetchAllNotes例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error), data: {} };
+            }
+        }
+        
+        /**
+         * localStorageの全ノートをSupabaseに移行
+         * @returns {Promise<Object>} { success, count, errors }
+         */
+        async migrateNotesFromLocal() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            if (this.#syncInProgress) {
+                return { success: false, error: '同期中です' };
+            }
+            
+            this.#syncInProgress = true;
+            const errors = [];
+            let successCount = 0;
+            
+            try {
+                // localStorageからノート取得
+                const localNotes = StorageValidator.safeLoad('notes', {}, StorageValidator.isObject);
+                
+                const dateKeys = Object.keys(localNotes);
+                if (dateKeys.length === 0) {
+                    console.log('[SyncModule] 移行するノートがありません');
+                    return { success: true, count: 0, errors: [] };
+                }
+                
+                console.log(`[SyncModule] ${dateKeys.length}件のノートを移行開始`);
+                this.#eventBus?.emit('sync:notes:migration:start', { total: dateKeys.length });
+                
+                // 一括upsert用に変換
+                const supabaseData = dateKeys.map(dateStr => 
+                    this.#localNoteToSupabase(dateStr, localNotes[dateStr])
+                );
+                
+                // バッチ処理（50件ずつ）
+                const batchSize = 50;
+                for (let i = 0; i < supabaseData.length; i += batchSize) {
+                    const batch = supabaseData.slice(i, i + batchSize);
+                    
+                    const { error } = await this.#supabase
+                        .from('notes')
+                        .upsert(batch, { onConflict: 'user_id,date' });
+                    
+                    if (error) {
+                        console.error(`[SyncModule] ノートバッチ${i / batchSize + 1}エラー:`, error);
+                        errors.push({ batch: i / batchSize + 1, error: error.message });
+                    } else {
+                        successCount += batch.length;
+                    }
+                    
+                    // 進捗通知
+                    this.#eventBus?.emit('sync:notes:migration:progress', {
+                        current: Math.min(i + batchSize, supabaseData.length),
+                        total: supabaseData.length
+                    });
+                }
+                
+                console.log(`[SyncModule] ノート移行完了: ${successCount}/${dateKeys.length}件`);
+                this.#eventBus?.emit('sync:notes:migration:complete', { count: successCount, errors });
+                
+                return { success: errors.length === 0, count: successCount, errors };
+                
+            } catch (error) {
+                console.error('[SyncModule] migrateNotesFromLocal例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error), errors };
+                
+            } finally {
+                this.#syncInProgress = false;
+            }
+        }
+        
+        /**
+         * Supabaseから全ノートをlocalStorageに同期
+         * @returns {Promise<Object>} { success, count, error }
+         */
+        async syncNotesToLocal() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const result = await this.fetchAllNotes();
+                
+                if (!result.success) {
+                    return result;
+                }
+                
+                // localStorageに保存
+                localStorage.setItem('notes', JSON.stringify(result.data));
+                
+                // グローバル変数も更新
+                if (window.notes !== undefined) {
+                    window.notes = result.data;
+                }
+                
+                // NoteManagerModule更新（存在する場合）
+                // NoteManagerModuleはプライベートフィールドを使用しているため、
+                // reload()メソッドがあればそれを呼び出す
+                if (window.NoteManagerModule?.reload) {
+                    window.NoteManagerModule.reload();
+                }
+                
+                const count = Object.keys(result.data).length;
+                console.log(`[SyncModule] ${count}件のノートをlocalStorageに同期`);
+                this.#eventBus?.emit('sync:notes:synced', { count });
+                
+                return { success: true, count };
+                
+            } catch (error) {
+                console.error('[SyncModule] syncNotesToLocal例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        // ========== Private Methods: データ変換（Trades） ==========
         
         /**
          * localStorage形式 → Supabase形式
@@ -383,6 +615,47 @@
             };
         }
         
+        // ========== Private Methods: データ変換（Notes） ==========
+        
+        /**
+         * localStorage形式 → Supabase形式（Notes）
+         * @param {string} dateStr - 日付文字列（YYYY-MM-DD）
+         * @param {Object} noteData - ノートデータ
+         * @returns {Object} Supabase用データ
+         */
+        #localNoteToSupabase(dateStr, noteData) {
+            const userId = this.#getCurrentUserId();
+            
+            return {
+                user_id: userId,
+                date: dateStr,
+                content: noteData.content || '',
+                updated_at: new Date().toISOString()
+                // id, created_at はSupabase側で自動生成
+            };
+        }
+        
+        /**
+         * Supabase形式 → localStorage形式（Notes）
+         * 複数レコードを日付キーのオブジェクトに変換
+         * @param {Array} supabaseNotes - Supabaseのノート配列
+         * @returns {Object} localStorage形式（日付キーのオブジェクト）
+         */
+        #supabaseNotesToLocal(supabaseNotes) {
+            const localNotes = {};
+            
+            for (const note of supabaseNotes) {
+                localNotes[note.date] = {
+                    content: note.content || '',
+                    timestamp: note.updated_at || note.created_at
+                };
+            }
+            
+            return localNotes;
+        }
+        
+        // ========== Private Methods: 共通 ==========
+        
         /**
          * 現在のユーザーIDを取得
          * @returns {string|null}
@@ -419,6 +692,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了');
+    console.log('[SyncModule] モジュール読み込み完了 v1.1.0');
     
 })();

@@ -763,6 +763,25 @@ class ExpenseManagerModule {
                 background: #c82333;
             }
             
+            /* メモ表示 */
+            .card-memo {
+                margin-top: 8px;
+                padding: 8px 10px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 4px;
+                border-left: 3px solid #60a5fa;
+                font-size: 0.85em;
+                color: #a0a0a0;
+            }
+            
+            .memo-label {
+                margin-right: 6px;
+            }
+            
+            .memo-text {
+                font-style: italic;
+            }
+            
             /* 全体サマリー */
             .expense-total-summary {
                 margin-top: 30px;
@@ -886,6 +905,14 @@ class ExpenseManagerModule {
      * @private
      */
     #generateExpenseCardHTML(expense) {
+        // メモがある場合のみ表示
+        const memoHtml = expense.memo ? `
+            <div class="card-memo">
+                <span class="memo-label">💬</span>
+                <span class="memo-text">${expense.memo}</span>
+            </div>
+        ` : '';
+        
         return `
             <div class="expense-card">
                 <div class="card-header">
@@ -894,6 +921,7 @@ class ExpenseManagerModule {
                 </div>
                 <div class="card-body">
                     <span class="card-description">📝 ${expense.description || '-'}</span>
+                    ${memoHtml}
                 </div>
                 <div class="card-footer">
                     <button class="btn-delete" 

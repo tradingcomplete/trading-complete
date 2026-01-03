@@ -1096,25 +1096,29 @@ body.light-mode .btn-icon:hover {
     border-color: #00aa5a !important;
 }
 
-/* 設定タブ - サブタブ（基本、トレーディング、データ） */
+/* 設定タブ - サブタブコンテナ（ライトモード・スクロール無効） */
+body.light-mode .settings-subtabs {
+    overflow-x: visible !important;
+}
+
+/* 設定タブ - サブタブ（基本、トレーディング、データ、マイページ）- 色のみ */
 body.light-mode .settings-subtab-btn {
     background: #f8f8f8 !important;
-    border: 2px solid #999999 !important;
+    border: none !important;
+    border-bottom: 3px solid #999999 !important;
     color: #000000 !important;
-    border-radius: 6px;
-    padding: 8px 16px;
 }
 
 body.light-mode .settings-subtab-btn:hover:not(.active) {
     background: #e8f5e9 !important;
-    border-color: #00aa5a !important;
+    border-bottom-color: #00aa5a !important;
     color: #00995a !important;
 }
 
 body.light-mode .settings-subtab-btn.active {
-    background: #00bb5f !important;
-    border: 2px solid #00995a !important;
-    color: #ffffff !important;
+    background: transparent !important;
+    border-bottom: 3px solid #00bb5f !important;
+    color: #00bb5f !important;
 }
 
 /* 設定タブ - サブタブコンテンツ */
