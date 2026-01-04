@@ -2,7 +2,7 @@
  * @module ExpenseManagerModule
  * @description 経費管理機能 - 経費の追加、削除、集計、表示を管理
  * @author AI Assistant / コンパナ
- * @version 1.0.0
+ * @version 1.0.1
  */
 class ExpenseManagerModule {
     // ================
@@ -107,6 +107,9 @@ class ExpenseManagerModule {
             // イベント発火
             this.#eventBus?.emit('expense:added', expense);
             
+            // Supabase同期（バックグラウンド）
+            this.#syncExpenseToCloud(expense);
+            
             console.log('Expense added:', expense);
             return true;
         } catch (error) {
@@ -135,11 +138,58 @@ class ExpenseManagerModule {
             // イベント発火
             this.#eventBus?.emit('expense:deleted', { id, expense: deleted });
             
+            // Supabase同期（バックグラウンド）
+            this.#deleteExpenseFromCloud(id);
+            
             console.log('Expense deleted:', id);
             return true;
         } catch (error) {
             console.error('ExpenseManagerModule.deleteExpense error:', error);
             return false;
+        }
+    }
+    
+    // ================
+    // Supabase同期（プライベート）
+    // ================
+    
+    /**
+     * 経費をSupabaseに同期（バックグラウンド）
+     * @param {Object} expense - 経費データ
+     */
+    #syncExpenseToCloud(expense) {
+        if (window.SyncModule?.isInitialized?.()) {
+            window.SyncModule.saveExpense(expense)
+                .then(result => {
+                    if (result.success) {
+                        console.log('[ExpenseManager] Supabase同期成功:', expense.id);
+                    } else {
+                        console.warn('[ExpenseManager] Supabase同期失敗:', result.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('[ExpenseManager] Supabase同期エラー:', err);
+                });
+        }
+    }
+    
+    /**
+     * 経費をSupabaseから削除（バックグラウンド）
+     * @param {string} expenseId - 経費ID
+     */
+    #deleteExpenseFromCloud(expenseId) {
+        if (window.SyncModule?.isInitialized?.()) {
+            window.SyncModule.deleteExpense(expenseId)
+                .then(result => {
+                    if (result.success) {
+                        console.log('[ExpenseManager] Supabase削除成功:', expenseId);
+                    } else {
+                        console.warn('[ExpenseManager] Supabase削除失敗:', result.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('[ExpenseManager] Supabase削除エラー:', err);
+                });
         }
     }
     
