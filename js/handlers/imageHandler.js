@@ -5,11 +5,7 @@
  * 
  * @module ImageHandler
  * @version 1.1.0
- * @changelog
- * - v1.1.0: PNG対応追加、高画質化（chart/note）
- *   - chart: JPEG 1000×750 → PNG 1600×900
- *   - note: JPEG 800×600 → PNG 1600×1200
- *   - icon: JPEG 200×200 のまま（品質向上 0.7→0.85）
+ * @updated 2026-01-04 - Supabase Storage対応追加
  */
 
 class ImageHandler {
@@ -18,42 +14,44 @@ class ImageHandler {
      */
     static CONFIG = {
         compression: {
-            maxWidth: 1600,
-            maxHeight: 1200,
-            quality: 0.92,
-            format: 'png'  // デフォルトをPNGに変更
+            maxWidth: 1200,
+            maxHeight: 900,
+            quality: 0.85,
+            format: 'jpeg'
+        },
+        // Supabase Storage設定
+        storage: {
+            bucketName: 'trade-images',
+            signedUrlExpiry: 3600, // 1時間（秒）
+            allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
         },
         // 用途別の設定
         presets: {
             icon: {
                 maxWidth: 200,
                 maxHeight: 200,
-                quality: 0.85,
-                format: 'jpeg'  // アイコンはJPEGでOK（小さいため）
+                quality: 0.7
             },
             chart: {
-                maxWidth: 1600,   // 1000 → 1600
-                maxHeight: 900,   // 750 → 900
-                quality: 1.0,     // PNG は品質100%
-                format: 'png'     // JPEG → PNG（文字がくっきり）
+                maxWidth: 1000,
+                maxHeight: 750,
+                quality: 0.8
             },
             note: {
-                maxWidth: 1600,   // 800 → 1600
-                maxHeight: 1200,  // 600 → 1200
-                quality: 1.0,     // PNG は品質100%
-                format: 'png'     // JPEG → PNG（文字がくっきり）
+                maxWidth: 800,
+                maxHeight: 600,
+                quality: 0.75
             },
             thumbnail: {
                 maxWidth: 300,
                 maxHeight: 300,
-                quality: 0.7,
-                format: 'jpeg'    // サムネイルはJPEGでOK
+                quality: 0.6
             }
         },
         // ファイルサイズ制限
         limits: {
-            maxFileSize: 10 * 1024 * 1024,      // 5MB → 10MB に拡大
-            maxCompressedSize: 3 * 1024 * 1024  // 1MB → 3MB に拡大
+            maxFileSize: 5 * 1024 * 1024, // 5MB
+            maxCompressedSize: 1 * 1024 * 1024 // 1MB
         }
     };
 
@@ -62,10 +60,9 @@ class ImageHandler {
      * @param {string|File} source - Base64文字列またはFileオブジェクト
      * @param {number} maxWidth - 最大幅（省略時はデフォルト値）
      * @param {number} quality - 圧縮品質（0-1）
-     * @param {string} format - 出力形式（'jpeg', 'png', 'webp'）
      * @returns {Promise<string>} 圧縮後のBase64文字列
      */
-    static async compress(source, maxWidth = null, quality = null, format = null) {
+    static async compress(source, maxWidth = null, quality = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 // Fileオブジェクトの場合はBase64に変換
@@ -89,12 +86,10 @@ class ImageHandler {
                     const ctx = canvas.getContext('2d');
                     
                     // 設定値の決定
-                    const outputFormat = format || this.CONFIG.compression.format;
                     const config = {
                         maxWidth: maxWidth || this.CONFIG.compression.maxWidth,
                         maxHeight: this.CONFIG.compression.maxHeight,
-                        quality: quality !== null ? quality : this.CONFIG.compression.quality,
-                        format: outputFormat
+                        quality: quality || this.CONFIG.compression.quality
                     };
                     
                     // アスペクト比を保持しながらリサイズ
@@ -112,8 +107,8 @@ class ImageHandler {
                     ctx.imageSmoothingEnabled = true;
                     ctx.imageSmoothingQuality = 'high';
                     
-                    // JPEG用の白背景設定（PNGは透明背景を維持）
-                    if (config.format === 'jpeg') {
+                    // JPEG用の白背景設定
+                    if (this.CONFIG.compression.format === 'jpeg') {
                         ctx.fillStyle = '#FFFFFF';
                         ctx.fillRect(0, 0, width, height);
                     }
@@ -122,12 +117,11 @@ class ImageHandler {
                     ctx.drawImage(img, 0, 0, width, height);
                     
                     // 圧縮されたBase64を取得
-                    const mimeType = `image/${config.format}`;
+                    const mimeType = `image/${this.CONFIG.compression.format}`;
                     const compressedBase64 = canvas.toDataURL(mimeType, config.quality);
                     
                     // 元の画像より大きくなった場合は元の画像を返す
-                    // （ただしフォーマット変換が必要な場合は除く）
-                    if (compressedBase64.length > base64String.length && !format) {
+                    if (compressedBase64.length > base64String.length) {
                         resolve(base64String);
                     } else {
                         resolve(compressedBase64);
@@ -161,8 +155,7 @@ class ImageHandler {
             return this.compress(source);
         }
         
-        // プリセットの format を使用
-        return this.compress(source, config.maxWidth, config.quality, config.format);
+        return this.compress(source, config.maxWidth, config.quality);
     }
 
     /**
@@ -231,10 +224,8 @@ class ImageHandler {
                 // 画像を描画
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // 元の形式を維持してリサイズ後のBase64を返す
-                const mimeMatch = base64String.match(/data:image\/(\w+);/);
-                const mimeType = mimeMatch ? `image/${mimeMatch[1]}` : 'image/png';
-                resolve(canvas.toDataURL(mimeType));
+                // リサイズ後のBase64を返す
+                resolve(canvas.toDataURL());
             };
             
             img.onerror = () => {
@@ -259,29 +250,21 @@ class ImageHandler {
         let width = originalWidth;
         let height = originalHeight;
         
-        // 既に最大サイズ以下の場合はそのまま
-        if (width <= maxWidth && height <= maxHeight) {
-            return { width, height };
-        }
-        
-        // アスペクト比を計算
-        const aspectRatio = width / height;
-        
-        // 幅基準でリサイズ
+        // 幅が最大値を超えている場合
         if (width > maxWidth) {
+            height = (height * maxWidth) / width;
             width = maxWidth;
-            height = width / aspectRatio;
         }
         
-        // 高さ基準でリサイズ（必要な場合）
+        // 高さが最大値を超えている場合
         if (height > maxHeight) {
+            width = (width * maxHeight) / height;
             height = maxHeight;
-            width = height * aspectRatio;
         }
         
-        return { 
-            width: Math.round(width), 
-            height: Math.round(height) 
+        return {
+            width: Math.round(width),
+            height: Math.round(height)
         };
     }
 
@@ -335,7 +318,7 @@ class ImageHandler {
      * @param {number} quality - 品質（0-1）
      * @returns {Promise<string>} 変換後のBase64文字列
      */
-    static async convertFormat(base64String, targetFormat = 'png', quality = 0.92) {
+    static async convertFormat(base64String, targetFormat = 'jpeg', quality = 0.85) {
         return new Promise((resolve, reject) => {
             if (!base64String || !base64String.startsWith('data:image')) {
                 resolve(base64String);
@@ -391,17 +374,12 @@ class ImageHandler {
                 const base64Data = base64String.split(',')[1];
                 const sizeInBytes = Math.round(base64Data.length * 0.75);
                 
-                // フォーマットを検出
-                const formatMatch = base64String.match(/data:image\/(\w+);/);
-                const format = formatMatch ? formatMatch[1] : 'unknown';
-                
                 resolve({
                     width: img.width,
                     height: img.height,
                     size: sizeInBytes,
                     sizeKB: Math.round(sizeInBytes / 1024),
-                    sizeMB: (sizeInBytes / 1024 / 1024).toFixed(2),
-                    format: format
+                    sizeMB: (sizeInBytes / 1024 / 1024).toFixed(2)
                 });
             };
             
@@ -411,6 +389,30 @@ class ImageHandler {
             
             img.src = base64String;
         });
+    }
+
+    /**
+     * Base64文字列をBlobに変換
+     * @param {string} base64String - Base64文字列
+     * @returns {Blob} Blobオブジェクト
+     */
+    static base64ToBlob(base64String) {
+        // データ部分を抽出
+        const parts = base64String.split(',');
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const base64Data = parts[1];
+        
+        // Base64をデコード
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type: mimeType });
     }
 
     /**
@@ -473,20 +475,146 @@ class ImageHandler {
     }
 
     /**
-     * 将来実装: クラウドアップロード
-     * @param {string|File} source - アップロード対象
+     * Supabase Storageに画像をアップロード
+     * @param {string|File} source - アップロード対象（Base64またはFile）
      * @param {Object} options - アップロードオプション
-     * @returns {Promise<string>} アップロードされた画像のURL
+     * @param {string} options.path - 保存パス（例: 'trades/xxx/chart1.jpg'）
+     * @param {string} options.userId - ユーザーID（必須）
+     * @param {boolean} options.compress - 圧縮するか（デフォルト: true）
+     * @returns {Promise<{url: string, path: string}>} アップロード結果
      */
     static async uploadToCloud(source, options = {}) {
-        // Supabase実装予定
-        console.warn('ImageHandler.uploadToCloud: この機能は将来実装予定です');
+        const { path, userId, compress = true } = options;
         
-        // 現在はBase64を返す（LocalStorage保存用）
-        if (source instanceof File) {
-            return this.toBase64(source);
+        // 必須パラメータチェック
+        if (!userId) {
+            throw new Error('ImageHandler.uploadToCloud: userIdが必要です');
         }
-        return source;
+        if (!path) {
+            throw new Error('ImageHandler.uploadToCloud: pathが必要です');
+        }
+        
+        // Supabaseクライアント確認
+        if (typeof supabase === 'undefined') {
+            console.warn('ImageHandler.uploadToCloud: Supabaseが初期化されていません。Base64を返します。');
+            if (source instanceof File) {
+                return { url: await this.toBase64(source), path: null };
+            }
+            return { url: source, path: null };
+        }
+        
+        try {
+            // 画像データの準備
+            let imageData;
+            if (source instanceof File) {
+                // Fileの場合：圧縮してからBlobに
+                if (compress) {
+                    const base64 = await this.compress(source);
+                    imageData = this.base64ToBlob(base64);
+                } else {
+                    imageData = source;
+                }
+            } else if (typeof source === 'string' && source.startsWith('data:image')) {
+                // Base64の場合：圧縮してからBlobに
+                if (compress) {
+                    const compressed = await this.compress(source);
+                    imageData = this.base64ToBlob(compressed);
+                } else {
+                    imageData = this.base64ToBlob(source);
+                }
+            } else {
+                throw new Error('無効な画像データです');
+            }
+            
+            // フルパスを構築（user_id/path）
+            const fullPath = `${userId}/${path}`;
+            
+            // Supabase Storageにアップロード
+            const { data, error } = await supabase.storage
+                .from(this.CONFIG.storage.bucketName)
+                .upload(fullPath, imageData, {
+                    cacheControl: '3600',
+                    upsert: true // 同名ファイルは上書き
+                });
+            
+            if (error) {
+                console.error('ImageHandler.uploadToCloud: アップロードエラー', error);
+                throw error;
+            }
+            
+            console.log(`[ImageHandler] アップロード成功: ${fullPath}`);
+            
+            // 署名付きURLを取得
+            const signedUrl = await this.getSignedUrl(fullPath);
+            
+            return {
+                url: signedUrl,
+                path: fullPath
+            };
+            
+        } catch (error) {
+            console.error('ImageHandler.uploadToCloud error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 署名付きURLを取得
+     * @param {string} path - ファイルパス（user_id/...を含む）
+     * @returns {Promise<string>} 署名付きURL
+     */
+    static async getSignedUrl(path) {
+        if (typeof supabase === 'undefined') {
+            console.warn('ImageHandler.getSignedUrl: Supabaseが初期化されていません');
+            return null;
+        }
+        
+        try {
+            const { data, error } = await supabase.storage
+                .from(this.CONFIG.storage.bucketName)
+                .createSignedUrl(path, this.CONFIG.storage.signedUrlExpiry);
+            
+            if (error) {
+                console.error('ImageHandler.getSignedUrl: エラー', error);
+                throw error;
+            }
+            
+            return data.signedUrl;
+            
+        } catch (error) {
+            console.error('ImageHandler.getSignedUrl error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Supabase Storageから画像を削除
+     * @param {string} path - ファイルパス（user_id/...を含む）
+     * @returns {Promise<boolean>} 削除成功したか
+     */
+    static async deleteFromCloud(path) {
+        if (typeof supabase === 'undefined') {
+            console.warn('ImageHandler.deleteFromCloud: Supabaseが初期化されていません');
+            return false;
+        }
+        
+        try {
+            const { error } = await supabase.storage
+                .from(this.CONFIG.storage.bucketName)
+                .remove([path]);
+            
+            if (error) {
+                console.error('ImageHandler.deleteFromCloud: エラー', error);
+                throw error;
+            }
+            
+            console.log(`[ImageHandler] 削除成功: ${path}`);
+            return true;
+            
+        } catch (error) {
+            console.error('ImageHandler.deleteFromCloud error:', error);
+            throw error;
+        }
     }
 
     /**
@@ -494,15 +622,16 @@ class ImageHandler {
      * @returns {Object} 設定情報とステータス
      */
     static getStatus() {
+        const cloudEnabled = typeof supabase !== 'undefined';
         return {
-            version: '1.1.0',
             config: this.CONFIG,
             presets: Object.keys(this.CONFIG.presets),
             limits: {
                 maxFileSizeMB: this.CONFIG.limits.maxFileSize / 1024 / 1024,
                 maxCompressedSizeMB: this.CONFIG.limits.maxCompressedSize / 1024 / 1024
             },
-            cloudEnabled: false // 将来的にtrue
+            cloudEnabled: cloudEnabled,
+            storageBucket: this.CONFIG.storage.bucketName
         };
     }
 }
