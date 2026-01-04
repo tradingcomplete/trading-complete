@@ -3,13 +3,14 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.2.0
+ * @version 1.3.0
  * @date 2025-01-04
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
  *   v1.1.1 - notes変換処理修正（memo/marketView/images対応）
  *   v1.2.0 - expenses同期追加
+ *   v1.3.0 - capital_records同期追加
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -726,6 +727,211 @@
             }
         }
         
+        // ========== Capital Records 同期 ==========
+        
+        /**
+         * 入出金記録をSupabaseに保存（upsert）
+         * @param {Object} record - 入出金データ
+         * @returns {Promise<Object>} { success, data, error }
+         */
+        async saveCapitalRecord(record) {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const supabaseData = this.#localCapitalToSupabase(record);
+                
+                const { data, error } = await this.#supabase
+                    .from('capital_records')
+                    .upsert(supabaseData, { onConflict: 'id' })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('[SyncModule] 入出金記録保存エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error) };
+                }
+                
+                console.log('[SyncModule] 入出金記録保存成功:', data.id);
+                this.#eventBus?.emit('sync:capital:saved', { recordId: data.id });
+                
+                return { success: true, data };
+                
+            } catch (error) {
+                console.error('[SyncModule] saveCapitalRecord例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * 入出金記録を削除
+         * @param {string} recordId - 記録ID
+         * @returns {Promise<Object>} { success, error }
+         */
+        async deleteCapitalRecord(recordId) {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const { error } = await this.#supabase
+                    .from('capital_records')
+                    .delete()
+                    .eq('id', recordId);
+                
+                if (error) {
+                    console.error('[SyncModule] 入出金記録削除エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error) };
+                }
+                
+                console.log('[SyncModule] 入出金記録削除成功:', recordId);
+                this.#eventBus?.emit('sync:capital:deleted', { recordId });
+                
+                return { success: true };
+                
+            } catch (error) {
+                console.error('[SyncModule] deleteCapitalRecord例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * Supabaseから全入出金記録を取得
+         * @returns {Promise<Object>} { success, data, error }
+         */
+        async fetchAllCapitalRecords() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化', data: [] };
+            }
+            
+            try {
+                const { data, error } = await this.#supabase
+                    .from('capital_records')
+                    .select('*')
+                    .order('date', { ascending: true });
+                
+                if (error) {
+                    console.error('[SyncModule] 入出金記録取得エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                }
+                
+                // Supabase形式 → localStorage形式に変換
+                const localRecords = data.map(r => this.#supabaseCapitalToLocal(r));
+                
+                console.log(`[SyncModule] ${localRecords.length}件の入出金記録を取得`);
+                
+                return { success: true, data: localRecords };
+                
+            } catch (error) {
+                console.error('[SyncModule] fetchAllCapitalRecords例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error), data: [] };
+            }
+        }
+        
+        /**
+         * localStorageの全入出金記録をSupabaseに移行
+         * @returns {Promise<Object>} { success, count, errors }
+         */
+        async migrateCapitalRecordsFromLocal() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            if (this.#syncInProgress) {
+                return { success: false, error: '同期中です' };
+            }
+            
+            this.#syncInProgress = true;
+            const errors = [];
+            let successCount = 0;
+            
+            try {
+                // localStorageから入出金記録取得
+                const localRecords = StorageValidator.safeLoad('depositWithdrawals', [], StorageValidator.isArray);
+                
+                if (localRecords.length === 0) {
+                    console.log('[SyncModule] 移行する入出金記録がありません');
+                    return { success: true, count: 0, errors: [] };
+                }
+                
+                console.log(`[SyncModule] ${localRecords.length}件の入出金記録を移行開始`);
+                this.#eventBus?.emit('sync:capital:migration:start', { total: localRecords.length });
+                
+                // 一括upsert用に変換
+                const supabaseData = localRecords.map(r => this.#localCapitalToSupabase(r));
+                
+                // バッチ処理（50件ずつ）
+                const batchSize = 50;
+                for (let i = 0; i < supabaseData.length; i += batchSize) {
+                    const batch = supabaseData.slice(i, i + batchSize);
+                    
+                    const { error } = await this.#supabase
+                        .from('capital_records')
+                        .upsert(batch, { onConflict: 'id' });
+                    
+                    if (error) {
+                        console.error(`[SyncModule] 入出金バッチ${i / batchSize + 1}エラー:`, error);
+                        errors.push({ batch: i / batchSize + 1, error: error.message });
+                    } else {
+                        successCount += batch.length;
+                    }
+                    
+                    // 進捗通知
+                    this.#eventBus?.emit('sync:capital:migration:progress', {
+                        current: Math.min(i + batchSize, supabaseData.length),
+                        total: supabaseData.length
+                    });
+                }
+                
+                console.log(`[SyncModule] 入出金記録移行完了: ${successCount}/${localRecords.length}件`);
+                this.#eventBus?.emit('sync:capital:migration:complete', { count: successCount, errors });
+                
+                return { success: errors.length === 0, count: successCount, errors };
+                
+            } catch (error) {
+                console.error('[SyncModule] migrateCapitalRecordsFromLocal例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error), errors };
+                
+            } finally {
+                this.#syncInProgress = false;
+            }
+        }
+        
+        /**
+         * Supabaseから全入出金記録をlocalStorageに同期
+         * @returns {Promise<Object>} { success, count, error }
+         */
+        async syncCapitalRecordsToLocal() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const result = await this.fetchAllCapitalRecords();
+                
+                if (!result.success) {
+                    return result;
+                }
+                
+                // localStorageに保存
+                localStorage.setItem('depositWithdrawals', JSON.stringify(result.data));
+                
+                // CapitalManagerModule更新（存在する場合）
+                // 注意: CapitalManagerModuleは#loadメソッドがプライベートなので、
+                // 直接呼び出しはできない。UIの更新が必要な場合はイベントを発火
+                
+                console.log(`[SyncModule] ${result.data.length}件の入出金記録をlocalStorageに同期`);
+                this.#eventBus?.emit('sync:capital:synced', { count: result.data.length });
+                
+                return { success: true, count: result.data.length };
+                
+            } catch (error) {
+                console.error('[SyncModule] syncCapitalRecordsToLocal例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
         // ========== Private Methods: データ変換（Trades） ==========
         
         /**
@@ -963,6 +1169,44 @@
             };
         }
         
+        // ========== Private Methods: データ変換（Capital Records） ==========
+        
+        /**
+         * localStorage形式 → Supabase形式（Capital Records）
+         * @param {Object} local - localStorageの入出金データ
+         * @returns {Object} Supabase用データ
+         */
+        #localCapitalToSupabase(local) {
+            const userId = this.#getCurrentUserId();
+            
+            return {
+                id: local.id,
+                user_id: userId,
+                date: local.date,
+                type: local.type,           // 'deposit' or 'withdrawal'
+                amount: local.amount,
+                memo: local.note || '',     // localStorage: note → Supabase: memo
+                created_at: local.createdAt || new Date().toISOString()
+            };
+        }
+        
+        /**
+         * Supabase形式 → localStorage形式（Capital Records）
+         * @param {Object} supa - Supabaseの入出金データ
+         * @returns {Object} localStorage形式
+         */
+        #supabaseCapitalToLocal(supa) {
+            return {
+                id: supa.id,
+                date: supa.date,
+                type: supa.type,
+                amount: supa.amount ? parseFloat(supa.amount) : 0,
+                balance: 0,                  // 残高は後でCapitalManagerModuleが再計算
+                note: supa.memo || '',       // Supabase: memo → localStorage: note
+                createdAt: supa.created_at
+            };
+        }
+        
         // ========== Private Methods: 共通 ==========
         
         /**
@@ -1001,6 +1245,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.2.0');
+    console.log('[SyncModule] モジュール読み込み完了 v1.3.0');
     
 })();
