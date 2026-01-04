@@ -7,7 +7,7 @@
  * @module NoteManagerModule
  * @description 相場ノート機能の統合管理モジュール
  * @author AI Assistant / コンパナ
- * @version 1.0.2
+ * @version 1.0.3
  * @important UIの変更は原則禁止。見た目は既存のまま維持すること。
  */
 
@@ -95,6 +95,9 @@ class NoteManagerModule {
 
     #saveMonthlyMemos() {
         localStorage.setItem('monthlyMemos', JSON.stringify(this.#monthlyMemos));
+        
+        // Supabase自動同期トリガー
+        this.#eventBus?.emit('settings:changed', { source: 'monthlyMemos' });
     }
 
     #saveCollapseState() {

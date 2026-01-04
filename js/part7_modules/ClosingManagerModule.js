@@ -2,7 +2,7 @@
  * ClosingManagerModule - 月次・四半期・年次締め処理
  * @description MODULES.md準拠の締め処理モジュール
  * @author AI Assistant / コンパナ
- * @version 1.0.0
+ * @version 1.0.1
  */
 class ClosingManagerModule {
     // ========== Private Fields ==========
@@ -322,6 +322,10 @@ class ClosingManagerModule {
     #saveClosedPeriods() {
         try {
             localStorage.setItem('tc_closed_periods', JSON.stringify(this.#closedPeriods));
+            
+            // Supabase自動同期トリガー
+            this.#eventBus?.emit('settings:changed', { source: 'closedPeriods' });
+            
         } catch (error) {
             console.error('ClosingManagerModule.#saveClosedPeriods error:', error);
         }

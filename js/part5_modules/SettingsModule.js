@@ -2,7 +2,7 @@
  * @module SettingsModule
  * @description 設定タブの完全管理（既存機能+新機能）
  * @author AI Assistant / コンパナ
- * @version 1.0.0
+ * @version 1.0.2
  * @important MODULES.md準拠 - 6点セット実装
  */
 class SettingsModule {
@@ -877,6 +877,9 @@ class SettingsModule {
             SettingsModule.STORAGE_KEYS.BROKERS,
             JSON.stringify(this.#brokers)
         );
+        
+        // Supabase自動同期トリガー
+        this.#eventBus?.emit('settings:changed', { source: 'brokers' });
     }
     
     // ================
@@ -1008,6 +1011,9 @@ class SettingsModule {
             SettingsModule.STORAGE_KEYS.FAVORITE_PAIRS,
             JSON.stringify(this.#favoritePairs)
         );
+        
+        // Supabase自動同期トリガー
+        this.#eventBus?.emit('settings:changed', { source: 'favoritePairs' });
     }
     
     // ================
