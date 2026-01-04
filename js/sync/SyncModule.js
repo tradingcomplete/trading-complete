@@ -3,8 +3,8 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.4.0
- * @date 2025-01-04
+ * @version 1.5.0
+ * @date 2026-01-04
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
@@ -12,6 +12,7 @@
  *   v1.2.0 - expenses同期追加
  *   v1.3.0 - capital_records同期追加
  *   v1.4.0 - user_settings同期追加（一括保存方式）
+ *   v1.5.0 - 画像アップロード統合（Supabase Storage）
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -98,7 +99,10 @@
             }
             
             try {
-                const supabaseData = this.#localTradeToSupabase(localTrade);
+                // 画像をSupabase Storageにアップロード（Base64 → URL）
+                const tradeWithUrls = await this.#uploadTradeImages(localTrade);
+                
+                const supabaseData = this.#localTradeToSupabase(tradeWithUrls);
                 
                 const { data, error } = await this.#supabase
                     .from('trades')
@@ -1102,6 +1106,96 @@
             });
         }
         
+        // ========== Private Methods: 画像アップロード ==========
+        
+        /**
+         * トレードの画像をSupabase Storageにアップロード
+         * Base64 → URL に変換
+         * @param {Object} trade - トレードデータ
+         * @returns {Promise<Object>} 画像URLに変換されたトレード
+         */
+        async #uploadTradeImages(trade) {
+            // chartImagesがない、または空の場合はそのまま返す
+            if (!trade.chartImages || trade.chartImages.length === 0) {
+                return trade;
+            }
+            
+            const userId = this.#getCurrentUserId();
+            if (!userId) {
+                console.warn('[SyncModule] userId がないため画像アップロードをスキップ');
+                return trade;
+            }
+            
+            // ImageHandlerが利用可能か確認
+            if (typeof ImageHandler === 'undefined' || !ImageHandler.uploadToCloud) {
+                console.warn('[SyncModule] ImageHandler が利用できないため画像アップロードをスキップ');
+                return trade;
+            }
+            
+            const updatedImages = [];
+            
+            for (let i = 0; i < trade.chartImages.length; i++) {
+                const img = trade.chartImages[i];
+                
+                // nullの場合はそのまま
+                if (!img) {
+                    updatedImages.push(null);
+                    continue;
+                }
+                
+                // 既にURLの場合（httpで始まる）はそのまま
+                if (img.url && img.url.startsWith('http')) {
+                    updatedImages.push(img);
+                    continue;
+                }
+                
+                // data プロパティがない場合はそのまま
+                if (!img.data) {
+                    updatedImages.push(img);
+                    continue;
+                }
+                
+                // Base64の場合はアップロード
+                if (img.data.startsWith('data:image')) {
+                    try {
+                        const path = `trades/${trade.id}/chart${i + 1}.jpg`;
+                        
+                        console.log(`[SyncModule] 画像アップロード中: ${path}`);
+                        
+                        const result = await ImageHandler.uploadToCloud(img.data, {
+                            userId: userId,
+                            path: path,
+                            compress: false // 既に圧縮済み
+                        });
+                        
+                        // URL形式に変換
+                        updatedImages.push({
+                            type: img.type || `chart${i + 1}`,
+                            url: result.url,
+                            path: result.path,
+                            timestamp: img.timestamp || new Date().toISOString()
+                        });
+                        
+                        console.log(`[SyncModule] 画像アップロード成功: ${path}`);
+                        
+                    } catch (error) {
+                        console.error(`[SyncModule] 画像アップロード失敗:`, error);
+                        // エラー時はBase64のまま保持（フォールバック）
+                        updatedImages.push(img);
+                    }
+                } else {
+                    // その他の形式はそのまま
+                    updatedImages.push(img);
+                }
+            }
+            
+            // 更新されたトレードを返す
+            return {
+                ...trade,
+                chartImages: updatedImages
+            };
+        }
+        
         // ========== Private Methods: データ変換（Trades） ==========
         
         /**
@@ -1415,6 +1509,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.4.0');
+    console.log('[SyncModule] モジュール読み込み完了 v1.5.0');
     
 })();
