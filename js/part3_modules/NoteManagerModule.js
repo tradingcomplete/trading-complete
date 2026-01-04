@@ -7,7 +7,7 @@
  * @module NoteManagerModule
  * @description 相場ノート機能の統合管理モジュール
  * @author AI Assistant / コンパナ
- * @version 1.0.1
+ * @version 1.0.2
  * @important UIの変更は原則禁止。見た目は既存のまま維持すること。
  */
 
@@ -1121,6 +1121,9 @@ class NoteManagerModule {
         
         // EventBus発火
         this.#eventBus?.emit('note:saved', { date: noteDate, note: noteData });
+        
+        // Supabase同期（バックグラウンド）
+        this.#syncNoteToCloud(noteDate, noteData);
     }
 
     /**
@@ -1185,6 +1188,9 @@ class NoteManagerModule {
         
         // EventBus発火
         this.#eventBus?.emit('note:updated', { date: targetDate, note: note });
+        
+        // Supabase同期（バックグラウンド）
+        this.#syncNoteToCloud(targetDate, note);
     }
 
     // ================
@@ -1366,6 +1372,9 @@ class NoteManagerModule {
         
         // EventBus発火
         this.#eventBus?.emit('note:deleted', { date: dateStr });
+        
+        // Supabase同期（バックグラウンド）
+        this.#deleteNoteFromCloud(dateStr);
     }
 
     /**
@@ -1375,6 +1384,51 @@ class NoteManagerModule {
         const noteDate = document.getElementById('noteDate').value;
         if (!noteDate) return;
         // 現在の入力内容を一時的に保存（実装は簡略化）
+    }
+
+    // ================
+    // Supabase同期（プライベート）
+    // ================
+    
+    /**
+     * ノートをSupabaseに同期（バックグラウンド）
+     * @param {string} dateStr - 日付
+     * @param {Object} noteData - ノートデータ
+     */
+    #syncNoteToCloud(dateStr, noteData) {
+        if (window.SyncModule?.isInitialized?.()) {
+            window.SyncModule.saveNote(dateStr, noteData)
+                .then(result => {
+                    if (result.success) {
+                        console.log('[NoteManager] Supabase同期成功:', dateStr);
+                    } else {
+                        console.warn('[NoteManager] Supabase同期失敗:', result.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('[NoteManager] Supabase同期エラー:', err);
+                });
+        }
+    }
+    
+    /**
+     * ノートをSupabaseから削除（バックグラウンド）
+     * @param {string} dateStr - 日付
+     */
+    #deleteNoteFromCloud(dateStr) {
+        if (window.SyncModule?.isInitialized?.()) {
+            window.SyncModule.deleteNote(dateStr)
+                .then(result => {
+                    if (result.success) {
+                        console.log('[NoteManager] Supabase削除成功:', dateStr);
+                    } else {
+                        console.warn('[NoteManager] Supabase削除失敗:', result.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('[NoteManager] Supabase削除エラー:', err);
+                });
+        }
     }
 
     // ================

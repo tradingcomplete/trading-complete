@@ -3,11 +3,12 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.1.0
- * @date 2025-12-30
+ * @version 1.1.1
+ * @date 2025-01-04
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
+ *   v1.1.1 - notes変換処理修正（memo/marketView/images対応）
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -296,7 +297,7 @@
         /**
          * ノートをSupabaseに保存（upsert）
          * @param {string} dateStr - 日付文字列（YYYY-MM-DD）
-         * @param {Object} noteData - ノートデータ { content, ... }
+         * @param {Object} noteData - ノートデータ { memo, marketView, images, ... }
          * @returns {Promise<Object>} { success, data, error }
          */
         async saveNote(dateStr, noteData) {
@@ -619,17 +620,25 @@
         
         /**
          * localStorage形式 → Supabase形式（Notes）
+         * memo, marketView, images を JSON文字列として content に保存
          * @param {string} dateStr - 日付文字列（YYYY-MM-DD）
-         * @param {Object} noteData - ノートデータ
+         * @param {Object} noteData - ノートデータ { memo, marketView, images, ... }
          * @returns {Object} Supabase用データ
          */
         #localNoteToSupabase(dateStr, noteData) {
             const userId = this.#getCurrentUserId();
             
+            // memo, marketView, images を content にまとめる
+            const contentObj = {
+                memo: noteData.memo || '',
+                marketView: noteData.marketView || '',
+                images: noteData.images || []
+            };
+            
             return {
                 user_id: userId,
                 date: dateStr,
-                content: noteData.content || '',
+                content: JSON.stringify(contentObj),
                 updated_at: new Date().toISOString()
                 // id, created_at はSupabase側で自動生成
             };
@@ -645,9 +654,30 @@
             const localNotes = {};
             
             for (const note of supabaseNotes) {
+                // content をパース
+                let contentObj = { memo: '', marketView: '', images: [] };
+                
+                if (note.content) {
+                    try {
+                        // JSON形式の場合
+                        contentObj = JSON.parse(note.content);
+                    } catch {
+                        // プレーンテキストの場合（後方互換性）
+                        contentObj = { 
+                            memo: note.content, 
+                            marketView: '', 
+                            images: [] 
+                        };
+                    }
+                }
+                
                 localNotes[note.date] = {
-                    content: note.content || '',
-                    timestamp: note.updated_at || note.created_at
+                    date: note.date,
+                    memo: contentObj.memo || '',
+                    marketView: contentObj.marketView || '',
+                    images: contentObj.images || [],
+                    createdAt: note.created_at,
+                    updatedAt: note.updated_at
                 };
             }
             
@@ -692,6 +722,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.1.0');
+    console.log('[SyncModule] モジュール読み込み完了 v1.1.1');
     
 })();
