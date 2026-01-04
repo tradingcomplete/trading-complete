@@ -3,12 +3,13 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.1.1
+ * @version 1.2.0
  * @date 2025-01-04
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
  *   v1.1.1 - notes変換処理修正（memo/marketView/images対応）
+ *   v1.2.0 - expenses同期追加
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -503,8 +504,6 @@
                 }
                 
                 // NoteManagerModule更新（存在する場合）
-                // NoteManagerModuleはプライベートフィールドを使用しているため、
-                // reload()メソッドがあればそれを呼び出す
                 if (window.NoteManagerModule?.reload) {
                     window.NoteManagerModule.reload();
                 }
@@ -517,6 +516,212 @@
                 
             } catch (error) {
                 console.error('[SyncModule] syncNotesToLocal例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        // ========== Expenses 同期 ==========
+        
+        /**
+         * 経費をSupabaseに保存（upsert）
+         * @param {Object} expense - 経費データ
+         * @returns {Promise<Object>} { success, data, error }
+         */
+        async saveExpense(expense) {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const supabaseData = this.#localExpenseToSupabase(expense);
+                
+                const { data, error } = await this.#supabase
+                    .from('expenses')
+                    .upsert(supabaseData, { onConflict: 'id' })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('[SyncModule] 経費保存エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error) };
+                }
+                
+                console.log('[SyncModule] 経費保存成功:', data.id);
+                this.#eventBus?.emit('sync:expense:saved', { expenseId: data.id });
+                
+                return { success: true, data };
+                
+            } catch (error) {
+                console.error('[SyncModule] saveExpense例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * 経費を削除
+         * @param {string} expenseId - 経費ID
+         * @returns {Promise<Object>} { success, error }
+         */
+        async deleteExpense(expenseId) {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const { error } = await this.#supabase
+                    .from('expenses')
+                    .delete()
+                    .eq('id', expenseId);
+                
+                if (error) {
+                    console.error('[SyncModule] 経費削除エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error) };
+                }
+                
+                console.log('[SyncModule] 経費削除成功:', expenseId);
+                this.#eventBus?.emit('sync:expense:deleted', { expenseId });
+                
+                return { success: true };
+                
+            } catch (error) {
+                console.error('[SyncModule] deleteExpense例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * Supabaseから全経費を取得
+         * @returns {Promise<Object>} { success, data, error }
+         */
+        async fetchAllExpenses() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化', data: [] };
+            }
+            
+            try {
+                const { data, error } = await this.#supabase
+                    .from('expenses')
+                    .select('*')
+                    .order('date', { ascending: false });
+                
+                if (error) {
+                    console.error('[SyncModule] 経費取得エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                }
+                
+                // Supabase形式 → localStorage形式に変換
+                const localExpenses = data.map(e => this.#supabaseExpenseToLocal(e));
+                
+                console.log(`[SyncModule] ${localExpenses.length}件の経費を取得`);
+                
+                return { success: true, data: localExpenses };
+                
+            } catch (error) {
+                console.error('[SyncModule] fetchAllExpenses例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error), data: [] };
+            }
+        }
+        
+        /**
+         * localStorageの全経費をSupabaseに移行
+         * @returns {Promise<Object>} { success, count, errors }
+         */
+        async migrateExpensesFromLocal() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            if (this.#syncInProgress) {
+                return { success: false, error: '同期中です' };
+            }
+            
+            this.#syncInProgress = true;
+            const errors = [];
+            let successCount = 0;
+            
+            try {
+                // localStorageから経費取得
+                const localExpenses = StorageValidator.safeLoad('tc_expenses', [], StorageValidator.isArray);
+                
+                if (localExpenses.length === 0) {
+                    console.log('[SyncModule] 移行する経費がありません');
+                    return { success: true, count: 0, errors: [] };
+                }
+                
+                console.log(`[SyncModule] ${localExpenses.length}件の経費を移行開始`);
+                this.#eventBus?.emit('sync:expenses:migration:start', { total: localExpenses.length });
+                
+                // 一括upsert用に変換
+                const supabaseData = localExpenses.map(e => this.#localExpenseToSupabase(e));
+                
+                // バッチ処理（50件ずつ）
+                const batchSize = 50;
+                for (let i = 0; i < supabaseData.length; i += batchSize) {
+                    const batch = supabaseData.slice(i, i + batchSize);
+                    
+                    const { error } = await this.#supabase
+                        .from('expenses')
+                        .upsert(batch, { onConflict: 'id' });
+                    
+                    if (error) {
+                        console.error(`[SyncModule] 経費バッチ${i / batchSize + 1}エラー:`, error);
+                        errors.push({ batch: i / batchSize + 1, error: error.message });
+                    } else {
+                        successCount += batch.length;
+                    }
+                    
+                    // 進捗通知
+                    this.#eventBus?.emit('sync:expenses:migration:progress', {
+                        current: Math.min(i + batchSize, supabaseData.length),
+                        total: supabaseData.length
+                    });
+                }
+                
+                console.log(`[SyncModule] 経費移行完了: ${successCount}/${localExpenses.length}件`);
+                this.#eventBus?.emit('sync:expenses:migration:complete', { count: successCount, errors });
+                
+                return { success: errors.length === 0, count: successCount, errors };
+                
+            } catch (error) {
+                console.error('[SyncModule] migrateExpensesFromLocal例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error), errors };
+                
+            } finally {
+                this.#syncInProgress = false;
+            }
+        }
+        
+        /**
+         * Supabaseから全経費をlocalStorageに同期
+         * @returns {Promise<Object>} { success, count, error }
+         */
+        async syncExpensesToLocal() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const result = await this.fetchAllExpenses();
+                
+                if (!result.success) {
+                    return result;
+                }
+                
+                // localStorageに保存
+                localStorage.setItem('tc_expenses', JSON.stringify(result.data));
+                
+                // ExpenseManagerModule更新（存在する場合）
+                if (window.ExpenseManagerModule?.loadExpenses) {
+                    window.ExpenseManagerModule.loadExpenses();
+                }
+                
+                console.log(`[SyncModule] ${result.data.length}件の経費をlocalStorageに同期`);
+                this.#eventBus?.emit('sync:expenses:synced', { count: result.data.length });
+                
+                return { success: true, count: result.data.length };
+                
+            } catch (error) {
+                console.error('[SyncModule] syncExpensesToLocal例外:', error);
                 return { success: false, error: SecureError.toUserMessage(error) };
             }
         }
@@ -684,6 +889,80 @@
             return localNotes;
         }
         
+        // ========== Private Methods: データ変換（Expenses） ==========
+        
+        /**
+         * localStorage形式 → Supabase形式（Expenses）
+         * memo, taxYear を description(JSON) に含める
+         * @param {Object} local - localStorageの経費データ
+         * @returns {Object} Supabase用データ
+         */
+        #localExpenseToSupabase(local) {
+            const userId = this.#getCurrentUserId();
+            
+            // description に memo, taxYear を含める
+            const descriptionObj = {
+                text: local.description || '',
+                memo: local.memo || '',
+                taxYear: local.taxYear || null
+            };
+            
+            return {
+                id: local.id,
+                user_id: userId,
+                date: local.date,
+                amount: local.amount,
+                category: local.category,
+                description: JSON.stringify(descriptionObj),
+                created_at: local.createdAt || new Date().toISOString()
+            };
+        }
+        
+        /**
+         * Supabase形式 → localStorage形式（Expenses）
+         * @param {Object} supa - Supabaseの経費データ
+         * @returns {Object} localStorage形式
+         */
+        #supabaseExpenseToLocal(supa) {
+            // description をパース
+            let descriptionObj = { text: '', memo: '', taxYear: null };
+            
+            if (supa.description) {
+                try {
+                    // JSON形式の場合
+                    descriptionObj = JSON.parse(supa.description);
+                } catch {
+                    // プレーンテキストの場合（後方互換性）
+                    descriptionObj = { 
+                        text: supa.description, 
+                        memo: '', 
+                        taxYear: null 
+                    };
+                }
+            }
+            
+            // taxYear が null の場合、日付から推定
+            let taxYear = descriptionObj.taxYear;
+            if (!taxYear && supa.date) {
+                const dateObj = new Date(supa.date);
+                const month = dateObj.getMonth() + 1;
+                const year = dateObj.getFullYear();
+                // 1-3月は前年度
+                taxYear = month <= 3 ? year - 1 : year;
+            }
+            
+            return {
+                id: supa.id,
+                date: supa.date,
+                amount: supa.amount ? parseFloat(supa.amount) : 0,
+                category: supa.category,
+                description: descriptionObj.text || '',
+                memo: descriptionObj.memo || '',
+                taxYear: taxYear,
+                createdAt: supa.created_at
+            };
+        }
+        
         // ========== Private Methods: 共通 ==========
         
         /**
@@ -722,6 +1001,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.1.1');
+    console.log('[SyncModule] モジュール読み込み完了 v1.2.0');
     
 })();
