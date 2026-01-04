@@ -494,8 +494,9 @@ class ImageHandler {
             throw new Error('ImageHandler.uploadToCloud: pathが必要です');
         }
         
-        // Supabaseクライアント確認
-        if (typeof supabase === 'undefined') {
+        // Supabaseクライアント取得
+        const supabaseClient = typeof getSupabase === 'function' ? getSupabase() : null;
+        if (!supabaseClient?.storage) {
             console.warn('ImageHandler.uploadToCloud: Supabaseが初期化されていません。Base64を返します。');
             if (source instanceof File) {
                 return { url: await this.toBase64(source), path: null };
@@ -530,7 +531,7 @@ class ImageHandler {
             const fullPath = `${userId}/${path}`;
             
             // Supabase Storageにアップロード
-            const { data, error } = await supabase.storage
+            const { data, error } = await supabaseClient.storage
                 .from(this.CONFIG.storage.bucketName)
                 .upload(fullPath, imageData, {
                     cacheControl: '3600',
@@ -564,13 +565,14 @@ class ImageHandler {
      * @returns {Promise<string>} 署名付きURL
      */
     static async getSignedUrl(path) {
-        if (typeof supabase === 'undefined') {
+        const supabaseClient = typeof getSupabase === 'function' ? getSupabase() : null;
+        if (!supabaseClient?.storage) {
             console.warn('ImageHandler.getSignedUrl: Supabaseが初期化されていません');
             return null;
         }
         
         try {
-            const { data, error } = await supabase.storage
+            const { data, error } = await supabaseClient.storage
                 .from(this.CONFIG.storage.bucketName)
                 .createSignedUrl(path, this.CONFIG.storage.signedUrlExpiry);
             
@@ -593,13 +595,14 @@ class ImageHandler {
      * @returns {Promise<boolean>} 削除成功したか
      */
     static async deleteFromCloud(path) {
-        if (typeof supabase === 'undefined') {
+        const supabaseClient = typeof getSupabase === 'function' ? getSupabase() : null;
+        if (!supabaseClient?.storage) {
             console.warn('ImageHandler.deleteFromCloud: Supabaseが初期化されていません');
             return false;
         }
         
         try {
-            const { error } = await supabase.storage
+            const { error } = await supabaseClient.storage
                 .from(this.CONFIG.storage.bucketName)
                 .remove([path]);
             
@@ -622,7 +625,8 @@ class ImageHandler {
      * @returns {Object} 設定情報とステータス
      */
     static getStatus() {
-        const cloudEnabled = typeof supabase !== 'undefined';
+        const supabaseClient = typeof getSupabase === 'function' ? getSupabase() : null;
+        const cloudEnabled = supabaseClient?.storage != null;
         return {
             config: this.CONFIG,
             presets: Object.keys(this.CONFIG.presets),
