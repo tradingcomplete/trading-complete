@@ -230,6 +230,80 @@ getSiteName(), setSiteName(), getSubtitle(), setSubtitle()
 
 ---
 
+### ImageHandler v1.1.0（画像処理・Storage対応）
+
+**ファイル**: `js/modules/ImageHandler.js`  
+**バージョン**: 1.1.0  
+**更新日**: 2026-01-04
+
+画像処理関連の機能を統合管理。圧縮、リサイズ、フォーマット変換、**Supabase Storageアップロード**に対応。
+
+#### Public API
+
+| メソッド | 引数 | 説明 |
+|---------|------|------|
+| `compress(source, maxWidth?, quality?)` | File/Base64, number, number | 画像圧縮 |
+| `compressWithPreset(source, preset)` | File/Base64, string | プリセット圧縮 |
+| `toBase64(file)` | File | Base64変換 |
+| `resize(base64, maxWidth, maxHeight)` | string, number, number | リサイズ |
+| `createThumbnail(base64, size?)` | string, number | サムネイル生成 |
+| `convertFormat(base64, format?, quality?)` | string, string, number | フォーマット変換 |
+| `getImageInfo(base64)` | string | サイズ等の情報取得 |
+| `validate(source)` | File/Base64 | 検証 |
+| `compressMultiple(sources, preset?)` | Array, string | 一括圧縮 |
+| `uploadToCloud(source, options)` | File/Base64, Object | Storageアップロード 🆕 |
+| `getSignedUrl(path)` | string | 署名付きURL取得 🆕 |
+| `deleteFromCloud(path)` | string | Storage削除 🆕 |
+| `base64ToBlob(base64)` | string | Blob変換 🆕 |
+| `getStatus()` | - | ステータス取得 |
+
+#### CONFIG（設定）
+
+```javascript
+static CONFIG = {
+    compression: {
+        maxWidth: 1200,
+        maxHeight: 900,
+        quality: 0.85,
+        format: 'jpeg'
+    },
+    storage: {
+        bucketName: 'trade-images',
+        signedUrlExpiry: 3600, // 1時間
+        allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    },
+    presets: {
+        icon: { maxWidth: 200, maxHeight: 200, quality: 0.7 },
+        chart: { maxWidth: 1000, maxHeight: 750, quality: 0.8 },
+        note: { maxWidth: 800, maxHeight: 600, quality: 0.75 },
+        thumbnail: { maxWidth: 300, maxHeight: 300, quality: 0.6 }
+    },
+    limits: {
+        maxFileSize: 5 * 1024 * 1024,    // 5MB
+        maxCompressedSize: 1 * 1024 * 1024 // 1MB
+    }
+};
+```
+
+#### uploadToCloud オプション
+
+```javascript
+await ImageHandler.uploadToCloud(source, {
+    userId: 'xxx-xxx-xxx',     // 必須: ユーザーID
+    path: 'trades/xxx/chart1.jpg', // 必須: 保存パス
+    compress: true             // オプション: 圧縮するか（デフォルト: true）
+});
+
+// 戻り値
+{ url: '署名付きURL', path: 'userId/trades/xxx/chart1.jpg' }
+```
+
+#### 依存関係
+
+- `getSupabase()` - Supabaseクライアント取得
+
+---
+
 ## フォーム制御（新規トレード）
 
 ```
@@ -299,6 +373,113 @@ async addTrade(trade) {
 ```
 
 **EventBus**: `storageMode:changed`
+
+---
+
+## 🔄 SyncModule v1.5.0（クラウド同期）
+
+**ファイル**: `js/modules/SyncModule.js`  
+**バージョン**: 1.5.0  
+**更新日**: 2026-01-04
+
+localStorage ↔ Supabase 双方向同期。**トレード保存時に画像を自動でSupabase Storageにアップロード**。
+
+### Public API
+
+| メソッド | 引数 | 説明 |
+|---------|------|------|
+| `initialize()` | - | 初期化（ログイン必須） |
+| `isInitialized()` | - | 初期化状態確認 |
+| `isSyncing()` | - | 同期中かどうか |
+| `saveTrade(trade)` | Object | トレード保存 + 画像アップロード 🆕 |
+| `deleteTrade(id)` | string | トレード削除 |
+| `fetchAllTrades()` | - | 全トレード取得 |
+| `migrateTradesFromLocal()` | - | ローカル→クラウド一括移行 |
+| `syncTradesToLocal()` | - | クラウド→ローカル同期 |
+| `saveNote(date, data)` | string, Object | ノート保存 |
+| `deleteNote(date)` | string | ノート削除 |
+| `fetchAllNotes()` | - | 全ノート取得 |
+| `saveExpense(expense)` | Object | 経費保存 |
+| `deleteExpense(id)` | string | 経費削除 |
+| `fetchAllExpenses()` | - | 全経費取得 |
+| `saveCapitalRecord(record)` | Object | 入出金保存 |
+| `deleteCapitalRecord(id)` | string | 入出金削除 |
+| `fetchAllCapitalRecords()` | - | 全入出金取得 |
+| `saveSettings(settings)` | Object | 設定一括保存 |
+| `fetchSettings()` | - | 設定取得 |
+| `getStatus()` | - | デバッグ用状態確認 |
+
+### Private Methods
+
+| メソッド | 説明 |
+|---------|------|
+| `#uploadTradeImages(trade)` | 画像をStorageにアップロード、Base64→URL変換 🆕 |
+| `#localTradeToSupabase(local)` | localStorage→Supabase形式変換 |
+| `#supabaseTradeToLocal(supa)` | Supabase→localStorage形式変換 |
+| `#localNoteToSupabase(date, data)` | ノート変換 |
+| `#supabaseNotesToLocal(notes)` | ノート変換 |
+| `#localExpenseToSupabase(local)` | 経費変換 |
+| `#supabaseExpenseToLocal(supa)` | 経費変換 |
+| `#localCapitalToSupabase(local)` | 入出金変換 |
+| `#supabaseCapitalToLocal(supa)` | 入出金変換 |
+| `#getCurrentUserId()` | ユーザーID取得 |
+| `#setupEventListeners()` | イベントリスナー設定 |
+
+### EventBus イベント
+
+| イベント | タイミング | データ |
+|---------|-----------|--------|
+| `sync:trade:saved` | トレード保存成功時 | `{ tradeId }` |
+| `sync:trade:deleted` | トレード削除成功時 | `{ tradeId }` |
+| `sync:note:saved` | ノート保存成功時 | `{ date }` |
+| `sync:note:deleted` | ノート削除成功時 | `{ date }` |
+| `sync:expense:saved` | 経費保存成功時 | `{ expenseId }` |
+| `sync:expense:deleted` | 経費削除成功時 | `{ expenseId }` |
+| `sync:capital:saved` | 入出金保存成功時 | `{ recordId }` |
+| `sync:capital:deleted` | 入出金削除成功時 | `{ recordId }` |
+| `sync:settings:saved` | 設定保存成功時 | - |
+| `sync:migration:start` | 移行開始時 | `{ total }` |
+| `sync:migration:progress` | 移行進捗時 | `{ current, total }` |
+| `sync:migration:complete` | 移行完了時 | `{ count, errors }` |
+
+### 画像アップロードフロー
+
+```
+saveTrade(trade)
+  ↓
+#uploadTradeImages(trade)
+  ├── chartImages配列をループ
+  ├── Base64の場合 → ImageHandler.uploadToCloud()
+  ├── 既にURLの場合 → そのまま
+  └── nullの場合 → そのまま
+  ↓
+tradeWithUrls（chartImagesがURL形式に変換済み）
+  ↓
+#localTradeToSupabase(tradeWithUrls)
+  ↓
+Supabase保存（chart_imagesにURLが格納）
+```
+
+### 依存関係
+
+- `getSupabase()` - Supabaseクライアント
+- `AuthModule` - ユーザーID取得
+- `ImageHandler` - 画像アップロード 🆕
+- `StorageValidator` - データ検証
+- `SecureError` - エラー処理
+- `EventBus` - イベント通知
+
+### バージョン履歴
+
+| バージョン | 日付 | 内容 |
+|-----------|------|------|
+| v1.0.1 | 2025-12-30 | trades同期実装 |
+| v1.1.0 | 2026-01-03 | notes同期追加 |
+| v1.1.1 | 2026-01-03 | notes変換処理修正 |
+| v1.2.0 | 2026-01-04 | expenses同期追加 |
+| v1.3.0 | 2026-01-04 | capital_records同期追加 |
+| v1.4.0 | 2026-01-04 | user_settings同期追加 |
+| v1.5.0 | 2026-01-04 | 画像アップロード統合 |
 
 ---
 
