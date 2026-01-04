@@ -7,8 +7,11 @@
  * - 認証モーダルの制御
  * - ユーザー名の管理
  * 
- * @version 1.1.0
- * @date 2025-12-17
+ * @version 1.1.1
+ * @changelog
+ *   v1.1.1 (2025-01-04) - SyncModule自動初期化追加
+ *   v1.1.0 (2025-12-29) - セッション監視機能追加、SecureError統合
+ *   v1.0.0 (2025-12-17) - 初版
  */
 
 const AuthModule = (function() {
@@ -431,9 +434,33 @@ const AuthModule = (function() {
         updateUserDisplay();
         updateMyPageDisplay();
         
+        // SyncModule初期化（データ同期用）
+        initializeSyncModule();
+        
         // EventBusで通知（存在する場合のみ）
         if (typeof EventBus !== 'undefined' && typeof EventBus.emit === 'function') {
             EventBus.emit('auth:login', { user: currentUser });
+        }
+    }
+
+    /**
+     * SyncModuleを初期化（データ同期用）
+     */
+    function initializeSyncModule() {
+        if (window.SyncModule) {
+            window.SyncModule.initialize()
+                .then(success => {
+                    if (success) {
+                        console.log('[Auth] SyncModule初期化成功');
+                    } else {
+                        console.warn('[Auth] SyncModule初期化失敗');
+                    }
+                })
+                .catch(err => {
+                    console.error('[Auth] SyncModule初期化エラー:', err);
+                });
+        } else {
+            console.log('[Auth] SyncModuleが見つかりません（スキップ）');
         }
     }
 
