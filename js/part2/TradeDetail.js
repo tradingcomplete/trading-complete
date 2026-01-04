@@ -1,19 +1,19 @@
 // js/part2/TradeDetail.js
-// Part 2 ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«åŒ– - ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°è¡¨ç¤ºæ©Ÿèƒ½
-// ä½œæˆæ—¥: 2025/09/17
+// Part 2 モジュール化 - トレード詳細表示機能
+// 作成日: 2025/09/17
 
 /**
- * TradeDetail ã‚¯ãƒ©ã‚¹
- * ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°è¡¨ç¤ºæ©Ÿèƒ½ã‚’ç®¡ç†
+ * TradeDetail クラス
+ * トレード詳細表示機能を管理
  */
 class TradeDetail {
     /**
-     * å††å»ºã¦æç›Šã®ãƒ•ã‚©ãƒ¼ãƒžãƒƒãƒˆ
+     * 円建て損益のフォーマット
      * @private
      */
     #formatYenProfitLoss(yenProfitLoss) {
         if (!yenProfitLoss || !yenProfitLoss.length) {
-            return '<p style="color: #888;">å††å»ºã¦æç›ŠãŒæœªè¨­å®šã§ã™</p>';
+            return '<p style="color: #888;">円建て損益が未設定です</p>';
         }
         
         const totalYen = yenProfitLoss.reduce((sum, pl) => sum + pl.amount, 0);
@@ -21,80 +21,77 @@ class TradeDetail {
         return `
             ${yenProfitLoss.map((pl, index) => `
                 <div class="yen-pl-item">
-                    <span>${pl.date ? this.#formatDateForDisplay(pl.date) : 'æ—¥ä»˜ãªã—'}: 
+                    <span>${pl.date ? this.#formatDateForDisplay(pl.date) : '日付なし'}: 
                     <strong class="${pl.amount >= 0 ? 'profit' : 'loss'}">
-                        ${pl.amount >= 0 ? '+' : ''}${pl.amount.toLocaleString()}å††
+                        ${pl.amount >= 0 ? '+' : ''}${pl.amount.toLocaleString()}円
                     </strong></span>
                 </div>
             `).join('')}
-            <p><strong>åˆè¨ˆ: <span class="${totalYen >= 0 ? 'profit' : 'loss'}">
-                ${totalYen >= 0 ? '+' : ''}${totalYen.toLocaleString()}å††
+            <p><strong>合計: <span class="${totalYen >= 0 ? 'profit' : 'loss'}">
+                ${totalYen >= 0 ? '+' : ''}${totalYen.toLocaleString()}円
             </span></strong></p>
         `;
     }
 
     /**
-     * å††å»ºã¦æç›Šã‚»ã‚¯ã‚·ãƒ§ãƒ³ã®æç”»ãƒ¡ã‚½ãƒƒãƒ‰
-     * @param {Object} trade - ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
-     * @param {HTMLElement} container - ã‚³ãƒ³ãƒ†ãƒŠè¦ç´ 
+     * 円建て損益セクションの描画メソッド
+     * @param {Object} trade - トレードオブジェクト
+     * @param {HTMLElement} container - コンテナ要素
      */
     renderYenProfitLossSection(trade, container) {
-        // æ±ºæ¸ˆæ¸ˆã¿ãƒˆãƒ¬ãƒ¼ãƒ‰ã®ã¿è¡¨ç¤ºï¼ˆä¿®æ­£ç‰ˆï¼‰
+        // 決済済みトレードのみ表示（修正版）
         if (!trade) {
             return;
         }
         
-        // ãƒˆãƒ¬ãƒ¼ãƒ‰ã®çŠ¶æ…‹ã‚’åˆ¤å®š
+        // トレードの状態を判定
         const hasExits = trade.exits && trade.exits.length > 0;
         const isClosed = trade.holdingStatus === 'closed';
         const isSettled = hasExits || isClosed;
         
-        // æ±ºæ¸ˆæ¸ˆã¿ã§ãªã„å ´åˆã¯ãƒªã‚¿ãƒ¼ãƒ³
+        // 決済済みでない場合はリターン
         if (!isSettled) {
             return;
         }
         
-        // æ—¢å­˜ã®å††å»ºã¦æç›Šã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’å‰Šé™¤ï¼ˆé‡è¤‡é˜²æ­¢ï¼‰
+        // 既存の円建て損益セクションを削除（重複防止）
         const existingSections = container.querySelectorAll('.yen-profit-loss-section');
         existingSections.forEach(section => section.remove());
         
-        // æ–°ã—ã„ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’ä½œæˆ
+        // 新しいセクションを作成
         const yenSection = document.createElement('div');
         yenSection.className = 'trade-detail-section yen-profit-loss-section';
         yenSection.style.cssText = 'background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;';
         
-        const headerStyle = 'color: #00ff88; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;';
-        const buttonStyle = 'font-size: 0.8rem; padding: 5px 10px;';
-        
-        // å††å»ºã¦æç›Šã®å†…å®¹ã‚’æ¡ä»¶åˆ†å²ã§ç”Ÿæˆ
+        // 円建て損益の内容を条件分岐で生成
         let yenContent = '';
         
         if (trade.yenProfitLoss && trade.yenProfitLoss.length > 0) {
-            // é…åˆ—å½¢å¼ã®è©³ç´°ãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚‹å ´åˆ
+            // 配列形式の詳細データがある場合
             yenContent = this.formatYenProfitLoss(trade.yenProfitLoss);
         } else if (trade.yenProfitLoss && (trade.yenProfitLoss.profitLoss !== undefined || trade.yenProfitLoss.netProfit !== undefined)) {
-            // ç°¡æ˜“ãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚‹å ´åˆï¼ˆä¸€æ‹¬å…¥åŠ›ãªã©ï¼‰
+            // 簡易データがある場合（一括入力など）
             yenContent = `
-                ${trade.broker ? `<p>ãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼: <span style="display: inline-block; background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 0.9rem;">${trade.broker}</span></p>` : ''}
-                <p>æç›Š: Â¥${(trade.yenProfitLoss.profitLoss || 0).toLocaleString()}</p>
-                <p>ã‚¹ãƒ¯ãƒƒãƒ—: Â¥${(trade.yenProfitLoss.swap || 0).toLocaleString()}</p>
-                <p>æ‰‹æ•°æ–™: Â¥${(trade.yenProfitLoss.commission || 0).toLocaleString()}</p>
-                <p class="net-profit"><strong>å®Ÿæç›Š: 
+                ${trade.broker ? `<p>ブローカー: <span style="display: inline-block; background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 0.9rem;">${trade.broker}</span></p>` : ''}
+                <p>損益: ¥${(trade.yenProfitLoss.profitLoss || 0).toLocaleString()}</p>
+                <p>スワップ: ¥${(trade.yenProfitLoss.swap || 0).toLocaleString()}</p>
+                <p>手数料: ¥${(trade.yenProfitLoss.commission || 0).toLocaleString()}</p>
+                <p class="net-profit"><strong>実損益: 
                     <span class="${(trade.yenProfitLoss.netProfit || 0) >= 0 ? 'profit' : 'loss'}" style="color: ${(trade.yenProfitLoss.netProfit || 0) >= 0 ? '#4ade80' : '#f87171'};">
-                        ${(trade.yenProfitLoss.netProfit || 0) >= 0 ? '+' : ''}Â¥${(trade.yenProfitLoss.netProfit || 0).toLocaleString()}
+                        ${(trade.yenProfitLoss.netProfit || 0) >= 0 ? '+' : ''}¥${(trade.yenProfitLoss.netProfit || 0).toLocaleString()}
                     </span>
                 </strong></p>
             `;
         } else {
-            // ãƒ‡ãƒ¼ã‚¿ãŒãªã„å ´åˆ
-            yenContent = '<p style="color: #888;">å††å»ºã¦æç›ŠãŒæœªè¨­å®šã§ã™</p>';
+            // データがない場合
+            yenContent = '<p style="color: #888;">円建て損益が未設定です</p>';
         }
         
         yenSection.innerHTML = `
-            <h4 style="${headerStyle}">
-                ðŸ’´ å††å»ºã¦æç›Š
-                <button class="btn btn-small btn-secondary" style="${buttonStyle}" onclick="window.${trade.yenProfitLoss ? 'editYenProfitLoss' : 'addYenProfitLoss'}('${trade.id}')">
-                    ${trade.yenProfitLoss ? 'ç·¨é›†' : 'è¿½åŠ '}
+            <h4 class="detail-section-header">
+                💴 円建て損益
+                <button class="btn btn-small btn-secondary detail-edit-btn" onclick="window.${trade.yenProfitLoss ? 'editYenProfitLoss' : 'addYenProfitLoss'}('${trade.id}')">
+                    ${trade.yenProfitLoss ? '編集' : '追加'}
                 </button>
             </h4>
             <div class="section-content">
@@ -102,37 +99,37 @@ class TradeDetail {
             </div>
         `;
         
-        // æ±ºæ¸ˆæƒ…å ±ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã®å¾Œã«æŒ¿å…¥
+        // 決済情報セクションの後に挿入
         const sections = container.querySelectorAll('.trade-detail-section');
         let insertAfterElement = null;
         
-        // æ±ºæ¸ˆæƒ…å ±ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’æŽ¢ã™
+        // 決済情報セクションを探す
         sections.forEach(section => {
             const header = section.querySelector('h4');
-            if (header && header.textContent.includes('æ±ºæ¸ˆæƒ…å ±')) {
+            if (header && header.textContent.includes('決済情報')) {
                 insertAfterElement = section;
             }
         });
         
         if (insertAfterElement) {
-            // æ±ºæ¸ˆæƒ…å ±ã®æ¬¡ã«æŒ¿å…¥
+            // 決済情報の次に挿入
             insertAfterElement.parentNode.insertBefore(yenSection, insertAfterElement.nextSibling);
         } else {
-            // è¦‹ã¤ã‹ã‚‰ãªã„å ´åˆã¯æœ€å¾Œã«è¿½åŠ ï¼ˆãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯ï¼‰
+            // 見つからない場合は最後に追加（フォールバック）
             container.appendChild(yenSection);
         }
     }
 
     /**
-     * å††å»ºã¦æç›Šã®ãƒ•ã‚©ãƒ¼ãƒžãƒƒãƒˆãƒ¡ã‚½ãƒƒãƒ‰
-     * @param {Object|Array} yenProfitLoss - å††å»ºã¦æç›Šãƒ‡ãƒ¼ã‚¿
-     * @returns {string} ãƒ•ã‚©ãƒ¼ãƒžãƒƒãƒˆæ¸ˆã¿HTML
+     * 円建て損益のフォーマットメソッド
+     * @param {Object|Array} yenProfitLoss - 円建て損益データ
+     * @returns {string} フォーマット済みHTML
      */
     formatYenProfitLoss(yenProfitLoss) {
-        // é…åˆ—ã®å ´åˆï¼ˆç¾åœ¨ã®å®Ÿè£…ï¼‰
+        // 配列の場合（現在の実装）
         if (Array.isArray(yenProfitLoss)) {
             if (!yenProfitLoss.length) {
-                return '<p style="color: #888;">å††å»ºã¦æç›ŠãŒæœªè¨­å®šã§ã™</p>';
+                return '<p style="color: #888;">円建て損益が未設定です</p>';
             }
             
             const totalYen = yenProfitLoss.reduce((sum, pl) => sum + pl.amount, 0);
@@ -140,36 +137,36 @@ class TradeDetail {
             return `
                 ${yenProfitLoss.map((pl, index) => `
                     <div class="yen-pl-item">
-                        <span>${pl.date ? this.#formatDateForDisplay(pl.date) : 'æ—¥ä»˜ãªã—'}: 
+                        <span>${pl.date ? this.#formatDateForDisplay(pl.date) : '日付なし'}: 
                         <strong class="${pl.amount >= 0 ? 'profit' : 'loss'}">
-                            ${pl.amount >= 0 ? '+' : ''}${pl.amount.toLocaleString()}å††
+                            ${pl.amount >= 0 ? '+' : ''}${pl.amount.toLocaleString()}円
                         </strong></span>
                     </div>
                 `).join('')}
-                <p><strong>åˆè¨ˆ: <span class="${totalYen >= 0 ? 'profit' : 'loss'}">
-                    ${totalYen >= 0 ? '+' : ''}${totalYen.toLocaleString()}å††
+                <p><strong>合計: <span class="${totalYen >= 0 ? 'profit' : 'loss'}">
+                    ${totalYen >= 0 ? '+' : ''}${totalYen.toLocaleString()}円
                 </span></strong></p>
             `;
         }
         
-        // ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®å ´åˆï¼ˆå°†æ¥ã®å®Ÿè£…ç”¨ï¼‰
+        // オブジェクトの場合（将来の実装用）
         if (!yenProfitLoss) {
-            return '<p style="color: #888;">å††å»ºã¦æç›ŠãŒæœªè¨­å®šã§ã™</p>';
+            return '<p style="color: #888;">円建て損益が未設定です</p>';
         }
         
         return `
-            <p>ãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼: ${yenProfitLoss.broker || 'æœªè¨­å®š'}</p>
-            <p>æç›Š: Â¥${(yenProfitLoss.profitLoss || 0).toLocaleString()}</p>
-            <p>ã‚¹ãƒ¯ãƒƒãƒ—: Â¥${(yenProfitLoss.swapPoints || 0).toLocaleString()}</p>
-            <p>æ‰‹æ•°æ–™: Â¥${(yenProfitLoss.commission || 0).toLocaleString()}</p>
-            <p>æ±ºæ¸ˆæ™‚ãƒ¬ãƒ¼ãƒˆ: ${yenProfitLoss.exchangeRate || '-'}</p>
-            <p class="net-profit">å®Ÿæç›Š: Â¥${(yenProfitLoss.netProfitLoss || 0).toLocaleString()}</p>
+            <p>ブローカー: ${yenProfitLoss.broker || '未設定'}</p>
+            <p>損益: ¥${(yenProfitLoss.profitLoss || 0).toLocaleString()}</p>
+            <p>スワップ: ¥${(yenProfitLoss.swap || 0).toLocaleString()}</p>
+            <p>手数料: ¥${(yenProfitLoss.commission || 0).toLocaleString()}</p>
+            <p>決済時レート: ${yenProfitLoss.exchangeRate || '-'}</p>
+            <p class="net-profit">実損益: ¥${(yenProfitLoss.netProfit || 0).toLocaleString()}</p>
         `;
     }
 
     /**
-     * åŸºæœ¬æƒ…å ±ã®ç·¨é›†
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * 基本情報の編集
+     * @param {string} tradeId - トレードID
      */
     editBasicInfo(tradeId) {
         console.log('editBasicInfo called:', tradeId);
@@ -177,13 +174,13 @@ class TradeDetail {
         if (typeof window.editTradeBasicInfo === 'function') {
             window.editTradeBasicInfo(tradeId);
         } else {
-            this.#showToast('åŸºæœ¬æƒ…å ±ç·¨é›†æ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+            this.#showToast('基本情報編集機能は準備中です', 'info');
         }
     }
 
     /**
-     * ã‚¨ãƒ³ãƒˆãƒªãƒ¼æ ¹æ‹ ï¼ˆãƒã‚§ãƒƒã‚¯ãƒªã‚¹ãƒˆï¼‰ã®ç·¨é›†
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * エントリー根拠（チェックリスト）の編集
+     * @param {string} tradeId - トレードID
      */
     editTradeReasons(tradeId) {
         console.log('editTradeReasons called:', tradeId);
@@ -191,13 +188,13 @@ class TradeDetail {
         if (typeof window.editTradeReasons === 'function') {
             window.editTradeReasons(tradeId);
         } else {
-            this.#showToast('ãƒã‚§ãƒƒã‚¯ãƒªã‚¹ãƒˆç·¨é›†æ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+            this.#showToast('チェックリスト編集機能は準備中です', 'info');
         }
     }
 
     /**
-     * æ±ºæ¸ˆæƒ…å ±ã®ç·¨é›†
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * 決済情報の編集
+     * @param {string} tradeId - トレードID
      */
     editExitInfo(tradeId) {
         console.log('editExitInfo called:', tradeId);
@@ -205,15 +202,15 @@ class TradeDetail {
         if (typeof window.editExitInfo === 'function') {
             window.editExitInfo(tradeId);
         } else {
-            this.#showToast('æ±ºæ¸ˆç·¨é›†æ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+            this.#showToast('決済編集機能は準備中です', 'info');
         }
     }
 
     /**
-     * ç”»åƒã®å¤‰æ›´
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
-     * @param {string} type - ç”»åƒã‚¿ã‚¤ãƒ—ï¼ˆ'icon' | 'chart'ï¼‰
-     * @param {number} index - ç”»åƒã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹
+     * 画像の変更
+     * @param {string} tradeId - トレードID
+     * @param {string} type - 画像タイプ（'icon' | 'chart'）
+     * @param {number} index - 画像のインデックス
      */
     changeTradeImage(tradeId, type, index) {
         console.log('changeTradeImage called:', tradeId, type, index);
@@ -221,7 +218,7 @@ class TradeDetail {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // æ—¢å­˜ã®ç”»åƒã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰ã‚·ã‚¹ãƒ†ãƒ ã‚’ä½¿ç”¨
+        // 既存の画像アップロードシステムを使用
         window.selectedTradeForEdit = tradeId;
         
         if (type === 'icon') {
@@ -230,19 +227,19 @@ class TradeDetail {
             window.pendingImageType = `tradeChart${index}`;
         }
         
-        // ç”»åƒã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰ãƒ¢ãƒ¼ãƒ€ãƒ«ã‚’è¡¨ç¤º
+        // 画像アップロードモーダルを表示
         if (typeof window.showImageUploadOptions === 'function') {
             window.showImageUploadOptions(window.pendingImageType);
         } else {
-            this.#showToast('ç”»åƒã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰æ©Ÿèƒ½ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“', 'error');
+            this.#showToast('画像アップロード機能が見つかりません', 'error');
         }
     }
 
     /**
-     * ç”»åƒã®å‰Šé™¤
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
-     * @param {string} type - ç”»åƒã‚¿ã‚¤ãƒ—ï¼ˆ'icon' | 'chart'ï¼‰
-     * @param {number} index - ç”»åƒã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹
+     * 画像の削除
+     * @param {string} tradeId - トレードID
+     * @param {string} type - 画像タイプ（'icon' | 'chart'）
+     * @param {number} index - 画像のインデックス
      */
     deleteTradeImage(tradeId, type, index) {
         console.log('deleteTradeImage called:', tradeId, type, index);
@@ -250,28 +247,28 @@ class TradeDetail {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        if (confirm('ã“ã®ç”»åƒã‚’å‰Šé™¤ã—ã¾ã™ã‹ï¼Ÿ')) {
+        if (confirm('この画像を削除しますか？')) {
             let updateData = {};
             
             if (type === 'icon') {
                 updateData.chartImage = null;
             } else if (type === 'chart') {
                 const chartImages = [...(trade.chartImages || [])];
-                chartImages[index] = null;
+                chartImages[index - 1] = null;
                 updateData.chartImages = chartImages;
             }
             
             const updatedTrade = this.#tradeManager.updateTrade(tradeId, updateData);
             if (updatedTrade) {
                 this.showTradeDetail(updatedTrade);
-                this.#showToast('ç”»åƒã‚’å‰Šé™¤ã—ã¾ã—ãŸ', 'success');
+                this.#showToast('画像を削除しました', 'success');
             }
         }
     }
 
     /**
-     * å††å»ºã¦æç›Šã®ç·¨é›†
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * 円建て損益の編集
+     * @param {string} tradeId - トレードID
      */
     editYenProfitLoss(tradeId) {
         console.log('editYenProfitLoss called:', tradeId);
@@ -279,17 +276,17 @@ class TradeDetail {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // ç·¨é›†æ©Ÿèƒ½ã®å®Ÿè£…ï¼ˆãƒ¢ãƒ¼ãƒ€ãƒ«è¡¨ç¤ºãªã©ï¼‰
+        // 編集機能の実装（モーダル表示など）
         if (typeof window.openYenProfitLossModal === 'function') {
             window.openYenProfitLossModal(tradeId);
         } else {
-            this.#showToast('å††å»ºã¦æç›Šç·¨é›†æ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+            this.#showToast('円建て損益編集機能は準備中です', 'info');
         }
     }
 
     /**
-     * å††å»ºã¦æç›Šã®è¿½åŠ 
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * 円建て損益の追加
+     * @param {string} tradeId - トレードID
      */
     addYenProfitLoss(tradeId) {
         console.log('addYenProfitLoss called:', tradeId);
@@ -297,11 +294,11 @@ class TradeDetail {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // è¿½åŠ æ©Ÿèƒ½ã®å®Ÿè£…ï¼ˆãƒ¢ãƒ¼ãƒ€ãƒ«è¡¨ç¤ºãªã©ï¼‰
+        // 追加機能の実装（モーダル表示など）
         if (typeof window.openYenProfitLossModal === 'function') {
             window.openYenProfitLossModal(tradeId);
         } else {
-            this.#showToast('å††å»ºã¦æç›Šè¿½åŠ æ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+            this.#showToast('円建て損益追加機能は準備中です', 'info');
         }
     }
     #tradeManager;
@@ -314,13 +311,13 @@ class TradeDetail {
     }
     
     /**
-     * ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°ã‚’è¡¨ç¤º
-     * @param {Object|string} tradeOrId - ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã¾ãŸã¯ID
+     * トレード詳細を表示
+     * @param {Object|string} tradeOrId - トレードオブジェクトまたはID
      */
     showTradeDetail(tradeOrId) {
         console.log('showTradeDetail called:', tradeOrId);
         
-        // ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã¾ãŸã¯IDã‹ã‚‰å–å¾—
+        // トレードオブジェクトまたはIDから取得
         let trade;
         if (typeof tradeOrId === 'object') {
             trade = tradeOrId;
@@ -344,16 +341,16 @@ class TradeDetail {
         const pips = this.#calculator.calculateTradePips(trade);
         const remainingLot = this.#calculator.calculateRemainingLot(trade);
         
-        // ãƒˆãƒ¬ãƒ¼ãƒ‰ã®çŠ¶æ…‹ã‚’åˆ¤å®šï¼ˆä¿®æ­£ç‰ˆï¼‰
+        // トレードの状態を判定（修正版）
         const hasExits = trade.exits && trade.exits.length > 0;
         const isClosed = trade.holdingStatus === 'closed';
         
-        // ä¿æœ‰ä¸­ã¨åˆ¤å®šã™ã‚‹æ¡ä»¶ã‚’æ˜Žç¢ºåŒ–
+        // 保有中と判定する条件を明確化
         const isOpen = !hasExits && !isClosed;
-        // æ±ºæ¸ˆæ¸ˆã¿ã¨åˆ¤å®šï¼ˆholdingStatus: 'closed'ã€exitså­˜åœ¨ã®ã„ãšã‚Œã‹ï¼‰
+        // 決済済みと判定（holdingStatus: 'closed'、exits存在のいずれか）
         const isSettled = hasExits || isClosed;
         
-        // ãƒ‡ãƒãƒƒã‚°ç”¨ï¼šãƒˆãƒ¬ãƒ¼ãƒ‰çŠ¶æ…‹ã®ç¢ºèª
+        // デバッグ用：トレード状態の確認
         console.log('Trade status check:', {
             id: trade.id,
             hasExits,
@@ -368,54 +365,55 @@ class TradeDetail {
             <h3>${trade.pair} ${trade.direction === 'buy' || trade.direction === 'long' ? 'LONG' : 'SHORT'}</h3>
             
             <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
-                <h4 style="color: #00ff88; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    ðŸ“ ã‚¨ãƒ³ãƒˆãƒªãƒ¼æƒ…å ±
-                    <button class="btn btn-small btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="editBasicInfo('${trade.id}')">ç·¨é›†</button>
+                <h4 class="detail-section-header">
+                    📍 エントリー情報
+                    <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editBasicInfo('${trade.id}')">編集</button>
                 </h4>
-                <p>æ—¥æ™‚: ${this.#formatDateTimeForDisplay(trade.entryTime || trade.date)}</p>
-                <p>ä¾¡æ ¼: ${trade.entryPrice}</p>
-                <p>ãƒ­ãƒƒãƒˆ: ${trade.lotSize} Lot</p>
+                <p>日時: ${this.#formatDateTimeForDisplay(trade.entryTime || trade.date)}</p>
+                <p>価格: ${trade.entryPrice}</p>
+                <p>ロット: ${trade.lotSize} Lot</p>
                 <p>SL: ${trade.stopLoss || '-'} / TP: ${trade.takeProfit || '-'}</p>
-                <p>ã‚·ãƒŠãƒªã‚ª: ${trade.scenario || '-'}</p>
-                <p>æ„Ÿæƒ…: ${trade.entryEmotion || '-'}</p>
+                <p>シナリオ: ${trade.scenario || '-'}</p>
+                <p>感情: ${trade.entryEmotion || '-'}</p>
             </div>
             
             <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
-                <h4 style="color: #00ff88; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    ðŸŽ¯ ãƒã‚§ãƒƒã‚¯ãƒªã‚¹ãƒˆ
-                    <button class="btn btn-small btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="editTradeReasons('${trade.id}')">ç·¨é›†</button>
+                <h4 class="detail-section-header">
+                    🎯 チェックリスト
+                    <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editTradeReasons('${trade.id}')">編集</button>
                 </h4>
-                <p>ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã®æ ¹æ‹ ï¼š</p>
-                <p style="padding-left: 20px;">${trade.reasons?.[0] || 'è¨˜å…¥ãªã—'}</p>
-                <p>æåˆ‡ã‚Šä¾¡æ ¼ã®æ ¹æ‹ ï¼š</p>
-                <p style="padding-left: 20px;">${trade.reasons?.[1] || 'è¨˜å…¥ãªã—'}</p>
-                <p>åˆ©ç¢ºç›®æ¨™ä¾¡æ ¼ã®æ ¹æ‹ ï¼š</p>
-                <p style="padding-left: 20px;">${trade.reasons?.[2] || 'è¨˜å…¥ãªã—'}</p>
+                <p class="checklist-label">エントリー価格の根拠：</p>
+                <p class="checklist-value">${trade.reasons?.[0] || '記入なし'}</p>
+                <p class="checklist-label">損切り価格の根拠：</p>
+                <p class="checklist-value">${trade.reasons?.[1] || '記入なし'}</p>
+                <p class="checklist-label">利確目標価格の根拠：</p>
+                <p class="checklist-value">${trade.reasons?.[2] || '記入なし'}</p>
             </div>
         `;
         
-        // æ±ºæ¸ˆæƒ…å ±ãŒã‚ã‚‹å ´åˆã€ã¾ãŸã¯æ±ºæ¸ˆæ¸ˆã¿ãƒˆãƒ¬ãƒ¼ãƒ‰ã®å ´åˆ
+        // 決済情報がある場合、または決済済みトレードの場合
         if (isSettled) {
-            // é€šå¸¸ã®æ±ºæ¸ˆæƒ…å ±ãŒã‚ã‚‹å ´åˆ
+            // 通常の決済情報がある場合
             if (trade.exits && trade.exits.length > 0) {
                 detailHTML += `
                     <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
-                        <h4 style="color: #00ff88; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                            ðŸ“Š æ±ºæ¸ˆæƒ…å ±
-                            <button class="btn btn-small btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="editExitInfo('${trade.id}')">ç·¨é›†</button>
+                        <h4 class="detail-section-header">
+                            📊 決済情報
+                            <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editExitInfo('${trade.id}')">編集</button>
                         </h4>
                         ${trade.exits.map((exit, i) => `
-                            <p>æ±ºæ¸ˆ${i + 1}: ${this.#formatDateTimeForDisplay(exit.time)} @ ${exit.price} (${exit.lot} Lot) â†’ ${exit.pips ? exit.pips.toFixed(1) : '-'} pips</p>
+                            <div class="settlement-line">決済${i + 1}: ${this.#formatDateTimeForDisplay(exit.time)}</div>
+                            <div class="settlement-line">@ ${exit.price} (${exit.lot} Lot) → ${exit.pips ? exit.pips.toFixed(1) : '-'} pips</div>
                         `).join('')}
-                        <p><strong>åˆè¨ˆ: ${pips >= 0 ? '+' : ''}${pips.toFixed(1)} pips</strong></p>
-                        ${remainingLot > 0 ? `<p>æœªæ±ºæ¸ˆ: ${remainingLot.toFixed(2)} Lot</p>` : ''}
+                        <p><strong>合計: ${pips >= 0 ? '+' : ''}${pips.toFixed(1)} pips</strong></p>
+                        ${remainingLot > 0 ? `<p>未決済: ${remainingLot.toFixed(2)} Lot</p>` : ''}
                     </div>
                 `;
             }
         }
         
-        // æŒ¯ã‚Šè¿”ã‚Šã‚»ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆæ”¹è¡Œå¯¾å¿œï¼‰
-        // æ±ºæ¸ˆæ¸ˆã¿ãƒˆãƒ¬ãƒ¼ãƒ‰ã®å ´åˆã«è¡¨ç¤º
+        // 振り返りセクション（改行対応）
+        // 決済済みトレードの場合に表示
         if (isSettled || trade.reflection) {
             const reflectionHtml = trade.reflection 
                 ? trade.reflection.replace(/\n/g, '<br>') 
@@ -423,80 +421,85 @@ class TradeDetail {
             
             detailHTML += `
                 <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
-                    <h4 style="color: #00ff88; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                        ðŸ“ æŒ¯ã‚Šè¿”ã‚Š
-                        <button class="btn btn-small btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="editReflection('${trade.id}')">ç·¨é›†</button>
+                    <h4 class="detail-section-header">
+                        📝 振り返り
+                        <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editReflection('${trade.id}')">編集</button>
                     </h4>
-                    <div id="reflectionDisplay">${reflectionHtml || 'è¨˜å…¥ãªã—'}</div>
+                    <div id="reflectionDisplay">${reflectionHtml || '記入なし'}</div>
                 </div>
             `;
         }
         
-        // ç”»åƒã‚»ã‚¯ã‚·ãƒ§ãƒ³
+        // 画像セクション
         detailHTML += `
             <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
-                <h4 style="color: #00ff88; margin-bottom: 15px;">ðŸ“¸ ç”»åƒ</h4>
+                <h4 class="detail-section-header">📸 画像</h4>
                 
-                <!-- ãƒãƒ£ãƒ¼ãƒˆç”»åƒ -->
-                <p style="color: #999; margin-bottom: 10px; font-size: 0.9em; text-align: center;">ãƒãƒ£ãƒ¼ãƒˆç”»åƒ</p>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    ${[0, 1, 2].map(index => {
-                        const chartImg = trade.chartImages && trade.chartImages[index];
-                        const imgSrc = window.getImageSrc ? window.getImageSrc(chartImg) : (typeof chartImg === 'string' ? chartImg : null);
-                        return `
-                            <div style="text-align: center;">
-                                <div style="margin-bottom: 10px;">
-                                    ${imgSrc ? 
-                                        `<img src="${imgSrc}" style="width: 160px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #444;" alt="ãƒãƒ£ãƒ¼ãƒˆ${index + 1}">` :
-                                        `<div style="width: 160px; height: 120px; background: #2a2a2a; border-radius: 8px; border: 1px dashed #444; display: flex; align-items: center; justify-content: center; color: #666;">
-                                            <span style="font-size: 0.9em;">ãƒãƒ£ãƒ¼ãƒˆ${index + 1}</span>
-                                        </div>`
-                                    }
+                ${(() => {
+                    const chartImages = trade.chartImages || [];
+                    
+                    // 常に3枠を表示
+                    let imagesHtml = '';
+                    for (let i = 0; i < 3; i++) {
+                        const imgData = chartImages[i];
+                        // Base64文字列とURLオブジェクト両方に対応
+                        const imgSrc = window.getImageSrc ? window.getImageSrc(imgData) : (typeof imgData === 'string' ? imgData : (imgData && imgData.url ? imgData.url : null));
+                        if (imgSrc) {
+                            // 画像がある場合
+                            imagesHtml += `
+                                <div class="detail-image-item has-image" onclick="changeTradeImage('${trade.id}', ${i + 1})">
+                                    <img src="${imgSrc}" alt="チャート画像${i + 1}">
+                                    <button class="detail-image-delete" onclick="event.stopPropagation(); deleteTradeImage('${trade.id}', ${i + 1})">×</button>
                                 </div>
-                                <div>
-                                    <button onclick="changeTradeImage('${trade.id}', 'chart', ${index})" class="btn btn-small btn-secondary" style="margin-right: 5px;">å¤‰æ›´</button>
-                                    <button onclick="deleteTradeImage('${trade.id}', 'chart', ${index})" class="btn btn-small btn-danger">å‰Šé™¤</button>
+                            `;
+                        } else {
+                            // 画像がない場合（空枠）
+                            imagesHtml += `
+                                <div class="detail-image-item empty" onclick="changeTradeImage('${trade.id}', ${i + 1})">
+                                    <span class="detail-image-placeholder">画像${i + 1}</span>
                                 </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
+                            `;
+                        }
+                    }
+                    
+                    return `<div class="detail-images-container">${imagesHtml}</div>`;
+                })()}
             </div>
         `;
         
-        // ãƒ¢ãƒ¼ãƒ€ãƒ«ãƒ˜ãƒƒãƒ€ãƒ¼ã«æ±ºæ¸ˆãƒœã‚¿ãƒ³ã‚’å‹•çš„ã«è¿½åŠ 
+        // モーダルヘッダーに決済ボタンを動的に追加
         const modalHeader = modal.querySelector('.modal-header');
         if (modalHeader) {
-            // æ—¢å­˜ã®h2ã¨Ã—ãƒœã‚¿ãƒ³ã‚’å–å¾—
+            // 既存のh2と×ボタンを取得
             const h2 = modalHeader.querySelector('h2');
             const closeBtn = modalHeader.querySelector('.modal-close');
             
-            // ãƒ˜ãƒƒãƒ€ãƒ¼ã‚’å†æ§‹ç¯‰
+            // ヘッダーを再構築
             modalHeader.style.display = 'flex';
             modalHeader.style.alignItems = 'center';
             modalHeader.style.justifyContent = 'space-between';
             
-            // å³å´ã®ãƒœã‚¿ãƒ³ã‚°ãƒ«ãƒ¼ãƒ—ã‚’ä½œæˆ
+            // 右側のボタングループを作成
             const buttonGroup = document.createElement('div');
             buttonGroup.style.display = 'flex';
             buttonGroup.style.alignItems = 'center';
             buttonGroup.style.gap = '10px';
             
-            // ä¿æœ‰ä¸­ã®å ´åˆã¯æ±ºæ¸ˆãƒœã‚¿ãƒ³ã‚’è¿½åŠ 
+            // 保有中の場合は決済ボタンを追加
             if (isOpen) {
                 const exitBtn = document.createElement('button');
                 exitBtn.className = 'btn btn-primary';
-                exitBtn.textContent = 'æ±ºæ¸ˆ';
+                exitBtn.textContent = '決済';
                 exitBtn.onclick = () => window.openExitModal(trade.id);
                 buttonGroup.appendChild(exitBtn);
             }
             
-            // Ã—ãƒœã‚¿ãƒ³ã‚’è¿½åŠ 
+            // ×ボタンを追加
             if (closeBtn) {
                 buttonGroup.appendChild(closeBtn);
             }
             
-            // ãƒ¢ãƒ¼ãƒ€ãƒ«ãƒ˜ãƒƒãƒ€ãƒ¼ã‚’ã‚¯ãƒªã‚¢ã—ã¦å†æ§‹ç¯‰
+            // モーダルヘッダーをクリアして再構築
             modalHeader.innerHTML = '';
             modalHeader.appendChild(h2);
             modalHeader.appendChild(buttonGroup);
@@ -504,12 +507,12 @@ class TradeDetail {
         
         content.innerHTML = detailHTML;
         
-        // å††å»ºã¦æç›Šã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’è¿½åŠ ï¼ˆDOMè¦ç´ ã¨ã—ã¦ï¼‰
+        // 円建て損益セクションを追加（DOM要素として）
         this.renderYenProfitLossSection(trade, content);
         
         modal.style.display = 'flex';
         
-        // ãƒ¢ãƒ¼ãƒ€ãƒ«å¤–ã‚¯ãƒªãƒƒã‚¯ã§é–‰ã˜ã‚‹
+        // モーダル外クリックで閉じる
         modal.onclick = (event) => {
             if (event.target === modal) {
                 this.closeTradeDetailModal();
@@ -518,7 +521,7 @@ class TradeDetail {
     }
     
     /**
-     * ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°ãƒ¢ãƒ¼ãƒ€ãƒ«ã‚’é–‰ã˜ã‚‹
+     * トレード詳細モーダルを閉じる
      */
     closeTradeDetailModal() {
         console.log('closeTradeDetailModal called');
@@ -530,8 +533,8 @@ class TradeDetail {
     }
     
     /**
-     * æŒ¯ã‚Šè¿”ã‚Šç·¨é›†ãƒ¢ãƒ¼ãƒ€ãƒ«ã‚’é–‹ã
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * 振り返り編集モーダルを開く
+     * @param {string} tradeId - トレードID
      */
     editReflection(tradeId) {
         console.log('editReflection called:', tradeId);
@@ -539,27 +542,27 @@ class TradeDetail {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // æ—¢å­˜ã®reflectionEditModalã‚’å‰Šé™¤ï¼ˆindex.htmlç‰ˆã‚’ç½®ãæ›ãˆï¼‰
+        // 既存のreflectionEditModalを削除（index.html版を置き換え）
         const existingModal = document.getElementById('reflectionEditModal');
         if (existingModal) existingModal.remove();
         
-        // å‹•çš„ã«ãƒ¢ãƒ¼ãƒ€ãƒ«HTMLã‚’ç”Ÿæˆ
+        // 動的にモーダルHTMLを生成
         const modalHTML = `
             <div id="reflectionEditModal" class="modal" style="display: flex;">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h2>æŒ¯ã‚Šè¿”ã‚Šç·¨é›†</h2>
-                        <button class="modal-close" id="reflectionModalClose">Ã—</button>
+                        <h2>振り返り編集</h2>
+                        <button class="modal-close" id="reflectionModalClose">×</button>
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
-                            <label>æŒ¯ã‚Šè¿”ã‚Šãƒ»åçœ</label>
-                            <textarea id="reflectionEditText" class="form-control" rows="10" placeholder="ã“ã®ãƒˆãƒ¬ãƒ¼ãƒ‰ã‹ã‚‰å­¦ã‚“ã ã“ã¨ã€æ”¹å–„ç‚¹ãªã©ã‚’è¨˜éŒ²">${trade.reflection || ''}</textarea>
+                            <label>振り返り・反省</label>
+                            <textarea id="reflectionEditText" class="form-control" rows="10" placeholder="このトレードから学んだこと、改善点などを記録">${trade.reflection || ''}</textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" id="reflectionModalCancel">ã‚­ãƒ£ãƒ³ã‚»ãƒ«</button>
-                        <button class="btn btn-primary" id="reflectionModalSave">ä¿å­˜</button>
+                        <button class="btn btn-secondary" id="reflectionModalCancel">キャンセル</button>
+                        <button class="btn btn-primary" id="reflectionModalSave">保存</button>
                     </div>
                 </div>
             </div>
@@ -568,24 +571,24 @@ class TradeDetail {
         document.body.insertAdjacentHTML('beforeend', modalHTML);
         const modal = document.getElementById('reflectionEditModal');
         
-        // ã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒŠãƒ¼è¨­å®š
+        // イベントリスナー設定
         document.getElementById('reflectionModalClose').onclick = () => this.closeReflectionEditModal();
         document.getElementById('reflectionModalCancel').onclick = () => this.closeReflectionEditModal();
         document.getElementById('reflectionModalSave').onclick = () => this.saveReflectionEdit();
         
-        // âœ… ãƒ¢ãƒ¼ãƒ€ãƒ«å¤–ã‚¯ãƒªãƒƒã‚¯ã‚’ç„¡åŠ¹åŒ–ï¼ˆã‚³ãƒ¡ãƒ³ãƒˆã‚¢ã‚¦ãƒˆï¼‰
+        // ✅ モーダル外クリックを無効化（コメントアウト）
         // modal.onclick = (event) => {
         //     if (event.target === modal) {
         //         this.closeReflectionEditModal();
         //     }
         // };
         
-        // ãƒ¢ãƒ¼ãƒ€ãƒ«ã«tradeIdã‚’ä¿å­˜
+        // モーダルにtradeIdを保存
         modal.dataset.tradeId = tradeId;
     }
     
     /**
-     * æŒ¯ã‚Šè¿”ã‚Šã‚’ä¿å­˜
+     * 振り返りを保存
      */
     saveReflectionEdit() {
         console.log('saveReflectionEdit called');
@@ -605,9 +608,9 @@ class TradeDetail {
         if (updatedTrade) {
             this.closeReflectionEditModal();
             this.showTradeDetail(updatedTrade);
-            this.#showToast('æŒ¯ã‚Šè¿”ã‚Šã‚’æ›´æ–°ã—ã¾ã—ãŸ', 'success');
+            this.#showToast('振り返りを更新しました', 'success');
             
-            // â˜… ãƒˆãƒ¬ãƒ¼ãƒ‰ä¸€è¦§ã‚’æ›´æ–°ï¼ˆè¿½åŠ ï¼‰
+            // ★ トレード一覧を更新（追加）
             if (window.displayAllTrades) {
                 window.displayAllTrades();
             }
@@ -615,7 +618,7 @@ class TradeDetail {
     }
     
     /**
-     * æŒ¯ã‚Šè¿”ã‚Šç·¨é›†ãƒ¢ãƒ¼ãƒ€ãƒ«ã‚’é–‰ã˜ã‚‹
+     * 振り返り編集モーダルを閉じる
      */
     closeReflectionEditModal() {
         console.log('closeReflectionEditModal called');
@@ -628,8 +631,8 @@ class TradeDetail {
     }
     
     /**
-     * å††å»ºã¦æç›Šã®ç·¨é›†
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * 円建て損益の編集
+     * @param {string} tradeId - トレードID
      */
     editYenProfitLoss(tradeId) {
         console.log('editYenProfitLoss called:', tradeId);
@@ -637,17 +640,17 @@ class TradeDetail {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // ç·¨é›†æ©Ÿèƒ½ã®å®Ÿè£…ï¼ˆãƒ¢ãƒ¼ãƒ€ãƒ«è¡¨ç¤ºãªã©ï¼‰
+        // 編集機能の実装（モーダル表示など）
         if (typeof window.openYenProfitLossModal === 'function') {
             window.openYenProfitLossModal(tradeId);
         } else {
-            this.#showToast('å††å»ºã¦æç›Šç·¨é›†æ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+            this.#showToast('円建て損益編集機能は準備中です', 'info');
         }
     }
 
     /**
-     * å††å»ºã¦æç›Šã®è¿½åŠ 
-     * @param {string} tradeId - ãƒˆãƒ¬ãƒ¼ãƒ‰ID
+     * 円建て損益の追加
+     * @param {string} tradeId - トレードID
      */
     addYenProfitLoss(tradeId) {
         console.log('addYenProfitLoss called:', tradeId);
@@ -655,18 +658,18 @@ class TradeDetail {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // è¿½åŠ æ©Ÿèƒ½ã®å®Ÿè£…ï¼ˆãƒ¢ãƒ¼ãƒ€ãƒ«è¡¨ç¤ºãªã©ï¼‰
+        // 追加機能の実装（モーダル表示など）
         if (typeof window.openYenProfitLossModal === 'function') {
             window.openYenProfitLossModal(tradeId);
         } else {
-            this.#showToast('å††å»ºã¦æç›Šè¿½åŠ æ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+            this.#showToast('円建て損益追加機能は準備中です', 'info');
         }
     }
     
-    // ==================== ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆãƒ¡ã‚½ãƒƒãƒ‰ ====================
+    // ==================== プライベートメソッド ====================
     
     /**
-     * æ—¥æ™‚ã‚’ãƒ•ã‚©ãƒ¼ãƒžãƒƒãƒˆï¼ˆè¡¨ç¤ºç”¨ï¼‰
+     * 日時をフォーマット（表示用）
      * @private
      */
     #formatDateTimeForDisplay(date) {
@@ -683,7 +686,7 @@ class TradeDetail {
     }
     
     /**
-     * æ—¥ä»˜ã‚’ãƒ•ã‚©ãƒ¼ãƒžãƒƒãƒˆï¼ˆè¡¨ç¤ºç”¨ï¼‰
+     * 日付をフォーマット（表示用）
      * @private
      */
     #formatDateForDisplay(date) {
@@ -698,7 +701,7 @@ class TradeDetail {
     }
     
     /**
-     * ãƒˆãƒ¼ã‚¹ãƒˆãƒ¡ãƒƒã‚»ãƒ¼ã‚¸è¡¨ç¤º
+     * トーストメッセージ表示
      * @private
      */
     #showToast(message, type = 'info') {
@@ -710,16 +713,16 @@ class TradeDetail {
     }
 }
 
-// ã‚°ãƒ­ãƒ¼ãƒãƒ«ã«å…¬é–‹
+// グローバルに公開
 window.TradeDetail = TradeDetail;
 console.log('TradeDetail.js loaded');
 
-// ã‚°ãƒ­ãƒ¼ãƒãƒ«ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã¨ã—ã¦å…¬é–‹
+// グローバルインスタンスとして公開
 if (!window.tradeDetailInstance) {
     window.tradeDetailInstance = new TradeDetail();
 }
 
-// ã‚°ãƒ­ãƒ¼ãƒãƒ«é–¢æ•°ã¨ã—ã¦å…¬é–‹ï¼ˆäº’æ›æ€§ã®ãŸã‚ï¼‰
+// グローバル関数として公開（互換性のため）
 window.showTradeDetail = function(tradeOrId) {
     return window.tradeDetailInstance.showTradeDetail(tradeOrId);
 };
@@ -740,7 +743,7 @@ window.closeReflectionEditModal = function() {
     return window.tradeDetailInstance.closeReflectionEditModal();
 };
 
-// å††å»ºã¦æç›Šç·¨é›†é–¢æ•°ã‚‚å…¬é–‹
+// 円建て損益編集関数も公開
 window.editYenProfitLoss = function(tradeId) {
     return window.tradeDetailInstance.editYenProfitLoss(tradeId);
 };
@@ -749,7 +752,7 @@ window.addYenProfitLoss = function(tradeId) {
     return window.tradeDetailInstance.addYenProfitLoss(tradeId);
 };
 
-// ç·¨é›†é–¢æ•°ã‚‚å…¬é–‹
+// 編集関数も公開
 window.editBasicInfo = function(tradeId) {
     return window.tradeDetailInstance.editBasicInfo(tradeId);
 };
@@ -762,13 +765,13 @@ window.editExitInfo = function(tradeId) {
     return window.tradeDetailInstance.editExitInfo(tradeId);
 };
 
-// ãƒˆãƒ¬ãƒ¼ãƒ‰å‰Šé™¤é–¢æ•°ã‚‚å…¬é–‹
+// トレード削除関数も公開
 window.deleteTrade = function(tradeId) {
-    if (confirm('ã“ã®ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚’å‰Šé™¤ã—ã¾ã™ã‹ï¼Ÿ')) {
+    if (confirm('このトレードを削除しますか？')) {
         const success = window.tradeManager.deleteTrade(tradeId);
         if (success) {
             window.tradeDetailInstance.closeTradeDetailModal();
-            // ãƒªã‚¹ãƒˆã‚’æ›´æ–°
+            // リストを更新
             if (window.displayAllTrades) {
                 window.displayAllTrades();
             }
@@ -776,22 +779,56 @@ window.deleteTrade = function(tradeId) {
     }
 };
 
-// ç”»åƒç®¡ç†é–¢æ•°ã‚‚å…¬é–‹ï¼ˆãƒãƒ£ãƒ¼ãƒˆç”»åƒç”¨ - Step 6ï¼‰
-window.changeTradeImage = function(tradeId, type, index) {
-    return window.tradeDetailInstance.changeTradeImage(tradeId, type, index);
+// 画像管理関数も公開（詳細モーダル用 - 新規エントリーと統一）
+// 詳細モーダルから画像を変更（画像追加モーダルを経由）
+window.changeTradeImage = function(tradeId, imageIndex) {
+    // ImageAddModalModuleを直接呼び出し、tradeIdを渡す
+    if (window.ImageAddModalModule) {
+        window.ImageAddModalModule.open('tradeChart' + imageIndex, tradeId);
+    } else if (typeof window.showImageUploadOptions === 'function') {
+        // フォールバック
+        window.selectedTradeForEdit = tradeId;
+        window.pendingImageType = 'tradeChart' + imageIndex;
+        window.showImageUploadOptions('tradeChart' + imageIndex);
+    } else {
+        console.error('画像追加モーダルが見つかりません');
+    }
 };
 
-window.deleteTradeImage = function(tradeId, type, index) {
-    return window.tradeDetailInstance.deleteTradeImage(tradeId, type, index);
+
+window.deleteTradeImage = function(tradeId, imageIndex) {
+    if (!confirm('この画像を削除しますか？')) return;
+    
+    const tradeManager = window.tradeManager || window.TradeManager.getInstance();
+    const trade = tradeManager.getTradeById(tradeId);
+    if (trade) {
+        const chartImages = [...(trade.chartImages || [null, null, null])];
+        // 配列を3要素に拡張
+        while (chartImages.length < 3) {
+            chartImages.push(null);
+        }
+        chartImages[imageIndex - 1] = null;
+        tradeManager.updateTrade(tradeId, { chartImages: chartImages });
+        
+        // 詳細モーダルを再表示
+        const updatedTrade = tradeManager.getTradeById(tradeId);
+        if (typeof window.showTradeDetail === 'function') {
+            window.showTradeDetail(updatedTrade);
+        }
+        // トレード一覧も更新
+        if (typeof window.displayAllTrades === 'function') {
+            window.displayAllTrades();
+        }
+    }
 };
 
-// æ±ºæ¸ˆãƒ¢ãƒ¼ãƒ€ãƒ«ã‚’é–‹ãé–¢æ•°ã‚‚å…¬é–‹
+// 決済モーダルを開く関数も公開
 window.openExitModal = function(tradeId) {
     if (typeof window.openExitModalOriginal === 'function') {
         window.openExitModalOriginal(tradeId);
     } else if (window.tradeExit) {
         window.tradeExit.openExitModal(tradeId);
     } else {
-        window.showToast('æ±ºæ¸ˆæ©Ÿèƒ½ã¯æº–å‚™ä¸­ã§ã™', 'info');
+        window.showToast('決済機能は準備中です', 'info');
     }
 };
