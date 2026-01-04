@@ -3,7 +3,7 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.3.0
+ * @version 1.4.0
  * @date 2025-01-04
  * @changelog
  *   v1.0.1 - trades同期実装
@@ -11,6 +11,7 @@
  *   v1.1.1 - notes変換処理修正（memo/marketView/images対応）
  *   v1.2.0 - expenses同期追加
  *   v1.3.0 - capital_records同期追加
+ *   v1.4.0 - user_settings同期追加（一括保存方式）
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -53,6 +54,9 @@
                     console.warn('[SyncModule] 未ログイン状態です');
                     return false;
                 }
+                
+                // settings:changed イベントをリッスン
+                this.#setupEventListeners();
                 
                 this.#initialized = true;
                 console.log('[SyncModule] 初期化完了', { userId: user.id });
@@ -917,10 +921,6 @@
                 // localStorageに保存
                 localStorage.setItem('depositWithdrawals', JSON.stringify(result.data));
                 
-                // CapitalManagerModule更新（存在する場合）
-                // 注意: CapitalManagerModuleは#loadメソッドがプライベートなので、
-                // 直接呼び出しはできない。UIの更新が必要な場合はイベントを発火
-                
                 console.log(`[SyncModule] ${result.data.length}件の入出金記録をlocalStorageに同期`);
                 this.#eventBus?.emit('sync:capital:synced', { count: result.data.length });
                 
@@ -930,6 +930,176 @@
                 console.error('[SyncModule] syncCapitalRecordsToLocal例外:', error);
                 return { success: false, error: SecureError.toUserMessage(error) };
             }
+        }
+        
+        // ========== User Settings 同期（一括保存方式） ==========
+        
+        /**
+         * ユーザー設定をSupabaseに保存（4つのlocalStorageを一括）
+         * @returns {Promise<Object>} { success, data, error }
+         */
+        async saveUserSettings() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const userId = this.#getCurrentUserId();
+                if (!userId) {
+                    return { success: false, error: 'ユーザーIDが取得できません' };
+                }
+                
+                // 4つのlocalStorageから読み取り
+                const brokers = StorageValidator.safeLoad('brokers', { list: [], nextId: 1 }, StorageValidator.isBrokersFormat);
+                const favoritePairs = StorageValidator.safeLoad('favoritePairs', [], StorageValidator.isArray);
+                const monthlyMemos = StorageValidator.safeLoad('monthlyMemos', { anomaly: {}, monthly: {} }, StorageValidator.isMonthlyMemosFormat);
+                const closedPeriods = StorageValidator.safeLoad('tc_closed_periods', [], StorageValidator.isArray);
+                
+                const supabaseData = {
+                    user_id: userId,
+                    brokers: brokers,
+                    favorite_pairs: favoritePairs,
+                    monthly_memos: monthlyMemos,
+                    closed_periods: closedPeriods,
+                    updated_at: new Date().toISOString()
+                };
+                
+                const { data, error } = await this.#supabase
+                    .from('user_settings')
+                    .upsert(supabaseData, { onConflict: 'user_id' })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('[SyncModule] ユーザー設定保存エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error) };
+                }
+                
+                console.log('[SyncModule] ユーザー設定保存成功');
+                this.#eventBus?.emit('sync:settings:saved', { userId });
+                
+                return { success: true, data };
+                
+            } catch (error) {
+                console.error('[SyncModule] saveUserSettings例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * Supabaseからユーザー設定を取得
+         * @returns {Promise<Object>} { success, data, error }
+         */
+        async fetchUserSettings() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化', data: null };
+            }
+            
+            try {
+                const userId = this.#getCurrentUserId();
+                if (!userId) {
+                    return { success: false, error: 'ユーザーIDが取得できません', data: null };
+                }
+                
+                const { data, error } = await this.#supabase
+                    .from('user_settings')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .single();
+                
+                if (error) {
+                    // PGRST116 は「レコードが見つからない」エラー（初回ユーザー）
+                    if (error.code === 'PGRST116') {
+                        console.log('[SyncModule] ユーザー設定なし（初回ユーザー）');
+                        return { success: true, data: null };
+                    }
+                    console.error('[SyncModule] ユーザー設定取得エラー:', error);
+                    return { success: false, error: SecureError.toUserMessage(error), data: null };
+                }
+                
+                console.log('[SyncModule] ユーザー設定取得成功');
+                
+                return { success: true, data };
+                
+            } catch (error) {
+                console.error('[SyncModule] fetchUserSettings例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error), data: null };
+            }
+        }
+        
+        /**
+         * Supabaseからユーザー設定を取得してlocalStorageに展開
+         * @returns {Promise<Object>} { success, error }
+         */
+        async syncUserSettingsToLocal() {
+            if (!this.#initialized) {
+                return { success: false, error: '未初期化' };
+            }
+            
+            try {
+                const result = await this.fetchUserSettings();
+                
+                if (!result.success) {
+                    return result;
+                }
+                
+                // データがない場合（初回ユーザー）はスキップ
+                if (!result.data) {
+                    console.log('[SyncModule] ユーザー設定なし、ローカル設定を維持');
+                    return { success: true };
+                }
+                
+                const settings = result.data;
+                
+                // 4つのlocalStorageに展開
+                if (settings.brokers) {
+                    localStorage.setItem('brokers', JSON.stringify(settings.brokers));
+                }
+                if (settings.favorite_pairs) {
+                    localStorage.setItem('favoritePairs', JSON.stringify(settings.favorite_pairs));
+                }
+                if (settings.monthly_memos) {
+                    localStorage.setItem('monthlyMemos', JSON.stringify(settings.monthly_memos));
+                }
+                if (settings.closed_periods) {
+                    localStorage.setItem('tc_closed_periods', JSON.stringify(settings.closed_periods));
+                }
+                
+                console.log('[SyncModule] ユーザー設定をlocalStorageに同期完了');
+                this.#eventBus?.emit('sync:settings:synced', {});
+                
+                return { success: true };
+                
+            } catch (error) {
+                console.error('[SyncModule] syncUserSettingsToLocal例外:', error);
+                return { success: false, error: SecureError.toUserMessage(error) };
+            }
+        }
+        
+        /**
+         * localStorageのユーザー設定をSupabaseに移行
+         * @returns {Promise<Object>} { success, error }
+         */
+        async migrateUserSettingsFromLocal() {
+            // saveUserSettings と同じ処理
+            return await this.saveUserSettings();
+        }
+        
+        // ========== Private Methods: イベントリスナー ==========
+        
+        /**
+         * EventBusリスナーを設定
+         */
+        #setupEventListeners() {
+            if (!this.#eventBus) return;
+            
+            // settings:changed イベントを購読
+            this.#eventBus.on('settings:changed', () => {
+                console.log('[SyncModule] settings:changed イベント受信、設定を同期');
+                this.saveUserSettings().catch(err => {
+                    console.error('[SyncModule] 設定自動同期エラー:', err);
+                });
+            });
         }
         
         // ========== Private Methods: データ変換（Trades） ==========
@@ -1245,6 +1415,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.3.0');
+    console.log('[SyncModule] モジュール読み込み完了 v1.4.0');
     
 })();
