@@ -2,7 +2,7 @@
  * @module CapitalManagerModule
  * @description 入出金管理モジュール - 追加入金・出金を記録し、投入資金と利益率を計算
  * @author AI Assistant / コンパナ
- * @version 1.0.0
+ * @version 1.0.1
  */
 class CapitalManagerModule {
     // プライベートフィールド
@@ -71,6 +71,10 @@ class CapitalManagerModule {
             });
             
             console.log('CapitalManagerModule: レコード追加成功', record);
+            
+            // Supabase同期（バックグラウンド）
+            this.#syncRecordToCloud(record);
+            
             return record;
             
         } catch (error) {
@@ -107,11 +111,59 @@ class CapitalManagerModule {
             });
             
             console.log('CapitalManagerModule: レコード削除成功', id);
+            
+            // Supabase同期（バックグラウンド）
+            this.#deleteRecordFromCloud(id);
+            
             return true;
             
         } catch (error) {
             console.error('CapitalManagerModule.deleteRecord error:', error);
             return false;
+        }
+    }
+    
+    // ================
+    // Supabase同期（プライベート）
+    // ================
+    
+    /**
+     * 入出金記録をSupabaseに同期（バックグラウンド）
+     * @param {Object} record - 入出金データ
+     */
+    #syncRecordToCloud(record) {
+        if (window.SyncModule?.isInitialized?.()) {
+            window.SyncModule.saveCapitalRecord(record)
+                .then(result => {
+                    if (result.success) {
+                        console.log('[CapitalManager] Supabase同期成功:', record.id);
+                    } else {
+                        console.warn('[CapitalManager] Supabase同期失敗:', result.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('[CapitalManager] Supabase同期エラー:', err);
+                });
+        }
+    }
+    
+    /**
+     * 入出金記録をSupabaseから削除（バックグラウンド）
+     * @param {string} recordId - 記録ID
+     */
+    #deleteRecordFromCloud(recordId) {
+        if (window.SyncModule?.isInitialized?.()) {
+            window.SyncModule.deleteCapitalRecord(recordId)
+                .then(result => {
+                    if (result.success) {
+                        console.log('[CapitalManager] Supabase削除成功:', recordId);
+                    } else {
+                        console.warn('[CapitalManager] Supabase削除失敗:', result.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('[CapitalManager] Supabase削除エラー:', err);
+                });
         }
     }
     
