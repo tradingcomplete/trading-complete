@@ -3,8 +3,8 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.5.0
- * @date 2026-01-04
+ * @version 1.5.1
+ * @date 2026-01-05
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
@@ -13,6 +13,7 @@
  *   v1.3.0 - capital_records同期追加
  *   v1.4.0 - user_settings同期追加（一括保存方式）
  *   v1.5.0 - 画像アップロード統合（Supabase Storage）
+ *   v1.5.1 - #uploadTradeImages修正（文字列形式のBase64にも対応）
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -1143,48 +1144,72 @@
                     continue;
                 }
                 
-                // 既にURLの場合（httpで始まる）はそのまま
-                if (img.url && img.url.startsWith('http')) {
-                    updatedImages.push(img);
-                    continue;
-                }
+                // 画像データを抽出（文字列形式とオブジェクト形式の両方に対応）
+                let base64Data = null;
+                let imgType = `chart${i + 1}`;
+                let imgTimestamp = new Date().toISOString();
                 
-                // data プロパティがない場合はそのまま
-                if (!img.data) {
-                    updatedImages.push(img);
-                    continue;
-                }
-                
-                // Base64の場合はアップロード
-                if (img.data.startsWith('data:image')) {
-                    try {
-                        const path = `trades/${trade.id}/chart${i + 1}.jpg`;
-                        
-                        console.log(`[SyncModule] 画像アップロード中: ${path}`);
-                        
-                        const result = await ImageHandler.uploadToCloud(img.data, {
-                            userId: userId,
-                            path: path,
-                            compress: false // 既に圧縮済み
-                        });
-                        
-                        // URL形式に変換
+                if (typeof img === 'string') {
+                    // 文字列形式: 'data:image/...' または 'http://...'
+                    if (img.startsWith('http')) {
+                        // 既にURLの場合はそのまま
                         updatedImages.push({
-                            type: img.type || `chart${i + 1}`,
-                            url: result.url,
-                            path: result.path,
-                            timestamp: img.timestamp || new Date().toISOString()
+                            type: imgType,
+                            url: img,
+                            path: null,
+                            timestamp: imgTimestamp
                         });
-                        
-                        console.log(`[SyncModule] 画像アップロード成功: ${path}`);
-                        
-                    } catch (error) {
-                        console.error(`[SyncModule] 画像アップロード失敗:`, error);
-                        // エラー時はBase64のまま保持（フォールバック）
-                        updatedImages.push(img);
+                        continue;
                     }
-                } else {
-                    // その他の形式はそのまま
+                    if (img.startsWith('data:image')) {
+                        base64Data = img;
+                    }
+                } else if (typeof img === 'object') {
+                    // オブジェクト形式: { data: '...', url: '...', type: '...' }
+                    imgType = img.type || imgType;
+                    imgTimestamp = img.timestamp || imgTimestamp;
+                    
+                    if (img.url && img.url.startsWith('http')) {
+                        // 既にURLの場合はそのまま
+                        updatedImages.push(img);
+                        continue;
+                    }
+                    if (img.data && img.data.startsWith('data:image')) {
+                        base64Data = img.data;
+                    }
+                }
+                
+                // Base64データがない場合はそのまま
+                if (!base64Data) {
+                    updatedImages.push(img);
+                    continue;
+                }
+                
+                // Base64をSupabase Storageにアップロード
+                try {
+                    const path = `trades/${trade.id}/${imgType}.jpg`;
+                    
+                    console.log(`[SyncModule] 画像アップロード中: ${path}`);
+                    
+                    const result = await ImageHandler.uploadToCloud(base64Data, {
+                        userId: userId,
+                        path: path,
+                        compress: false // 既に圧縮済み
+                    });
+                    
+                    // URL形式に変換
+                    updatedImages.push({
+                        type: imgType,
+                        url: result.url,
+                        path: result.path,
+                        timestamp: imgTimestamp
+                    });
+                    
+                    console.log(`[SyncModule] 画像アップロード成功: ${path}`);
+                    
+                } catch (error) {
+                    console.error(`[SyncModule] 画像アップロード失敗:`, error);
+                    // エラー時はBase64のまま保持（フォールバック）
                     updatedImages.push(img);
                 }
             }
