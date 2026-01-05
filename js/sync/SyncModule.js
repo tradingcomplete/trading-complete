@@ -3,7 +3,7 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.5.1
+ * @version 1.5.2
  * @date 2026-01-05
  * @changelog
  *   v1.0.1 - trades同期実装
@@ -14,6 +14,7 @@
  *   v1.4.0 - user_settings同期追加（一括保存方式）
  *   v1.5.0 - 画像アップロード統合（Supabase Storage）
  *   v1.5.1 - #uploadTradeImages修正（文字列形式のBase64にも対応）
+ *   v1.5.2 - #uploadNoteImages追加（ノート画像のStorage対応）
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -317,7 +318,10 @@
             }
             
             try {
-                const supabaseData = this.#localNoteToSupabase(dateStr, noteData);
+                // 画像をSupabase Storageにアップロード（Base64 → URL）
+                const noteWithUrls = await this.#uploadNoteImages(dateStr, noteData);
+                
+                const supabaseData = this.#localNoteToSupabase(dateStr, noteWithUrls);
                 
                 // user_id + date でupsert（UNIQUE制約を利用）
                 const { data, error } = await this.#supabase
@@ -1221,6 +1225,119 @@
             };
         }
         
+        /**
+         * ノート画像をSupabase Storageにアップロード
+         * @private
+         * @param {string} dateStr - 日付文字列（YYYY-MM-DD）
+         * @param {Object} noteData - ノートデータ
+         * @returns {Promise<Object>} 画像URLに変換されたノートデータ
+         */
+        async #uploadNoteImages(dateStr, noteData) {
+            // imagesがない、または空の場合はそのまま返す
+            if (!noteData.images || noteData.images.length === 0) {
+                return noteData;
+            }
+            
+            const userId = this.#getCurrentUserId();
+            if (!userId) {
+                console.warn('[SyncModule] userId がないためノート画像アップロードをスキップ');
+                return noteData;
+            }
+            
+            // ImageHandlerが利用可能か確認
+            if (typeof ImageHandler === 'undefined' || !ImageHandler.uploadToCloud) {
+                console.warn('[SyncModule] ImageHandler が利用できないためノート画像アップロードをスキップ');
+                return noteData;
+            }
+            
+            const updatedImages = [];
+            
+            for (let i = 0; i < noteData.images.length; i++) {
+                const img = noteData.images[i];
+                
+                // nullの場合はそのまま
+                if (!img) {
+                    updatedImages.push(null);
+                    continue;
+                }
+                
+                // 画像データを抽出（文字列形式とオブジェクト形式の両方に対応）
+                let base64Data = null;
+                let imgType = `image${i + 1}`;
+                let imgTimestamp = new Date().toISOString();
+                
+                if (typeof img === 'string') {
+                    // 文字列形式: 'data:image/...' または 'http://...'
+                    if (img.startsWith('http')) {
+                        // 既にURLの場合はそのまま
+                        updatedImages.push({
+                            type: imgType,
+                            url: img,
+                            path: null,
+                            timestamp: imgTimestamp
+                        });
+                        continue;
+                    }
+                    if (img.startsWith('data:image')) {
+                        base64Data = img;
+                    }
+                } else if (typeof img === 'object') {
+                    // オブジェクト形式: { data: '...', url: '...', type: '...' }
+                    imgType = img.type || imgType;
+                    imgTimestamp = img.timestamp || imgTimestamp;
+                    
+                    if (img.url && img.url.startsWith('http')) {
+                        // 既にURLの場合はそのまま
+                        updatedImages.push(img);
+                        continue;
+                    }
+                    if (img.data && img.data.startsWith('data:image')) {
+                        base64Data = img.data;
+                    }
+                }
+                
+                // Base64データがない場合はそのまま
+                if (!base64Data) {
+                    updatedImages.push(img);
+                    continue;
+                }
+                
+                // Base64をSupabase Storageにアップロード
+                try {
+                    const path = `notes/${dateStr}/${imgType}.jpg`;
+                    
+                    console.log(`[SyncModule] ノート画像アップロード中: ${path}`);
+                    
+                    const result = await ImageHandler.uploadToCloud(base64Data, {
+                        userId: userId,
+                        path: path,
+                        compress: false // 既に圧縮済み
+                    });
+                    
+                    // URL形式に変換
+                    updatedImages.push({
+                        type: imgType,
+                        url: result.url,
+                        path: result.path,
+                        timestamp: imgTimestamp
+                    });
+                    
+                    console.log(`[SyncModule] ノート画像アップロード成功: ${path}`);
+                    
+                } catch (error) {
+                    console.error(`[SyncModule] ノート画像アップロード失敗:`, error);
+                    // エラー時はBase64のまま保持（フォールバック）
+                    updatedImages.push(img);
+                }
+            }
+            
+            // 更新されたノートを返す
+            return {
+                ...noteData,
+                images: updatedImages
+            };
+        }
+        
         // ========== Private Methods: データ変換（Trades） ==========
         
         /**
@@ -1534,6 +1651,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.5.1');
+    console.log('[SyncModule] モジュール読み込み完了 v1.5.2');
     
 })();
