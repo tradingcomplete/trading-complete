@@ -304,6 +304,53 @@ await ImageHandler.uploadToCloud(source, {
 
 ---
 
+### 🖼️ imageUtils.js（画像ヘルパー）
+
+**ファイル**: `js/utils/imageUtils.js`  
+**バージョン**: 1.0.0  
+**作成日**: 2026-01-05
+
+Base64文字列とSupabase Storage URLの両形式に対応した画像ヘルパー関数。
+
+#### グローバル関数
+
+| 関数 | 引数 | 戻り値 | 説明 |
+|------|------|--------|------|
+| `getImageSrc(img)` | any | string\|null | 画像ソースを取得（両形式対応） |
+| `hasValidImage(img)` | any | boolean | 有効な画像データか確認 |
+| `isUrlImage(img)` | any | boolean | URL形式か確認 |
+| `isBase64Image(img)` | any | boolean | Base64形式か確認 |
+
+#### 使用例
+
+```javascript
+// TradeDetail.jsでの使用
+const imgData = chartImages[i];
+const imgSrc = window.getImageSrc ? window.getImageSrc(imgData) : null;
+if (imgSrc) {
+    imgEl.src = imgSrc;
+}
+```
+
+#### 対応形式
+
+| 形式 | 例 | getImageSrcの戻り値 |
+|------|-----|---------------------|
+| Base64文字列 | `'data:image/jpeg;base64,...'` | そのまま返す |
+| URL文字列 | `'https://...'` | そのまま返す |
+| URLオブジェクト | `{ url: 'https://...', path: '...' }` | `url`プロパティを返す |
+| Base64オブジェクト | `{ data: 'data:image/...' }` | `data`プロパティを返す |
+| null/undefined | - | `null` |
+
+#### index.html への追加
+
+```html
+<!-- validation.jsの後に追加 -->
+<script src="js/utils/imageUtils.js"></script>
+```
+
+---
+
 ## フォーム制御（新規トレード）
 
 ```
@@ -376,13 +423,13 @@ async addTrade(trade) {
 
 ---
 
-## 🔄 SyncModule v1.5.0（クラウド同期）
+## 🔄 SyncModule v1.5.2（クラウド同期）
 
-**ファイル**: `js/modules/SyncModule.js`  
-**バージョン**: 1.5.0  
-**更新日**: 2026-01-04
+**ファイル**: `js/sync/SyncModule.js`  
+**バージョン**: 1.5.2  
+**更新日**: 2026-01-05
 
-localStorage ↔ Supabase 双方向同期。**トレード保存時に画像を自動でSupabase Storageにアップロード**。
+localStorage ↔ Supabase 双方向同期。**トレード・ノート保存時に画像を自動でSupabase Storageにアップロード**。
 
 ### Public API
 
@@ -391,12 +438,12 @@ localStorage ↔ Supabase 双方向同期。**トレード保存時に画像を�
 | `initialize()` | - | 初期化（ログイン必須） |
 | `isInitialized()` | - | 初期化状態確認 |
 | `isSyncing()` | - | 同期中かどうか |
-| `saveTrade(trade)` | Object | トレード保存 + 画像アップロード 🆕 |
+| `saveTrade(trade)` | Object | トレード保存 + 画像アップロード |
 | `deleteTrade(id)` | string | トレード削除 |
 | `fetchAllTrades()` | - | 全トレード取得 |
 | `migrateTradesFromLocal()` | - | ローカル→クラウド一括移行 |
 | `syncTradesToLocal()` | - | クラウド→ローカル同期 |
-| `saveNote(date, data)` | string, Object | ノート保存 |
+| `saveNote(date, data)` | string, Object | ノート保存 + 画像アップロード 🆕 |
 | `deleteNote(date)` | string | ノート削除 |
 | `fetchAllNotes()` | - | 全ノート取得 |
 | `saveExpense(expense)` | Object | 経費保存 |
@@ -413,7 +460,8 @@ localStorage ↔ Supabase 双方向同期。**トレード保存時に画像を�
 
 | メソッド | 説明 |
 |---------|------|
-| `#uploadTradeImages(trade)` | 画像をStorageにアップロード、Base64→URL変換 🆕 |
+| `#uploadTradeImages(trade)` | トレード画像をStorageにアップロード、Base64→URL変換 |
+| `#uploadNoteImages(date, data)` | ノート画像をStorageにアップロード、Base64→URL変換 🆕 |
 | `#localTradeToSupabase(local)` | localStorage→Supabase形式変換 |
 | `#supabaseTradeToLocal(supa)` | Supabase→localStorage形式変換 |
 | `#localNoteToSupabase(date, data)` | ノート変換 |
@@ -464,7 +512,7 @@ Supabase保存（chart_imagesにURLが格納）
 
 - `getSupabase()` - Supabaseクライアント
 - `AuthModule` - ユーザーID取得
-- `ImageHandler` - 画像アップロード 🆕
+- `ImageHandler` - 画像アップロード
 - `StorageValidator` - データ検証
 - `SecureError` - エラー処理
 - `EventBus` - イベント通知
@@ -479,7 +527,9 @@ Supabase保存（chart_imagesにURLが格納）
 | v1.2.0 | 2026-01-04 | expenses同期追加 |
 | v1.3.0 | 2026-01-04 | capital_records同期追加 |
 | v1.4.0 | 2026-01-04 | user_settings同期追加 |
-| v1.5.0 | 2026-01-04 | 画像アップロード統合 |
+| v1.5.0 | 2026-01-05 | 画像アップロード統合（#uploadTradeImages） |
+| v1.5.1 | 2026-01-05 | 文字列形式Base64対応 |
+| v1.5.2 | 2026-01-05 | #uploadNoteImages追加（ノート画像対応） |
 
 ---
 

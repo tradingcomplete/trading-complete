@@ -7,8 +7,10 @@
  * - 認証モーダルの制御
  * - ユーザー名の管理
  * 
- * @version 1.1.1
+ * @version 1.2.0
+ * @date 2026-01-05
  * @changelog
+ *   v1.2.0 (2026-01-05) - ログイン時のクラウド同期追加（syncAllDataFromCloud）
  *   v1.1.1 (2025-01-04) - SyncModule自動初期化追加
  *   v1.1.0 (2025-12-29) - セッション監視機能追加、SecureError統合
  *   v1.0.0 (2025-12-17) - 初版
@@ -444,7 +446,7 @@ const AuthModule = (function() {
     }
 
     /**
-     * SyncModuleを初期化（データ同期用）
+     * SyncModuleを初期化し、Supabaseからデータを同期
      */
     function initializeSyncModule() {
         if (window.SyncModule) {
@@ -452,6 +454,8 @@ const AuthModule = (function() {
                 .then(success => {
                     if (success) {
                         console.log('[Auth] SyncModule初期化成功');
+                        // Supabase → localStorage にデータを同期
+                        syncAllDataFromCloud();
                     } else {
                         console.warn('[Auth] SyncModule初期化失敗');
                     }
@@ -461,6 +465,78 @@ const AuthModule = (function() {
                 });
         } else {
             console.log('[Auth] SyncModuleが見つかりません（スキップ）');
+        }
+    }
+
+    /**
+     * Supabaseから全データをlocalStorageに同期
+     */
+    async function syncAllDataFromCloud() {
+        console.log('[Auth] クラウドからデータ同期開始...');
+        
+        try {
+            const results = {
+                trades: false,
+                notes: false,
+                expenses: false,
+                capitalRecords: false,
+                settings: false
+            };
+            
+            // 1. トレード同期
+            try {
+                const tradesResult = await window.SyncModule.syncTradesToLocal();
+                results.trades = tradesResult?.success || false;
+                console.log('[Auth] トレード同期:', results.trades ? '成功' : '失敗');
+            } catch (e) {
+                console.warn('[Auth] トレード同期エラー:', e);
+            }
+            
+            // 2. ノート同期
+            try {
+                const notesResult = await window.SyncModule.syncNotesToLocal();
+                results.notes = notesResult?.success || false;
+                console.log('[Auth] ノート同期:', results.notes ? '成功' : '失敗');
+            } catch (e) {
+                console.warn('[Auth] ノート同期エラー:', e);
+            }
+            
+            // 3. 経費同期
+            try {
+                const expensesResult = await window.SyncModule.syncExpensesToLocal();
+                results.expenses = expensesResult?.success || false;
+                console.log('[Auth] 経費同期:', results.expenses ? '成功' : '失敗');
+            } catch (e) {
+                console.warn('[Auth] 経費同期エラー:', e);
+            }
+            
+            // 4. 入出金同期
+            try {
+                const capitalResult = await window.SyncModule.syncCapitalRecordsToLocal();
+                results.capitalRecords = capitalResult?.success || false;
+                console.log('[Auth] 入出金同期:', results.capitalRecords ? '成功' : '失敗');
+            } catch (e) {
+                console.warn('[Auth] 入出金同期エラー:', e);
+            }
+            
+            // 5. 設定同期
+            try {
+                const settingsResult = await window.SyncModule.syncUserSettingsToLocal();
+                results.settings = settingsResult?.success || false;
+                console.log('[Auth] 設定同期:', results.settings ? '成功' : '失敗');
+            } catch (e) {
+                console.warn('[Auth] 設定同期エラー:', e);
+            }
+            
+            console.log('[Auth] クラウド同期完了:', results);
+            
+            // UIを更新するためページリロードを促す（または直接更新）
+            if (window.eventBus) {
+                window.eventBus.emit('sync:complete', results);
+            }
+            
+        } catch (err) {
+            console.error('[Auth] クラウド同期エラー:', err);
         }
     }
 
