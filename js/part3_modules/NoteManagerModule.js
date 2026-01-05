@@ -93,6 +93,28 @@ class NoteManagerModule {
         window.notes = this.#notes;
     }
 
+    /**
+     * localStorageからデータを再読み込みしてUIを更新
+     * クラウド同期後に呼び出される
+     */
+    #reloadFromLocalStorage() {
+        // localStorageから再読み込み
+        this.#notes = StorageValidator.safeLoad(
+            'notes',
+            {},
+            StorageValidator.isObject
+        );
+        
+        // グローバルにも反映
+        window.notes = this.#notes;
+        
+        console.log(`[NoteManagerModule] 再読み込み完了: ${Object.keys(this.#notes).length}件`);
+        
+        // UIを更新
+        this.updateWeeklyPreview();
+        this.updateCalendar();
+    }
+
     #saveMonthlyMemos() {
         localStorage.setItem('monthlyMemos', JSON.stringify(this.#monthlyMemos));
         
@@ -2543,6 +2565,12 @@ class NoteManagerModule {
         
         this.#eventBus?.on('trade:deleted', () => {
             this.updateCalendar();
+        });
+        
+        // クラウド同期後にデータとUIを更新
+        this.#eventBus?.on('sync:notes:synced', (data) => {
+            console.log('[NoteManagerModule] クラウド同期検知、データ再読み込み');
+            this.#reloadFromLocalStorage();
         });
     }
 
