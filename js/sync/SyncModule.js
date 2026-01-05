@@ -1534,6 +1534,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.5.0');
+    console.log('[SyncModule] モジュール読み込み完了 v1.5.1');
     
 })();
