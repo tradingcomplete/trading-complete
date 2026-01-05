@@ -792,6 +792,15 @@ class NoteManagerModule {
         const container = document.getElementById('noteImages');
         if (!container) return;
         
+        // 画像ソースを取得（Base64/URL/オブジェクト形式すべてに対応）
+        const actualSrc = window.getImageSrc ? window.getImageSrc(imageSrc) : 
+            (typeof imageSrc === 'string' ? imageSrc : (imageSrc?.url || imageSrc?.data || null));
+        
+        if (!actualSrc) {
+            console.log('[NoteManagerModule] 有効な画像ソースがありません');
+            return;
+        }
+        
         // pendingNoteImageIndexがあればそのインデックスに、なければ最初の空枠に
         let targetIndex = window.pendingNoteImageIndex;
         
@@ -814,7 +823,7 @@ class NoteManagerModule {
         targetSlot.classList.remove('empty');
         targetSlot.classList.add('has-image');
         targetSlot.innerHTML = `
-            <img src="${imageSrc}" alt="ノート画像${targetIndex}">
+            <img src="${actualSrc}" alt="ノート画像${targetIndex}">
             <button class="note-image-delete" onclick="event.stopPropagation(); window.NoteManagerModule.removeNoteImageAt(${targetIndex})">×</button>
         `;
         targetSlot.onclick = () => this.addNoteImageAt(targetIndex);
@@ -2148,8 +2157,11 @@ class NoteManagerModule {
             `;
             
             note.images.forEach((img, index) => {
-                const imgSrc = typeof img === 'string' ? img : (img.data || img.url || img);
-                detailHTML += `<img src="${imgSrc}" onclick="showImageModal('${imgSrc}')" style="cursor: pointer; max-width: 200px; max-height: 150px; margin: 5px; border-radius: 8px;">`;
+                const imgSrc = window.getImageSrc ? window.getImageSrc(img) : 
+                    (typeof img === 'string' ? img : (img.url || img.data || ''));
+                if (imgSrc) {
+                    detailHTML += `<img src="${imgSrc}" onclick="showImageModal('${imgSrc}')" style="cursor: pointer; max-width: 200px; max-height: 150px; margin: 5px; border-radius: 8px;">`;
+                }
             });
             
             detailHTML += `
