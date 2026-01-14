@@ -2730,37 +2730,48 @@
 @media (max-width: 480px) {
     /* === ヘッダー改善 === */
     .header {
-        padding: 10px 0;
-        margin-bottom: 10px;
+        padding: 8px 0;
+        margin-bottom: 8px;
     }
     
     .header-content {
-        flex-direction: row;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         padding: 0 10px;
     }
     
-    /* ロゴ縮小: 120px → 60px */
+    /* ロゴ縮小 */
+    .user-icon {
+        flex-shrink: 0;
+        width: 50px;
+        height: 50px;
+    }
+    
     .user-icon img {
-        width: 60px !important;
-        height: 60px !important;
+        width: 50px !important;
+        height: 50px !important;
     }
     
     .header-info {
         flex: 1;
+        min-width: 150px;
         text-align: left;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
     
     .header-title {
         font-size: 1.1rem !important;
-        margin-bottom: 2px;
+        margin-bottom: 0;
+        line-height: 1.2;
     }
     
     .header-subtitle {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         opacity: 0.8;
+        line-height: 1.2;
     }
     
     /* === 目標折りたたみ機能 === */
@@ -2791,15 +2802,16 @@
         font-size: 0.65rem;
     }
     
-    /* 折りたたみトグルボタン */
+    /* 折りたたみトグルボタン - 下の行に強制 */
     .goals-toggle-btn {
         display: flex !important;
         align-items: center;
         justify-content: center;
         gap: 5px;
         width: 100%;
+        flex-basis: 100%;
         padding: 8px;
-        margin-top: 10px;
+        margin-top: 5px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 8px;
