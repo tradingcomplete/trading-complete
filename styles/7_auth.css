@@ -401,3 +401,27 @@ body.light-mode .mypage-value {
 body.light-mode .mypage-item label {
     color: #666;
 }
+
+/* ========================================
+   パスワードリセットリンク（Phase 3.5）
+   ======================================== */
+
+.auth-link {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.auth-link a {
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+/* パスワードリセットモーダル z-index修正 */
+#resetPasswordModal {
+    z-index: 10001;
+}
