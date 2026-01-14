@@ -1,7 +1,7 @@
-# Supabase導入 ロードマップ・要件定義書 v2.0
+# Supabase導入 ロードマップ・要件定義書 v2.1
 
 **作成日**: 2025-12-17  
-**更新日**: 2026-01-05  
+**更新日**: 2026-01-14  
 **プロジェクト**: Trading Complete  
 **目的**: ログイン機能・クラウドデータ同期の実装
 
@@ -253,16 +253,26 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 | 4.5.7 | ノート画像保存時のURL変換（SyncModule v1.5.2） | ✅ |
 | 4.5.8 | 既存Base64画像の移行処理 | ⏭️ スキップ（テストデータのため不要） |
 
-**完了日**: 2026-01-05
+**完了日**: 2026-01-05（署名付きURL対応: 2026-01-14）
 
 **実装成果**:
 - ImageHandler v1.1.0: uploadToCloud, getSignedUrl, deleteFromCloud, base64ToBlob
 - SyncModule v1.5.2: #uploadTradeImages, #uploadNoteImages（両形式対応）
-- imageUtils.js: getImageSrc, hasValidImage, isUrlImage, isBase64Image
+- imageUtils.js v1.0.0: getImageSrc, hasValidImage, isUrlImage, isBase64Image
+- **imageUtils.js v1.1.0**: 署名付きURL期限チェック＆自動更新機能追加
+  - getUrlExpiration, isUrlExpired, getValidImageSrc
+  - refreshNoteImageUrls, refreshTradeImageUrls
 - TradeDetail.js: URL/Base64両形式の画像表示対応
 - AuthModule v1.2.0: ログイン時クラウド同期（syncAllDataFromCloud）
 - NoteManagerModule: sync:notes:synced イベント対応（UI自動更新）
 - NoteManagerModule: 画像URL形式対応（getImageSrc使用）
+- **NoteManagerModule: 画像URL期限切れ時の自動更新対応（getValidImageSrc使用）**
+
+**⚠️ Supabase無料プラン注意事項**:
+| 制限 | 内容 | 対策 |
+|------|------|------|
+| プロジェクト停止 | 1週間非アクティブで停止 | 週1回アクセス or Proプラン |
+| 署名付きURL期限 | デフォルト1時間〜7日 | imageUtils v1.1.0で自動更新 |
 
 **Supabase Storage設計**:
 
@@ -358,11 +368,11 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 ```
 js/sync/SyncModule.js（v1.5.2）✅ 完成
 js/auth/AuthModule.js（v1.2.0）✅ ログイン時クラウド同期追加
-js/utils/imageUtils.js（v1.0.0）✅ 新規作成
+js/utils/imageUtils.js（v1.1.0）✅ 署名付きURL期限チェック＆自動更新対応
 js/handlers/imageHandler.js（v1.1.0）✅ Storage対応
 js/part2/TradeDetail.js ✅ 画像表示対応
 js/part2/TradeManager-nomodule.js（_syncToCloud追加）✅ 完成
-js/part3_modules/NoteManagerModule.js ✅ sync:notes:synced対応、画像URL対応
+js/part3_modules/NoteManagerModule.js ✅ sync:notes:synced対応、画像URL自動更新対応
 js/part7_modules/ExpenseManagerModule.js（#syncToCloud追加）✅ 完成
 js/part7_modules/CapitalManagerModule.js（#syncToCloud追加）✅ 完成
 js/part5_modules/SettingsModule.js（settings:changed発火追加）✅ 完成
@@ -379,7 +389,8 @@ js/part7_modules/ClosingManagerModule.js（settings:changed発火追加）✅ �
 - [x] Supabaseのデータ → localStorageに同期される
 - [x] 別端末でログイン → 同じデータが表示される
 - [x] 既存localStorageデータ → クラウドへ移行可能
-- [ ] **画像がSupabase Storageに保存される** ✅ 完了（2026-01-05）
+- [x] **画像がSupabase Storageに保存される** ✅ 完了（2026-01-05）
+- [x] **署名付きURL期限切れ時に自動更新される** ✅ 完了（2026-01-14）
 - [ ] ユーザーネーム変更が動作する
 - [ ] メールアドレス変更が動作する（確認メール送信）
 - [ ] パスワード変更が動作する
@@ -519,7 +530,8 @@ js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加（
 | v1.7.1 | 2025-12-30 | Phase 3.6 完了 |
 | v1.8 | 2026-01-04 | Phase 4.1〜4.3 完了（全5テーブル同期）、SyncModule v1.4.0、Phase 4.5 Supabase Storage追加 |
 | v1.9 | 2026-01-05 | Phase 4.5 完了（Supabase Storage）、ImageHandler v1.1.0、SyncModule v1.5.2、imageUtils.js追加 |
-| **v2.0** | **2026-01-05** | **AuthModule v1.2.0（ログイン時同期）、NoteManagerModule（sync対応・画像URL対応）、Phase 4.6-4.7追加** |
+| v2.0 | 2026-01-05 | AuthModule v1.2.0（ログイン時同期）、NoteManagerModule（sync対応・画像URL対応）、Phase 4.6-4.7追加 |
+| **v2.1** | **2026-01-14** | **imageUtils v1.1.0（署名付きURL期限自動更新）、NoteManagerModule画像自動更新対応、Supabase無料プラン注意事項追加** |
 
 ---
 

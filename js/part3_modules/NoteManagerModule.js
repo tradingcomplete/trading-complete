@@ -854,6 +854,35 @@ class NoteManagerModule {
     }
 
     /**
+     * 画像をフルスクリーン表示
+     * @param {string|Object} imageData - 画像URL/Base64またはオブジェクト
+     */
+    showImageFullscreen(imageData) {
+        // 画像ソースを取得
+        const imageUrl = window.getImageSrc ? window.getImageSrc(imageData) : 
+            (typeof imageData === 'string' ? imageData : (imageData?.url || imageData?.data || null));
+        
+        if (!imageUrl) {
+            console.log('[NoteManagerModule] 有効な画像URLがありません');
+            return;
+        }
+        
+        // 既存のモーダルがあれば削除
+        const existingModal = document.querySelector('.image-fullscreen-modal');
+        if (existingModal) existingModal.remove();
+        
+        // モーダルを作成
+        const modal = document.createElement('div');
+        modal.className = 'image-fullscreen-modal';
+        modal.innerHTML = `
+            <div class="image-fullscreen-backdrop" onclick="this.parentElement.remove()"></div>
+            <img src="${imageUrl}" class="image-fullscreen-img" onclick="event.stopPropagation()">
+            <button class="image-fullscreen-close" onclick="this.parentElement.remove()">×</button>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    /**
      * 画像を削除
      * @param {number} index - 画像インデックス
      */
@@ -1898,6 +1927,33 @@ class NoteManagerModule {
         dayDiv.appendChild(headerDiv);
         dayDiv.appendChild(contentDiv);
         
+        // 画像サムネイルを追加（最大3枚）
+        if (note && note.images && note.images.length > 0) {
+            const imagesDiv = document.createElement('div');
+            imagesDiv.className = 'day-preview-images';
+            
+            note.images.slice(0, 3).forEach((img, index) => {
+                const imgSrc = window.getImageSrc ? window.getImageSrc(img) : 
+                    (typeof img === 'string' ? img : (img?.url || img?.data || null));
+                
+                if (imgSrc) {
+                    const thumb = document.createElement('img');
+                    thumb.src = imgSrc;
+                    thumb.alt = `画像${index + 1}`;
+                    thumb.className = 'day-preview-thumb';
+                    thumb.onclick = (e) => {
+                        e.stopPropagation();
+                        this.showImageFullscreen(img);
+                    };
+                    imagesDiv.appendChild(thumb);
+                }
+            });
+            
+            if (imagesDiv.children.length > 0) {
+                dayDiv.appendChild(imagesDiv);
+            }
+        }
+        
         if (isMobile) {
             // モバイル: アコーディオン動作
             dayDiv.dataset.dateStr = dateStr;
@@ -2666,6 +2722,7 @@ class NoteManagerModule {
         window.addNoteImage = () => this.addNoteImage();
         window.addNoteImageAt = (i) => this.addNoteImageAt(i);
         window.displayNoteImage = (s) => this.displayNoteImage(s);
+        window.showImageFullscreen = (s) => this.showImageFullscreen(s);
         window.removeNoteImage = (i) => this.removeNoteImage(i);
         window.removeNoteImageAt = (i) => this.removeNoteImageAt(i);
         window.collectNoteImages = () => this.collectNoteImages();

@@ -105,6 +105,20 @@ saveMonthlyMemoFromModal()       // モーダルから保存
 getStatus()                      // デバッグ用
 ```
 
+### Private Methods（画像自動更新対応）
+
+| メソッド | 説明 |
+|---------|------|
+| `#saveNoteToStorageAndCloud(dateStr, note)` | ノートをlocalStorageとSupabaseに保存（URL更新時用） |
+| `#restoreImagesAsync(imageArray)` | 画像を非同期で復元（期限切れURL自動更新対応） |
+
+### 変更メソッド（画像自動更新対応）
+
+| メソッド | 変更内容 |
+|---------|---------|
+| `showNoteDetail()` | 画像を非同期表示、期限切れURL自動更新対応 |
+| `restoreNoteImages()` | 非同期処理に変更、`#restoreImagesAsync`を呼び出し |
+
 **EventBus**:
 - `note:saved`, `note:selected`, `note:deleted`
 - `monthlyMemo:anomalySaved`, `monthlyMemo:monthlySaved`
@@ -307,10 +321,10 @@ await ImageHandler.uploadToCloud(source, {
 ### 🖼️ imageUtils.js（画像ヘルパー）
 
 **ファイル**: `js/utils/imageUtils.js`  
-**バージョン**: 1.0.0  
-**作成日**: 2026-01-05
+**バージョン**: 1.1.0  
+**更新日**: 2026-01-14
 
-Base64文字列とSupabase Storage URLの両形式に対応した画像ヘルパー関数。
+Base64文字列とSupabase Storage URLの両形式に対応した画像ヘルパー関数（署名付きURL期限管理含む）。
 
 #### グローバル関数
 
@@ -320,6 +334,23 @@ Base64文字列とSupabase Storage URLの両形式に対応した画像ヘルパ
 | `hasValidImage(img)` | any | boolean | 有効な画像データか確認 |
 | `isUrlImage(img)` | any | boolean | URL形式か確認 |
 | `isBase64Image(img)` | any | boolean | Base64形式か確認 |
+| `getUrlExpiration(url)` | string | Date\|null | 署名付きURLの有効期限を取得 🆕 |
+| `isUrlExpired(img)` | any | boolean | URLが期限切れか（1時間前から切れと判定） 🆕 |
+| `getValidImageSrc(img)` | any | Promise<string\|null> | 期限切れなら自動更新してURLを返す（async） 🆕 |
+| `refreshNoteImageUrls(note)` | Object | Promise<Object> | ノートの全画像URLを検証・更新 🆕 |
+| `refreshTradeImageUrls(trade)` | Object | Promise<Object> | トレードの全画像URLを検証・更新 🆕 |
+
+#### 署名付きURL自動更新フロー
+
+```
+画像表示リクエスト
+    ↓
+isUrlExpired() で期限チェック
+    ↓
+期限切れ？ → Yes → pathから新URL取得 → 保存
+    ↓ No
+画像表示
+```
 
 #### 使用例
 
@@ -329,6 +360,12 @@ const imgData = chartImages[i];
 const imgSrc = window.getImageSrc ? window.getImageSrc(imgData) : null;
 if (imgSrc) {
     imgEl.src = imgSrc;
+}
+
+// 期限切れURL自動更新（非同期）
+const validSrc = await window.getValidImageSrc(imgData);
+if (validSrc) {
+    imgEl.src = validSrc;
 }
 ```
 
