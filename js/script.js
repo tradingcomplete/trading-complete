@@ -5166,3 +5166,87 @@ window.initGoalsToggle = initGoalsToggle;
 window.toggleGoalsDisplay = toggleGoalsDisplay;
 
 // ========== Part 8 終了 ==========
+
+// =====================================================
+// Pull-to-Refresh（ホーム画面追加時用）
+// =====================================================
+(function initPullToRefresh() {
+    let startY = 0;
+    let isPulling = false;
+    const threshold = 80;
+    
+    // インジケーター要素を取得または作成
+    let indicator = document.getElementById('pullToRefreshIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'pullToRefreshIndicator';
+        document.body.appendChild(indicator);
+    }
+    
+    // スタイル設定
+    indicator.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 0;
+        background: linear-gradient(180deg, rgba(0,255,136,0.2) 0%, transparent 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #00ff88;
+        font-size: 0.9rem;
+        font-weight: 600;
+        overflow: hidden;
+        transition: height 0.1s ease;
+        z-index: 99999;
+        pointer-events: none;
+    `;
+
+    document.addEventListener('touchstart', function(e) {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].pageY;
+            isPulling = true;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(e) {
+        if (!isPulling || window.scrollY > 0) {
+            isPulling = false;
+            indicator.style.height = '0';
+            return;
+        }
+        
+        const currentY = e.touches[0].pageY;
+        const pullDistance = currentY - startY;
+        
+        if (pullDistance > 0) {
+            const height = Math.min(pullDistance * 0.5, 60);
+            indicator.style.height = height + 'px';
+            
+            if (pullDistance > threshold) {
+                indicator.textContent = '↓ 離すとリロード';
+            } else {
+                indicator.textContent = '↓ 引っ張ってリロード';
+            }
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function(e) {
+        if (!isPulling) return;
+        
+        const endY = e.changedTouches[0].pageY;
+        const pullDistance = endY - startY;
+        
+        indicator.style.height = '0';
+        isPulling = false;
+        
+        if (window.scrollY === 0 && pullDistance > threshold) {
+            indicator.textContent = '🔄 リロード中...';
+            indicator.style.height = '40px';
+            setTimeout(() => location.reload(), 300);
+        }
+    }, { passive: true });
+    
+    console.log('Pull-to-Refresh 初期化完了');
+})();
