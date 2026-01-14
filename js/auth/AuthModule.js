@@ -807,9 +807,10 @@ const AuthModule = (function() {
         }
         
         try {
-            const { data, error } = await supabase.auth.updateUser({
-                email: newEmail
-            });
+            const { data, error } = await supabase.auth.updateUser(
+                { email: newEmail },
+                { emailRedirectTo: 'https://tradingcomplete.com/trading-complete/' }
+            );
             
             if (error) {
                 console.error('[Auth] メールアドレス変更エラー:', error);
