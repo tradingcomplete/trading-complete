@@ -87,8 +87,8 @@ class TradeExit {
             <div class="exit-entries" id="exitEntries">
                 <div class="exit-entry">
                     <input type="datetime-local" class="exit-time" value="${this.#formatDateTimeForInput(new Date())}" />
-                    <input type="number" class="exit-price" placeholder="決済価格" step="0.00001" />
-                    <input type="number" class="exit-lot" placeholder="決済ロット" step="0.1" value="${remainingLot.toFixed(1)}" max="${remainingLot}" />
+                    <input type="number" class="exit-price" placeholder="価格" step="0.00001" />
+                    <input type="number" class="exit-lot" placeholder="Lot" step="0.1" value="${remainingLot.toFixed(1)}" max="${remainingLot}" />
                 </div>
             </div>
             
@@ -137,8 +137,8 @@ class TradeExit {
         entry.className = 'exit-entry';
         entry.innerHTML = `
             <input type="datetime-local" class="exit-time" value="${this.#formatDateTimeForInput(new Date())}" />
-            <input type="number" class="exit-price" placeholder="決済価格" step="0.00001" />
-            <input type="number" class="exit-lot" placeholder="決済ロット" step="0.1" />
+            <input type="number" class="exit-price" placeholder="価格" step="0.00001" />
+            <input type="number" class="exit-lot" placeholder="Lot" step="0.1" />
             <button class="remove-exit" onclick="removeExitEntry(this)">削除</button>
         `;
         container.appendChild(entry);

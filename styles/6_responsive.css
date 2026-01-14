@@ -423,7 +423,7 @@
     .exit-entry {
         display: flex !important;
         flex-wrap: nowrap !important;
-        gap: 4px !important;
+        gap: 6px !important;
         align-items: center !important;
         margin-bottom: 8px !important;
     }
@@ -432,42 +432,42 @@
     .exit-entries input,
     .exit-entry input {
         min-width: 0 !important;
-        font-size: 0.7rem !important;
-        padding: 4px 6px !important;
-        height: 36px !important;
+        font-size: 0.75rem !important;
+        padding: 6px 8px !important;
+        height: 38px !important;
         box-sizing: border-box !important;
     }
     
-    /* 日付入力 - コンパクト */
+    /* 日付入力 */
     #exitEntriesContainer input[type="datetime-local"],
     .exit-entries input[type="datetime-local"],
     .exit-entry input[type="datetime-local"],
     .exit-time {
-        flex: 0 0 115px !important;
-        width: 115px !important;
-        font-size: 0.6rem !important;
-        height: 36px !important;
-        padding: 4px !important;
+        flex: 1 1 auto !important;
+        min-width: 110px !important;
+        font-size: 0.65rem !important;
+        height: 38px !important;
+        padding: 6px !important;
     }
     
     /* 決済価格 */
     #exitEntriesContainer input.exit-price,
     .exit-entries input.exit-price,
     .exit-entry input.exit-price {
-        flex: 1 1 60px !important;
-        min-width: 55px !important;
+        flex: 0 0 70px !important;
+        width: 70px !important;
         text-align: center !important;
-        height: 36px !important;
+        height: 38px !important;
     }
     
     /* ロット */
     #exitEntriesContainer input.exit-lot,
     .exit-entries input.exit-lot,
     .exit-entry input.exit-lot {
-        flex: 0 0 45px !important;
-        width: 45px !important;
+        flex: 0 0 50px !important;
+        width: 50px !important;
         text-align: center !important;
-        height: 36px !important;
+        height: 38px !important;
     }
     
     /* 削除ボタン */
@@ -475,9 +475,9 @@
     .exit-entries button,
     .exit-entry button {
         flex-shrink: 0 !important;
-        font-size: 0.55rem !important;
-        padding: 4px 5px !important;
-        height: 36px !important;
+        font-size: 0.65rem !important;
+        padding: 6px 8px !important;
+        height: 38px !important;
         box-sizing: border-box !important;
     }
     
