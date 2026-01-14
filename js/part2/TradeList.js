@@ -586,14 +586,29 @@ class TradeList {
                     trade.chartImages.slice(0, 3).forEach(img => {
                         if (img) {
                             const imgEl = document.createElement('img');
-                            // Base64文字列とURLオブジェクト両方に対応
-                            const imgSrc = window.getImageSrc ? window.getImageSrc(img) : (typeof img === 'string' ? img : (img && img.url ? img.url : null));
+                            // まず同期的に取得（即座に表示）
+                            let imgSrc = window.getImageSrc ? window.getImageSrc(img) : (typeof img === 'string' ? img : (img && img.url ? img.url : null));
                             if (!imgSrc) return;
                             imgEl.src = imgSrc;
                             imgEl.className = 'trade-chart-thumb';
                             imgEl.alt = 'チャート';
                             imgEl.loading = 'lazy';
                             imgEl.style.cssText = 'width: 160px; height: 120px; border-radius: 8px; object-fit: cover; cursor: pointer;';
+                            
+                            // 署名付きURL期限切れの場合は非同期で更新
+                            if (window.isUrlExpired && window.isUrlExpired(img)) {
+                                (async () => {
+                                    try {
+                                        const validSrc = await window.getValidImageSrc(img);
+                                        if (validSrc) {
+                                            imgEl.src = validSrc;
+                                            imgSrc = validSrc; // クリック用にも更新
+                                        }
+                                    } catch (e) {
+                                        console.warn('[TradeList] 画像URL更新失敗:', e);
+                                    }
+                                })();
+                            }
                             
                             imgEl.onerror = function() {
                                 this.style.display = 'none';
@@ -602,7 +617,7 @@ class TradeList {
                             imgEl.onclick = (e) => {
                                 e.stopPropagation();
                                 // クリック時も正しいURLを渡す
-                                if (typeof window.showImageModal === 'function') window.showImageModal(imgSrc);
+                                if (typeof window.showImageModal === 'function') window.showImageModal(imgEl.src);
                             };
                             imagesSection.appendChild(imgEl);
                         }

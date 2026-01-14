@@ -446,9 +446,10 @@ class TradeDetail {
                         const imgSrc = window.getImageSrc ? window.getImageSrc(imgData) : (typeof imgData === 'string' ? imgData : (imgData && imgData.url ? imgData.url : null));
                         if (imgSrc) {
                             // 画像がある場合
+                            // data-img-index を追加して後から更新できるようにする
                             imagesHtml += `
                                 <div class="detail-image-item has-image" onclick="changeTradeImage('${trade.id}', ${i + 1})">
-                                    <img src="${imgSrc}" alt="チャート画像${i + 1}">
+                                    <img src="${imgSrc}" alt="チャート画像${i + 1}" data-img-index="${i}" onerror="this.style.opacity='0.3'">
                                     <button class="detail-image-delete" onclick="event.stopPropagation(); deleteTradeImage('${trade.id}', ${i + 1})">×</button>
                                 </div>
                             `;
@@ -466,6 +467,29 @@ class TradeDetail {
                 })()}
             </div>
         `;
+        
+        // 署名付きURL期限切れの画像を非同期で更新
+        setTimeout(async () => {
+            const chartImages = trade.chartImages || [];
+            const imgElements = modal.querySelectorAll('.detail-image-item img[data-img-index]');
+            
+            for (const imgEl of imgElements) {
+                const index = parseInt(imgEl.dataset.imgIndex, 10);
+                const imgData = chartImages[index];
+                
+                if (imgData && window.isUrlExpired && window.isUrlExpired(imgData)) {
+                    try {
+                        const validSrc = await window.getValidImageSrc(imgData);
+                        if (validSrc) {
+                            imgEl.src = validSrc;
+                            imgEl.style.opacity = '1';
+                        }
+                    } catch (e) {
+                        console.warn('[TradeDetail] 画像URL更新失敗:', e);
+                    }
+                }
+            }
+        }, 100);
         
         // モーダルヘッダーに決済ボタンを動的に追加
         const modalHeader = modal.querySelector('.modal-header');
