@@ -5242,9 +5242,31 @@ window.toggleGoalsDisplay = toggleGoalsDisplay;
         isPulling = false;
         
         if (window.scrollY === 0 && pullDistance > threshold) {
-            indicator.textContent = '🔄 リロード中...';
-            indicator.style.height = '40px';
-            setTimeout(() => location.reload(), 300);
+            // 画面暗転オーバーレイを作成
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 999999;
+                color: #00ff88;
+                font-size: 1.2rem;
+                font-weight: 600;
+            `;
+            overlay.innerHTML = `
+                <div style="font-size: 2rem; margin-bottom: 15px;">🔄</div>
+                <div>更新中...</div>
+            `;
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => location.reload(), 500);
         }
     }, { passive: true });
     
