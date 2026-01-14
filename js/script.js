@@ -5168,12 +5168,17 @@ window.toggleGoalsDisplay = toggleGoalsDisplay;
 // ========== Part 8 終了 ==========
 
 // =====================================================
-// Pull-to-Refresh（ホーム画面追加時用）
+// Pull-to-Refresh（ホーム画面追加時用）- iOS対応版
 // =====================================================
 (function initPullToRefresh() {
     let startY = 0;
     let isPulling = false;
     const threshold = 80;
+    
+    // スクロール位置を取得（iOS対応）
+    function getScrollTop() {
+        return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    }
     
     // インジケーター要素を取得または作成
     let indicator = document.getElementById('pullToRefreshIndicator');
@@ -5204,14 +5209,15 @@ window.toggleGoalsDisplay = toggleGoalsDisplay;
     `;
 
     document.addEventListener('touchstart', function(e) {
-        if (window.scrollY === 0) {
+        // iOS対応: 5px以下なら最上部とみなす
+        if (getScrollTop() <= 5) {
             startY = e.touches[0].pageY;
             isPulling = true;
         }
     }, { passive: true });
 
     document.addEventListener('touchmove', function(e) {
-        if (!isPulling || window.scrollY > 0) {
+        if (!isPulling || getScrollTop() > 5) {
             isPulling = false;
             indicator.style.height = '0';
             return;
@@ -5241,7 +5247,7 @@ window.toggleGoalsDisplay = toggleGoalsDisplay;
         indicator.style.height = '0';
         isPulling = false;
         
-        if (window.scrollY === 0 && pullDistance > threshold) {
+        if (getScrollTop() <= 5 && pullDistance > threshold) {
             // 画面暗転オーバーレイを作成
             const overlay = document.createElement('div');
             overlay.style.cssText = `
@@ -5270,5 +5276,5 @@ window.toggleGoalsDisplay = toggleGoalsDisplay;
         }
     }, { passive: true });
     
-    console.log('Pull-to-Refresh 初期化完了');
+    console.log('Pull-to-Refresh 初期化完了（iOS対応版）');
 })();
