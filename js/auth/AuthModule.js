@@ -119,6 +119,22 @@ const AuthModule = (function() {
         supabase.auth.onAuthStateChange((event, session) => {
             console.log('[Auth] 認証状態変更:', event);
             
+            // パスワードリカバリー検知
+            if (event === 'PASSWORD_RECOVERY') {
+                console.log('[Auth] パスワードリカバリー検知');
+                currentUser = session.user;
+                onLoginSuccess();
+                
+                // 少し待ってからモーダルを開く（UI描画完了を待つ）
+                setTimeout(() => {
+                    if (typeof showToast === 'function') {
+                        showToast('新しいパスワードを設定してください', 'info', 5000);
+                    }
+                    openChangePasswordModal();
+                }, 500);
+                return;
+            }
+            
             if (session) {
                 currentUser = session.user;
                 onLoginSuccess();
