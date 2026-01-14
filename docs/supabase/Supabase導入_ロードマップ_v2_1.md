@@ -36,7 +36,7 @@
 | セキュアエラー | 攻撃者にヒントを与えない |
 | セッション管理 | 24時間で自動ログアウト |
 
-**詳細**: Trading_Complete_セキュリティ要件定義書_v1_3.md
+**詳細**: Trading_Complete_セキュリティ要件定義書_v1_4.md
 
 ---
 
@@ -45,12 +45,7 @@
 | URL | 用途 | ホスティング | 状態 |
 |-----|------|-------------|------|
 | tradingcomplete.com | ランディングページ（製品紹介・LINE登録） | 現状維持 | ✅ 稼働中 |
-| app.tradingcomplete.com | アプリ本体（トレード記録システム） | GitHub Pages | 🔜 リリース時 |
-
-### メリット
-- ランディングページとアプリを分離
-- プロフェッショナルな印象
-- マーケティングしやすい構成
+| tradingcomplete.com/trading-complete/ | アプリ本体（トレード記録システム） | GitHub Pages | ✅ 稼働中 |
 
 ---
 
@@ -64,8 +59,8 @@
 6. [Phase 3: 認証実装](#phase-3-認証実装) ✅ 完了
 7. [Phase 3.5: マイページUI作成](#phase-35-マイページui作成) ✅ 完了
 8. [Phase 3.6: セキュリティ基盤](#phase-36-セキュリティ基盤) ✅ 完了
-9. [Phase 4: データ同期実装](#phase-4-データ同期実装) 🔄 進行中
-10. [Phase 5: 統合テスト・本番準備・リリース](#phase-5-統合テスト本番準備リリース)
+9. [Phase 4: データ同期実装](#phase-4-データ同期実装) ✅ 完了
+10. [Phase 5: 統合テスト・本番準備・リリース](#phase-5-統合テスト本番準備リリース) 🔜 次
 11. [ファイル構成](#ファイル構成)
 12. [リスクと対策](#リスクと対策)
 
@@ -79,9 +74,9 @@
 |------|------|
 | アプリ完成度 | 95-97%（ローカル版） |
 | コード規模 | 約50,000行（HTML/CSS/JavaScript） |
-| データ保存 | localStorage（ブラウザ内のみ） |
+| データ保存 | localStorage + Supabase（クラウド同期） |
 | ホスティング | GitHub Pages |
-| ユーザー | なし（開発者のみ） |
+| ユーザー | 開発者のみ（リリース前） |
 
 ### 1.2 既存データ構造（localStorage）
 
@@ -95,14 +90,15 @@
 | `brokers` | ブローカー設定 | ✅ 必須 | ✅ 完了 |
 | `favoritePairs` | お気に入り通貨ペア | ✅ 必須 | ✅ 完了 |
 | `monthlyMemos` | 月メモ | ✅ 必須 | ✅ 完了 |
+| `goalsData` | 目標設定 | ✅ 必須 | ✅ 完了 |
+| `userIcon` | アイコン | ✅ 必須 | ✅ 完了 |
 | `theme` | テーマ設定 | ⚠️ ローカルのみ | - |
-| `goalsData` | 目標設定 | ⚠️ ローカルのみ | - |
 
 ---
 
 ## 2. 導入目標
 
-### 2.1 必須要件（Must Have）
+### 2.1 必須要件（Must Have）✅ 全完了
 
 | 要件 | 説明 | 状態 |
 |------|------|------|
@@ -111,8 +107,8 @@
 | セキュリティ基盤 | XSS対策、入力検証、セッション管理 | ✅ 完了 |
 | データ同期 | localStorage ↔ Supabase 双方向同期 | ✅ 完了 |
 | データ分離 | ユーザーごとにデータを分離（RLS） | ✅ 完了 |
-| マイページ | アカウント情報管理・ログアウト | ✅ 完了 |
-| **画像ストレージ** | **Supabase Storageで画像保存** | **✅ 完了** |
+| マイページ | アカウント情報管理・変更・ログアウト | ✅ 完了 |
+| 画像ストレージ | Supabase Storageで画像保存 | ✅ 完了 |
 
 ### 2.2 推奨要件（Should Have）
 
@@ -120,7 +116,6 @@
 |------|------|------|
 | Google OAuth | Googleアカウントでログイン | ⬜ 将来 |
 | パスワードリセット | メールでリセットリンク送信 | ⬜ 将来 |
-| 初回移行 | 既存localStorageデータをクラウドへ移行 | ⬜ Phase 4 |
 
 ### 2.3 将来要件（Could Have）
 
@@ -144,8 +139,8 @@
 | **Phase 3** | 認証実装 | 4-5日 | ✅ **完了** |
 | **Phase 3.5** | マイページUI作成 | 1-2日 | ✅ **完了** |
 | **Phase 3.6** | セキュリティ基盤 | 1-2日 | ✅ **完了** |
-| **Phase 4** | データ同期実装 | 5-7日 | 🔄 **進行中** |
-| **Phase 5** | 統合テスト・本番準備・リリース | 3-4日 | ⬜ 未着手 |
+| **Phase 4** | データ同期実装 | 5-7日 | ✅ **完了** |
+| **Phase 5** | 統合テスト・本番準備・リリース | 3-4日 | 🔜 **次** |
 
 **合計工数**: 約3週間
 
@@ -155,15 +150,13 @@
 Week 1: Phase 1-2 完了（環境構築 + DB設計）✅ 完了！
 Week 2: Phase 3-3.5 完了（認証 + マイページ）✅ 完了！
 Week 3: Phase 3.6 完了（セキュリティ基盤）✅ 完了！
-Week 4: Phase 4 完了（データ同期）← 現在進行中
-Week 5: Phase 5 完了（テスト + 本番準備）
+Week 4: Phase 4 完了（データ同期）✅ 完了！
+Week 5: Phase 5（テスト + 本番準備）← 現在
 ```
 
 ---
 
 ## Phase 1: 準備・環境構築 ✅ 完了
-
-（内容は前バージョンと同じ - 省略）
 
 **完了日**: 2025-12-17
 
@@ -171,15 +164,11 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 
 ## Phase 2: データベース設計 ✅ 完了
 
-（内容は前バージョンと同じ - 省略）
-
 **完了日**: 2025-12-17
 
 ---
 
 ## Phase 3: 認証実装 ✅ 完了
-
-（内容は前バージョンと同じ - 省略）
 
 **完了日**: 2025-12-18
 
@@ -187,21 +176,17 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 
 ## Phase 3.5: マイページUI作成 ✅ 完了
 
-（内容は前バージョンと同じ - 省略）
-
 **完了日**: 2025-12-19
 
 ---
 
 ## Phase 3.6: セキュリティ基盤 ✅ 完了
 
-（内容は前バージョンと同じ - 省略）
-
 **完了日**: 2025-12-30
 
 ---
 
-## Phase 4: データ同期実装 🔄 進行中
+## Phase 4: データ同期実装 ✅ 完了
 
 ### 4.1 SyncModule作成 ✅ 完了
 
@@ -232,120 +217,81 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 | 4.3.3 | CapitalManagerModule対応 | capital_records | ✅ | 2026-01-04 |
 | 4.3.4 | user_settings一括同期 | user_settings | ✅ | 2026-01-04 |
 
-### 4.4 マイページ変更機能
+### 4.4 マイページ変更機能 ✅ 完了
 
-| Step | タスク | 状態 |
-|------|--------|------|
-| 4.4.1 | ユーザーネーム変更機能 | ⬜ |
-| 4.4.2 | メールアドレス変更機能 | ⬜ |
-| 4.4.3 | パスワード変更機能 | ⬜ |
+| Step | タスク | 状態 | 完了日 |
+|------|--------|------|--------|
+| 4.4.1 | ユーザーネーム変更機能 | ✅ | 2026-01-14 |
+| 4.4.2 | メールアドレス変更機能 | ✅ | 2026-01-14 |
+| 4.4.3 | パスワード変更機能 | ✅ | 2026-01-14 |
+
+**完了日**: 2026-01-14
+
+**実装成果**:
+- AuthModule v1.3.0: changeUsername, changeEmail, changePassword
+- モーダル3つ追加（index.html）
+- マイページボタン有効化
+- メールアドレス変更時の `emailRedirectTo` 設定
+
+**Supabase設定変更**:
+- 「Secure email change」→ **オフ**に変更（新メールアドレスのみで変更可能に）
 
 ### 4.5 Supabase Storage（画像保存）✅ 完了
 
-| Step | タスク | 状態 |
-|------|--------|------|
-| 4.5.1 | Supabase Storageバケット作成（trade-images） | ✅ |
-| 4.5.2 | RLSポリシー設定（ユーザー別アクセス制限） | ✅ |
-| 4.5.3 | ImageHandler v1.1.0（uploadToCloud実装） | ✅ |
-| 4.5.4 | SyncModule v1.5.0（画像アップロード統合） | ✅ |
-| 4.5.5 | トレード画像保存時のURL変換 | ✅ |
-| 4.5.6 | 画像表示対応（imageUtils.js, TradeDetail.js） | ✅ |
-| 4.5.7 | ノート画像保存時のURL変換（SyncModule v1.5.2） | ✅ |
-| 4.5.8 | 既存Base64画像の移行処理 | ⏭️ スキップ（テストデータのため不要） |
+| Step | タスク | 状態 | 完了日 |
+|------|--------|------|--------|
+| 4.5.1 | Supabase Storageバケット作成（trade-images） | ✅ | 2026-01-05 |
+| 4.5.2 | RLSポリシー設定（ユーザー別アクセス制限） | ✅ | 2026-01-05 |
+| 4.5.3 | ImageHandler v1.1.0（uploadToCloud実装） | ✅ | 2026-01-05 |
+| 4.5.4 | SyncModule v1.5.0（画像アップロード統合） | ✅ | 2026-01-05 |
+| 4.5.5 | トレード画像保存時のURL変換 | ✅ | 2026-01-05 |
+| 4.5.6 | 画像表示対応（imageUtils.js, TradeDetail.js） | ✅ | 2026-01-05 |
+| 4.5.7 | ノート画像保存時のURL変換（SyncModule v1.5.2） | ✅ | 2026-01-05 |
+| 4.5.8 | 既存Base64画像の移行処理 | ⏭️ | スキップ（テストデータのため不要） |
 
-**完了日**: 2026-01-05（署名付きURL対応: 2026-01-14）
-
-**実装成果**:
-- ImageHandler v1.1.0: uploadToCloud, getSignedUrl, deleteFromCloud, base64ToBlob
-- SyncModule v1.5.2: #uploadTradeImages, #uploadNoteImages（両形式対応）
-- imageUtils.js v1.0.0: getImageSrc, hasValidImage, isUrlImage, isBase64Image
-- **imageUtils.js v1.1.0**: 署名付きURL期限チェック＆自動更新機能追加
-  - getUrlExpiration, isUrlExpired, getValidImageSrc
-  - refreshNoteImageUrls, refreshTradeImageUrls
-- TradeDetail.js: URL/Base64両形式の画像表示対応
-- AuthModule v1.2.0: ログイン時クラウド同期（syncAllDataFromCloud）
-- NoteManagerModule: sync:notes:synced イベント対応（UI自動更新）
-- NoteManagerModule: 画像URL形式対応（getImageSrc使用）
-- **NoteManagerModule: 画像URL期限切れ時の自動更新対応（getValidImageSrc使用）**
-
-**⚠️ Supabase無料プラン注意事項**:
-| 制限 | 内容 | 対策 |
-|------|------|------|
-| プロジェクト停止 | 1週間非アクティブで停止 | 週1回アクセス or Proプラン |
-| 署名付きURL期限 | デフォルト1時間〜7日 | imageUtils v1.1.0で自動更新 |
-
-**Supabase Storage設計**:
-
-```
-バケット名: trade-images
-├── {user_id}/
-│   ├── trades/
-│   │   └── {trade_id}/
-│   │       ├── chart1.jpg
-│   │       ├── chart2.jpg
-│   │       └── chart3.jpg
-│   └── notes/
-│       └── {date}/
-│           └── image1.jpg
-```
-
-**容量比較**:
-| 保存先 | 無料枠 | 画像枚数目安 |
-|--------|--------|-------------|
-| localStorage | 5MB | 約25枚 |
-| Supabase Database（Base64） | 500MB | 約2,500枚 |
-| **Supabase Storage** | **1GB** | **約5,000枚** |
+**完了日**: 2026-01-05
 
 ### 4.6 スマホ相場ノート詳細パネル表示 ✅ 完了
 
-**優先度**: HIGH（スマホで画像が見えないのは致命的）
-**完了日**: 2026-01-14
+| Step | タスク | 状態 | 完了日 |
+|------|--------|------|--------|
+| 4.6.1 | 相場ノート詳細パネルのスマホ表示対応 | ✅ | 2026-01-09 |
+| 4.6.2 | タップで詳細表示（モーダル実装） | ✅ | 2026-01-09 |
 
-| Step | タスク | 状態 |
-|------|--------|------|
-| 4.6.1 | 相場ノート詳細パネルのスマホ表示対応 | ✅ |
-| 4.6.2 | タップで詳細表示（モーダル or 展開） | ✅ |
+**完了日**: 2026-01-09
 
 ### 4.7 セルフイメージ・アイコン同期 ✅ 完了
 
-**優先度**: MEDIUM（マルチデバイス体験向上）
+| Step | タスク | 状態 | 完了日 |
+|------|--------|------|--------|
+| 4.7.1 | goalsデータをuser_settingsに追加 | ✅ | 2026-01-09 |
+| 4.7.2 | userIconをuser_settingsに追加 | ✅ | 2026-01-09 |
+| 4.7.3 | SettingsModule で同期対応 | ✅ | 2026-01-09 |
+
+**完了日**: 2026-01-09
+
+### 4.8 セキュリティ適用 ✅ 完了
+
+| Step | タスク | 状態 | 完了日 |
+|------|--------|------|--------|
+| 4.8.1 | TradeEntry.js にサニタイズ適用 | ✅ | 2026-01-14 |
+| 4.8.2 | TradeEdit.js にサニタイズ適用 | ✅ | 2026-01-14 |
+| 4.8.3 | NoteManagerModule にサニタイズ適用 | ✅ | 2026-01-14 |
+| 4.8.4 | ExpenseManagerModule にサニタイズ適用 | ✅ | 2026-01-14 |
+| 4.8.5 | SyncModule エラーハンドリング適用 | ✅ | 2026-01-14 |
+
 **完了日**: 2026-01-14
 
-| Step | タスク | 状態 |
-|------|--------|------|
-| 4.7.1 | goalsデータをuser_settingsに追加 | ✅ |
-| 4.7.2 | userIconをuser_settingsに追加 | ✅ |
-| 4.7.3 | SyncModule で同期対応 | ✅ |
+**実装成果**:
+- 全入力フィールドにXSS対策サニタイズ適用
+- window.escapeHtml() / cleanupNoteHTML() 使用
+- SyncModule v1.6.0: #toUserMessage() フォールバック追加
 
-**対象localStorageキー**:
-- goalText1, goalText2, goalText3
-- goalDeadline1, goalDeadline2, goalDeadline3
-- goalAchieved1, goalAchieved2, goalAchieved3
-- userIcon
+### 4.9 初回移行フロー ⏭️ スキップ
 
-### 4.8 セキュリティ適用 🆕 ← 次
+**理由**: リリース前のため既存ローカルユーザーがいない。全員が新規ユーザーとしてクラウド版を使い始める。
 
-| Step | タスク | 状態 |
-|------|--------|------|
-| 4.8.1 | TradeEntry.js にサニタイズ適用 | ⬜ |
-| 4.8.2 | TradeEdit.js にサニタイズ適用 | ⬜ |
-| 4.8.3 | NoteManagerModule にサニタイズ適用 | ⬜ |
-| 4.8.4 | ExpenseManagerModule にサニタイズ適用 | ⬜ |
-| 4.8.5 | SyncModule エラーハンドリング適用 | ⬜ |
-
-### 4.9 初回移行フロー
-
-```
-1. ユーザーが初回ログイン
-2. localStorageにデータあり？
-   - Yes → 移行確認ダイアログ表示
-   - No → スキップ
-3. 「移行する」選択
-4. サニタイズ処理 → Supabase一括アップロード
-5. 画像があれば → Supabase Storageにアップロード
-6. 完了通知
-7. 以降はSupabase優先で動作
-```
+**将来対応**: リリース後に仕様変更が必要な場合に検討。
 
 ### 4.10 SyncModule バージョン履歴
 
@@ -359,26 +305,40 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 | v1.4.0 | 2026-01-04 | user_settings同期追加（一括保存方式） |
 | v1.5.0 | 2026-01-05 | 画像アップロード統合（Supabase Storage） |
 | v1.5.1 | 2026-01-05 | #uploadTradeImages修正（文字列形式Base64対応） |
-| **v1.5.2** | **2026-01-05** | **#uploadNoteImages追加（ノート画像Storage対応）** |
+| v1.5.2 | 2026-01-05 | #uploadNoteImages追加（ノート画像Storage対応） |
+| v1.5.3 | 2026-01-09 | goals/icon同期追加 |
+| **v1.6.0** | **2026-01-14** | **セキュリティ強化（#toUserMessage フォールバック追加）** |
 
-### 4.11 成果物
+### 4.11 AuthModule バージョン履歴
+
+| バージョン | 日付 | 内容 |
+|-----------|------|------|
+| v1.0.0 | 2025-12-17 | 初版（ログイン/登録/ログアウト） |
+| v1.1.0 | 2025-12-29 | セッション監視機能追加、SecureError統合 |
+| v1.1.1 | 2025-01-04 | SyncModule自動初期化追加 |
+| v1.2.0 | 2026-01-05 | ログイン時のクラウド同期追加（syncAllDataFromCloud） |
+| **v1.3.0** | **2026-01-14** | **マイページ変更機能追加（ユーザーネーム、メール、パスワード）** |
+
+### 4.12 成果物
 
 ```
-js/sync/SyncModule.js（v1.5.2）✅ 完成
-js/auth/AuthModule.js（v1.2.0）✅ ログイン時クラウド同期追加
-js/utils/imageUtils.js（v1.1.0）✅ 署名付きURL期限チェック＆自動更新対応
+js/sync/SyncModule.js（v1.6.0）✅ 完成
+js/auth/AuthModule.js（v1.3.0）✅ マイページ変更機能追加
+js/utils/imageUtils.js（v1.0.0）✅ 新規作成
 js/handlers/imageHandler.js（v1.1.0）✅ Storage対応
 js/part2/TradeDetail.js ✅ 画像表示対応
+js/part2/TradeEntry.js ✅ サニタイズ適用
+js/part2/TradeEdit.js ✅ サニタイズ適用
 js/part2/TradeManager-nomodule.js（_syncToCloud追加）✅ 完成
-js/part3_modules/NoteManagerModule.js ✅ sync:notes:synced対応、画像URL自動更新対応
-js/part7_modules/ExpenseManagerModule.js（#syncToCloud追加）✅ 完成
+js/part3_modules/NoteManagerModule.js ✅ sync対応、画像URL対応、サニタイズ適用
+js/part7_modules/ExpenseManagerModule.js（#syncToCloud追加）✅ サニタイズ適用
 js/part7_modules/CapitalManagerModule.js（#syncToCloud追加）✅ 完成
 js/part5_modules/SettingsModule.js（settings:changed発火追加）✅ 完成
 js/part7_modules/ClosingManagerModule.js（settings:changed発火追加）✅ 完成
-js/sync/SyncModule.js（v1.6.0）✅ goals/userIcon同期対応
+index.html ✅ モーダル3つ追加（マイページ変更用）
 ```
 
-### 4.12 完了条件
+### 4.13 完了条件 ✅ 全達成
 
 - [x] 新規トレード追加 → Supabaseに保存される
 - [x] 新規ノート追加 → Supabaseに保存される
@@ -388,18 +348,16 @@ js/sync/SyncModule.js（v1.6.0）✅ goals/userIcon同期対応
 - [x] Supabaseのデータ → localStorageに同期される
 - [x] 別端末でログイン → 同じデータが表示される
 - [x] 既存localStorageデータ → クラウドへ移行可能
-- [x] **画像がSupabase Storageに保存される** ✅ 完了（2026-01-05）
-- [x] **署名付きURL期限切れ時に自動更新される** ✅ 完了（2026-01-14）
-- [x] **goals/userIconがクラウド同期される** ✅ 完了（2026-01-14）
-- [ ] ユーザーネーム変更が動作する
-- [ ] メールアドレス変更が動作する（確認メール送信）
-- [ ] パスワード変更が動作する
-- [ ] **すべての入力がサニタイズされている**
-- [ ] **不正データが拒否される**
+- [x] 画像がSupabase Storageに保存される
+- [x] ユーザーネーム変更が動作する
+- [x] メールアドレス変更が動作する（確認メール送信）
+- [x] パスワード変更が動作する
+- [x] すべての入力がサニタイズされている
+- [x] 不正データが拒否される
 
 ---
 
-## Phase 5: 統合テスト・本番準備・リリース
+## Phase 5: 統合テスト・本番準備・リリース 🔜 次
 
 ### 5.1 機能テスト
 
@@ -416,24 +374,40 @@ js/sync/SyncModule.js（v1.6.0）✅ goals/userIcon同期対応
 | 9 | ログアウト → 再ログイン → データ確認 | ⬜ |
 | 10 | 既存データ移行 → 確認 | ⬜ |
 | 11 | マイページ → ユーザー情報表示確認 | ⬜ |
-| 12 | マイページ → 各種変更機能確認 | ⬜ |
-| 13 | **画像アップロード → Storage確認** | ✅ |
+| 12 | マイページ → 各種変更機能確認 | ✅ |
+| 13 | 画像アップロード → Storage確認 | ✅ |
 
 ### 5.2 セキュリティテスト
 
-（内容は前バージョンと同じ - 省略）
+| # | テスト項目 | 状態 |
+|---|-----------|------|
+| 1 | XSS攻撃テスト | ⬜ |
+| 2 | 他ユーザーデータアクセステスト | ⬜ |
+| 3 | セッションタイムアウトテスト | ⬜ |
 
 ### 5.3 エッジケーステスト
 
-（内容は前バージョンと同じ - 省略）
+| # | テスト項目 | 状態 |
+|---|-----------|------|
+| 1 | オフライン時の動作 | ⬜ |
+| 2 | 同時編集時の動作 | ⬜ |
+| 3 | 大量データ時のパフォーマンス | ⬜ |
 
 ### 5.4 本番環境準備確認
 
-（内容は前バージョンと同じ - 省略）
+| 項目 | 状態 |
+|------|------|
+| GitHub Pages設定 | ✅ |
+| ドメイン設定 | ✅ |
+| SSL証明書 | ✅ |
+| Supabase本番設定 | ⬜ |
 
 ### 5.5 ドメイン設定
 
-（内容は前バージョンと同じ - 省略）
+| 項目 | 状態 |
+|------|------|
+| tradingcomplete.com | ✅ |
+| SSL | ✅ |
 
 ### 5.6 ドキュメント更新
 
@@ -446,7 +420,12 @@ js/sync/SyncModule.js（v1.6.0）✅ goals/userIcon同期対応
 
 ### 5.7 リリース作業
 
-（内容は前バージョンと同じ - 省略）
+| Step | タスク | 状態 |
+|------|--------|------|
+| 5.7.1 | 最終ビルド確認 | ⬜ |
+| 5.7.2 | 本番デプロイ | ⬜ |
+| 5.7.3 | 動作確認 | ⬜ |
+| 5.7.4 | リリース発表 | ⬜ |
 
 ---
 
@@ -460,9 +439,11 @@ js/
 │   ├── supabaseClient.js    ← ✅ Phase 1 完了
 │   └── security.js          ← ✅ Phase 3.6 完了
 ├── auth/
-│   └── AuthModule.js        ← ✅ Phase 3 完了（v1.1.0）
-└── sync/
-    └── SyncModule.js        ← ✅ Phase 4 完了（v1.4.0）
+│   └── AuthModule.js        ← ✅ Phase 4.4 完了（v1.3.0）
+├── sync/
+│   └── SyncModule.js        ← ✅ Phase 4 完了（v1.6.0）
+└── utils/
+    └── imageUtils.js        ← ✅ Phase 4.5 完了
 
 styles/
 └── 7_auth.css               ← ✅ Phase 3 完了
@@ -476,15 +457,38 @@ favicon.ico                  ← ✅ Phase 3 完了
 ### 修正ファイル
 
 ```
-index.html                   ← ✅ セッション切れモーダル追加
-js/auth/AuthModule.js        ← ✅ セッション監視追加（v1.1.0）
+index.html                   ← ✅ マイページ変更モーダル追加
+js/auth/AuthModule.js        ← ✅ v1.3.0（マイページ変更機能）
 js/part2/TradeManager-nomodule.js   ← ✅ SyncModule連携追加
-js/part3_modules/NoteManagerModule.js ← ✅ SyncModule連携追加（v1.0.3）
-js/part7_modules/ExpenseManagerModule.js ← ✅ SyncModule連携追加（v1.0.2）
-js/part7_modules/CapitalManagerModule.js ← ✅ SyncModule連携追加（v1.0.1）
-js/part5_modules/SettingsModule.js ← ✅ settings:changed発火追加（v1.0.2）
-js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加（v1.0.1）
+js/part2/TradeEntry.js       ← ✅ サニタイズ適用
+js/part2/TradeEdit.js        ← ✅ サニタイズ適用
+js/part3_modules/NoteManagerModule.js ← ✅ SyncModule連携 + サニタイズ適用
+js/part7_modules/ExpenseManagerModule.js ← ✅ SyncModule連携 + サニタイズ適用
+js/part7_modules/CapitalManagerModule.js ← ✅ SyncModule連携追加
+js/part5_modules/SettingsModule.js ← ✅ settings:changed発火追加
+js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加
 ```
+
+---
+
+## Supabase設定メモ
+
+### Authentication → Email 設定
+
+| 設定 | 値 | 備考 |
+|------|-----|------|
+| Enable Email provider | ✅ オン | |
+| **Secure email change** | **オフ** | 新メールアドレスのみで変更可能 |
+| Secure password change | オフ | |
+| Minimum password length | 6 | AuthModuleで8文字以上にバリデーション |
+| Email OTP Expiration | 3600秒 | 1時間 |
+
+### Authentication → URL Configuration
+
+| 設定 | 値 |
+|------|-----|
+| Site URL | `https://tradingcomplete.com/trading-complete/` |
+| Redirect URLs | `https://tradingcomplete.com/trading-complete/`, `http://127.0.0.1:5500/` |
 
 ---
 
@@ -496,10 +500,10 @@ js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加（
 | 同期競合（複数端末） | 中 | 最終更新優先（Last Write Wins） |
 | 移行時データ損失 | 高 | 移行前バックアップ、確認ダイアログ |
 | 認証トークン漏洩 | 高 | anon keyのみ使用、RLS徹底 |
-| XSS攻撃 | 高 | **security.jsでサニタイズ** |
-| セッションハイジャック | 中 | **24時間タイムアウト** |
-| localStorageデータ破損 | 中 | **StorageValidatorで検証** |
-| **画像容量不足** | **高** | **Supabase Storage実装** 🆕 |
+| XSS攻撃 | 高 | **security.jsでサニタイズ** ✅ 対策済み |
+| セッションハイジャック | 中 | **24時間タイムアウト** ✅ 対策済み |
+| localStorageデータ破損 | 中 | **StorageValidatorで検証** ✅ 対策済み |
+| 画像容量不足 | 高 | **Supabase Storage実装** ✅ 対策済み |
 | オフライン時の操作 | 低 | Phase 1ではオンライン必須、将来対応 |
 
 ---
@@ -509,9 +513,9 @@ js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加（
 - [Supabase公式ドキュメント](https://supabase.com/docs)
 - [Supabase JavaScript Client](https://supabase.com/docs/reference/javascript/introduction)
 - [Supabase Auth](https://supabase.com/docs/guides/auth)
-- [Supabase Storage](https://supabase.com/docs/guides/storage) 🆕
+- [Supabase Storage](https://supabase.com/docs/guides/storage)
 - [Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)
-- **Trading_Complete_セキュリティ要件定義書_v1_3.md**
+- **Trading_Complete_セキュリティ要件定義書_v1_4.md**
 
 ---
 
@@ -531,7 +535,7 @@ js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加（
 | v1.8 | 2026-01-04 | Phase 4.1〜4.3 完了（全5テーブル同期）、SyncModule v1.4.0、Phase 4.5 Supabase Storage追加 |
 | v1.9 | 2026-01-05 | Phase 4.5 完了（Supabase Storage）、ImageHandler v1.1.0、SyncModule v1.5.2、imageUtils.js追加 |
 | v2.0 | 2026-01-05 | AuthModule v1.2.0（ログイン時同期）、NoteManagerModule（sync対応・画像URL対応）、Phase 4.6-4.7追加 |
-| **v2.1** | **2026-01-14** | **imageUtils v1.1.0（署名付きURL期限自動更新）、Phase 4.6完了、Phase 4.7完了（goals/userIcon同期）** |
+| **v2.1** | **2026-01-14** | **Phase 4 完了（4.4マイページ変更、4.6スマホ対応、4.7 goals同期、4.8セキュリティ、4.9スキップ）、AuthModule v1.3.0、SyncModule v1.6.0、Supabase設定メモ追加** |
 
 ---
 
@@ -543,11 +547,11 @@ Phase 2   ██████████ 100% ✅ 完了（2025-12-17）
 Phase 3   ██████████ 100% ✅ 完了（2025-12-18）
 Phase 3.5 ██████████ 100% ✅ 完了（2025-12-19）
 Phase 3.6 ██████████ 100% ✅ 完了（2025-12-30）
-Phase 4   █████████░  97% 🔄 進行中（Storage完了、同期完了、goals/icon同期完了）
-Phase 5   ░░░░░░░░░░   0%
+Phase 4   ██████████ 100% ✅ 完了（2026-01-14）
+Phase 5   ░░░░░░░░░░   0% 🔜 次
 ```
 
-**次のアクション**: Phase 4.8「セキュリティ適用」
+**次のアクション**: Phase 5「統合テスト・本番準備・リリース」
 
 ---
 

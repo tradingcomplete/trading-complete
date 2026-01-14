@@ -8,9 +8,10 @@
  * - ユーザー名の管理
  * - アカウント情報変更（ユーザーネーム、メールアドレス、パスワード）
  * 
- * @version 1.3.0
+ * @version 1.4.0
  * @date 2026-01-14
  * @changelog
+ *   v1.4.0 (2026-01-14) - パスワードリセット機能追加
  *   v1.3.0 (2026-01-14) - マイページ変更機能追加（ユーザーネーム、メール、パスワード）
  *   v1.2.0 (2026-01-05) - ログイン時のクラウド同期追加（syncAllDataFromCloud）
  *   v1.1.1 (2025-01-04) - SyncModule自動初期化追加
@@ -960,6 +961,122 @@ const AuthModule = (function() {
     }
 
     // ============================================
+    // パスワードリセット
+    // ============================================
+
+    /**
+     * パスワードリセットモーダルを開く
+     */
+    function openResetPasswordModal() {
+        const modal = document.getElementById('resetPasswordModal');
+        if (!modal) {
+            console.error('[Auth] resetPasswordModal が見つかりません');
+            return;
+        }
+        
+        // 入力欄をクリア
+        const emailInput = document.getElementById('resetEmail');
+        if (emailInput) emailInput.value = '';
+        
+        // エラー・成功メッセージをクリア
+        const errorDiv = document.getElementById('resetPasswordError');
+        const successDiv = document.getElementById('resetPasswordSuccess');
+        if (errorDiv) errorDiv.style.display = 'none';
+        if (successDiv) successDiv.style.display = 'none';
+        
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * パスワードリセットモーダルを閉じる
+     */
+    function closeResetPasswordModal() {
+        const modal = document.getElementById('resetPasswordModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    /**
+     * パスワードリセットメールを送信
+     */
+    async function sendResetPasswordEmail() {
+        const emailInput = document.getElementById('resetEmail');
+        const errorDiv = document.getElementById('resetPasswordError');
+        const successDiv = document.getElementById('resetPasswordSuccess');
+        const submitBtn = document.querySelector('#resetPasswordModal .btn-primary');
+        
+        const email = emailInput?.value.trim();
+        
+        // バリデーション
+        if (!email) {
+            showError(errorDiv, 'メールアドレスを入力してください');
+            return;
+        }
+        
+        // メールアドレス形式チェック
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showError(errorDiv, 'メールアドレスの形式が正しくありません');
+            return;
+        }
+        
+        // ボタン無効化
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '送信中...';
+        }
+        hideError(errorDiv);
+        hideSuccess(successDiv);
+        
+        const supabase = getSupabase();
+        if (!supabase) {
+            showError(errorDiv, 'Supabaseに接続できません');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'リセットメールを送信';
+            }
+            return;
+        }
+        
+        try {
+            const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: 'https://tradingcomplete.com/trading-complete/'
+            });
+            
+            if (error) {
+                console.error('[Auth] パスワードリセットエラー:', error);
+                showError(errorDiv, getErrorMessage(error));
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'リセットメールを送信';
+                }
+                return;
+            }
+            
+            // 成功メッセージ表示
+            showSuccess(successDiv, 'パスワードリセットメールを送信しました。メールをご確認ください。');
+            
+            // 入力欄をクリア
+            if (emailInput) emailInput.value = '';
+            
+            console.log('[Auth] パスワードリセットメール送信:', email);
+            
+            // 3秒後にモーダルを閉じる
+            setTimeout(() => {
+                closeResetPasswordModal();
+            }, 3000);
+            
+        } catch (err) {
+            console.error('[Auth] パスワードリセット失敗:', err);
+            showError(errorDiv, '予期しないエラーが発生しました');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'リセットメールを送信';
+            }
+        }
+    }
+
+    // ============================================
     // ヘルパー関数
     // ============================================
 
@@ -1081,7 +1198,11 @@ const AuthModule = (function() {
         changeEmail: changeEmail,
         openChangePasswordModal: openChangePasswordModal,
         closeChangePasswordModal: closeChangePasswordModal,
-        changePassword: changePassword
+        changePassword: changePassword,
+        // パスワードリセット
+        openResetPasswordModal: openResetPasswordModal,
+        closeResetPasswordModal: closeResetPasswordModal,
+        sendResetPasswordEmail: sendResetPasswordEmail
     };
 
 })();
