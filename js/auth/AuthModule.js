@@ -298,7 +298,8 @@ const AuthModule = (function() {
                     data: {
                         username: username || null,
                         display_name: username || email.split('@')[0]
-                    }
+                    },
+                    emailRedirectTo: 'https://tradingcomplete.com/trading-complete/'
                 }
             });
 

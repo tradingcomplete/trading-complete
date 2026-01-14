@@ -317,13 +317,14 @@ Week 5: Phase 5（テスト + 本番準備）← 現在
 | v1.1.0 | 2025-12-29 | セッション監視機能追加、SecureError統合 |
 | v1.1.1 | 2025-01-04 | SyncModule自動初期化追加 |
 | v1.2.0 | 2026-01-05 | ログイン時のクラウド同期追加（syncAllDataFromCloud） |
-| **v1.3.0** | **2026-01-14** | **マイページ変更機能追加（ユーザーネーム、メール、パスワード）** |
+| v1.3.0 | 2026-01-14 | マイページ変更機能追加（ユーザーネーム、メール、パスワード） |
+| **v1.4.0** | **2026-01-14** | **パスワードリセット機能追加（PASSWORD_RECOVERY検知、警告バナー）** |
 
 ### 4.12 成果物
 
 ```
 js/sync/SyncModule.js（v1.6.0）✅ 完成
-js/auth/AuthModule.js（v1.3.0）✅ マイページ変更機能追加
+js/auth/AuthModule.js（v1.4.0）✅ パスワードリセット機能追加
 js/utils/imageUtils.js（v1.0.0）✅ 新規作成
 js/handlers/imageHandler.js（v1.1.0）✅ Storage対応
 js/part2/TradeDetail.js ✅ 画像表示対応
@@ -335,25 +336,27 @@ js/part7_modules/ExpenseManagerModule.js（#syncToCloud追加）✅ サニタイ
 js/part7_modules/CapitalManagerModule.js（#syncToCloud追加）✅ 完成
 js/part5_modules/SettingsModule.js（settings:changed発火追加）✅ 完成
 js/part7_modules/ClosingManagerModule.js（settings:changed発火追加）✅ 完成
-index.html ✅ モーダル3つ追加（マイページ変更用）
+index.html ✅ モーダル4つ追加（マイページ変更用3つ + パスワードリセット用1つ）
+styles/7_auth.css ✅ パスワードリセット関連スタイル追加
 ```
 
 ### 4.13 完了条件 ✅ 全達成
 
-- [x] 新規トレード追加 → Supabaseに保存される
-- [x] 新規ノート追加 → Supabaseに保存される
-- [x] 新規経費追加 → Supabaseに保存される
-- [x] 新規入出金追加 → Supabaseに保存される
-- [x] 設定変更 → Supabaseに保存される
-- [x] Supabaseのデータ → localStorageに同期される
-- [x] 別端末でログイン → 同じデータが表示される
-- [x] 既存localStorageデータ → クラウドへ移行可能
-- [x] 画像がSupabase Storageに保存される
-- [x] ユーザーネーム変更が動作する
-- [x] メールアドレス変更が動作する（確認メール送信）
-- [x] パスワード変更が動作する
-- [x] すべての入力がサニタイズされている
-- [x] 不正データが拒否される
+- ✅ 新規トレード追加 → Supabaseに保存される
+- ✅ 新規ノート追加 → Supabaseに保存される
+- ✅ 新規経費追加 → Supabaseに保存される
+- ✅ 新規入出金追加 → Supabaseに保存される
+- ✅ 設定変更 → Supabaseに保存される
+- ✅ Supabaseのデータ → localStorageに同期される
+- ✅ 別端末でログイン → 同じデータが表示される
+- ✅ 既存localStorageデータ → クラウドへ移行可能
+- ✅ 画像がSupabase Storageに保存される
+- ✅ ユーザーネーム変更が動作する
+- ✅ メールアドレス変更が動作する（確認メール送信）
+- ✅ パスワード変更が動作する
+- ✅ すべての入力がサニタイズされている
+- ✅ 不正データが拒否される
+- ✅ パスワードリセットが動作する（メール送信、自動検知、警告バナー）
 
 ---
 
@@ -535,7 +538,8 @@ js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加
 | v1.8 | 2026-01-04 | Phase 4.1〜4.3 完了（全5テーブル同期）、SyncModule v1.4.0、Phase 4.5 Supabase Storage追加 |
 | v1.9 | 2026-01-05 | Phase 4.5 完了（Supabase Storage）、ImageHandler v1.1.0、SyncModule v1.5.2、imageUtils.js追加 |
 | v2.0 | 2026-01-05 | AuthModule v1.2.0（ログイン時同期）、NoteManagerModule（sync対応・画像URL対応）、Phase 4.6-4.7追加 |
-| **v2.1** | **2026-01-14** | **Phase 4 完了（4.4マイページ変更、4.6スマホ対応、4.7 goals同期、4.8セキュリティ、4.9スキップ）、AuthModule v1.3.0、SyncModule v1.6.0、Supabase設定メモ追加** |
+| v2.1 | 2026-01-14 | Phase 4 完了（4.4マイページ変更、4.6スマホ対応、4.7 goals同期、4.8セキュリティ、4.9スキップ）、AuthModule v1.3.0、SyncModule v1.6.0、Supabase設定メモ追加 |
+| **v2.1.1** | **2026-01-14** | **AuthModule v1.4.0（パスワードリセット機能追加）** |
 
 ---
 
