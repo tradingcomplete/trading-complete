@@ -296,28 +296,26 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 | Supabase Database（Base64） | 500MB | 約2,500枚 |
 | **Supabase Storage** | **1GB** | **約5,000枚** |
 
-### 4.6 スマホ相場ノート詳細パネル表示 🆕 ← 次
+### 4.6 スマホ相場ノート詳細パネル表示 ✅ 完了
 
 **優先度**: HIGH（スマホで画像が見えないのは致命的）
+**完了日**: 2026-01-14
 
 | Step | タスク | 状態 |
 |------|--------|------|
-| 4.6.1 | 相場ノート詳細パネルのスマホ表示対応 | ⬜ |
-| 4.6.2 | タップで詳細表示（モーダル or 展開） | ⬜ |
+| 4.6.1 | 相場ノート詳細パネルのスマホ表示対応 | ✅ |
+| 4.6.2 | タップで詳細表示（モーダル or 展開） | ✅ |
 
-**現状の問題**:
-- スマホでは週間プレビューの左側しか表示されない
-- 右側の詳細パネル（メモ・相場観・画像）が見えない
-
-### 4.7 セルフイメージ・アイコン同期 🆕
+### 4.7 セルフイメージ・アイコン同期 ✅ 完了
 
 **優先度**: MEDIUM（マルチデバイス体験向上）
+**完了日**: 2026-01-14
 
 | Step | タスク | 状態 |
 |------|--------|------|
-| 4.7.1 | goalsデータをuser_settingsに追加 | ⬜ |
-| 4.7.2 | userIconをuser_settingsに追加 | ⬜ |
-| 4.7.3 | SettingsModule で同期対応 | ⬜ |
+| 4.7.1 | goalsデータをuser_settingsに追加 | ✅ |
+| 4.7.2 | userIconをuser_settingsに追加 | ✅ |
+| 4.7.3 | SyncModule で同期対応 | ✅ |
 
 **対象localStorageキー**:
 - goalText1, goalText2, goalText3
@@ -325,7 +323,7 @@ Week 5: Phase 5 完了（テスト + 本番準備）
 - goalAchieved1, goalAchieved2, goalAchieved3
 - userIcon
 
-### 4.8 セキュリティ適用
+### 4.8 セキュリティ適用 🆕 ← 次
 
 | Step | タスク | 状態 |
 |------|--------|------|
@@ -377,6 +375,7 @@ js/part7_modules/ExpenseManagerModule.js（#syncToCloud追加）✅ 完成
 js/part7_modules/CapitalManagerModule.js（#syncToCloud追加）✅ 完成
 js/part5_modules/SettingsModule.js（settings:changed発火追加）✅ 完成
 js/part7_modules/ClosingManagerModule.js（settings:changed発火追加）✅ 完成
+js/sync/SyncModule.js（v1.6.0）✅ goals/userIcon同期対応
 ```
 
 ### 4.12 完了条件
@@ -391,6 +390,7 @@ js/part7_modules/ClosingManagerModule.js（settings:changed発火追加）✅ �
 - [x] 既存localStorageデータ → クラウドへ移行可能
 - [x] **画像がSupabase Storageに保存される** ✅ 完了（2026-01-05）
 - [x] **署名付きURL期限切れ時に自動更新される** ✅ 完了（2026-01-14）
+- [x] **goals/userIconがクラウド同期される** ✅ 完了（2026-01-14）
 - [ ] ユーザーネーム変更が動作する
 - [ ] メールアドレス変更が動作する（確認メール送信）
 - [ ] パスワード変更が動作する
@@ -531,7 +531,7 @@ js/part7_modules/ClosingManagerModule.js ← ✅ settings:changed発火追加（
 | v1.8 | 2026-01-04 | Phase 4.1〜4.3 完了（全5テーブル同期）、SyncModule v1.4.0、Phase 4.5 Supabase Storage追加 |
 | v1.9 | 2026-01-05 | Phase 4.5 完了（Supabase Storage）、ImageHandler v1.1.0、SyncModule v1.5.2、imageUtils.js追加 |
 | v2.0 | 2026-01-05 | AuthModule v1.2.0（ログイン時同期）、NoteManagerModule（sync対応・画像URL対応）、Phase 4.6-4.7追加 |
-| **v2.1** | **2026-01-14** | **imageUtils v1.1.0（署名付きURL期限自動更新）、NoteManagerModule画像自動更新対応、Supabase無料プラン注意事項追加** |
+| **v2.1** | **2026-01-14** | **imageUtils v1.1.0（署名付きURL期限自動更新）、Phase 4.6完了、Phase 4.7完了（goals/userIcon同期）** |
 
 ---
 
@@ -543,11 +543,11 @@ Phase 2   ██████████ 100% ✅ 完了（2025-12-17）
 Phase 3   ██████████ 100% ✅ 完了（2025-12-18）
 Phase 3.5 ██████████ 100% ✅ 完了（2025-12-19）
 Phase 3.6 ██████████ 100% ✅ 完了（2025-12-30）
-Phase 4   █████████░  95% 🔄 進行中（Storage完了、同期完了、レスポンシブ対応中）
+Phase 4   █████████░  97% 🔄 進行中（Storage完了、同期完了、goals/icon同期完了）
 Phase 5   ░░░░░░░░░░   0%
 ```
 
-**次のアクション**: Phase 4.6「スマホ相場ノート詳細パネル表示」
+**次のアクション**: Phase 4.8「セキュリティ適用」
 
 ---
 

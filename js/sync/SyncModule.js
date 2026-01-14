@@ -3,8 +3,8 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.5.2
- * @date 2026-01-05
+ * @version 1.6.0
+ * @date 2026-01-14
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
@@ -15,6 +15,7 @@
  *   v1.5.0 - 画像アップロード統合（Supabase Storage）
  *   v1.5.1 - #uploadTradeImages修正（文字列形式のBase64にも対応）
  *   v1.5.2 - #uploadNoteImages追加（ノート画像のStorage対応）
+ *   v1.6.0 - goals/userIcon同期追加、セキュリティ強化（エラーハンドリング改善、SecureErrorフォールバック追加）
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -27,6 +28,38 @@
         #eventBus = null;
         #initialized = false;
         #syncInProgress = false;
+        
+        // ========== セキュリティ: エラーハンドリング ==========
+        
+        /**
+         * エラーメッセージをユーザーフレンドリーに変換
+         * SecureErrorが存在しない場合のフォールバック
+         * @private
+         * @param {Error} error - エラーオブジェクト
+         * @returns {string} ユーザー向けメッセージ
+         */
+        #toUserMessage(error) {
+            // SecureErrorが存在する場合はそちらを使用
+            if (typeof SecureError !== 'undefined' && SecureError.toUserMessage) {
+                return this.#toUserMessage(error);
+            }
+            
+            // フォールバック: 詳細なエラー情報を隠す
+            console.error('[SyncModule] エラー詳細:', error);
+            
+            // ネットワークエラーの判定
+            if (error.message?.includes('network') || error.message?.includes('fetch')) {
+                return 'ネットワークエラーが発生しました。接続を確認してください。';
+            }
+            
+            // 認証エラーの判定
+            if (error.message?.includes('auth') || error.code === 'PGRST301') {
+                return '認証エラーが発生しました。再ログインしてください。';
+            }
+            
+            // 一般的なエラーメッセージ
+            return '同期中にエラーが発生しました。しばらくしてから再試行してください。';
+        }
         
         // ========== Constructor ==========
         constructor() {
@@ -114,7 +147,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] トレード保存エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] トレード保存成功:', data.id);
@@ -124,7 +157,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] saveTrade例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -146,7 +179,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] トレード削除エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] トレード削除成功:', tradeId);
@@ -156,7 +189,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] deleteTrade例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -177,7 +210,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] トレード取得エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                    return { success: false, error: this.#toUserMessage(error), data: [] };
                 }
                 
                 // Supabase形式 → localStorage形式に変換
@@ -189,7 +222,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] fetchAllTrades例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                return { success: false, error: this.#toUserMessage(error), data: [] };
             }
         }
         
@@ -255,7 +288,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] migrateTradesFromLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), errors };
+                return { success: false, error: this.#toUserMessage(error), errors };
                 
             } finally {
                 this.#syncInProgress = false;
@@ -300,7 +333,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] syncTradesToLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -335,7 +368,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] ノート保存エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] ノート保存成功:', dateStr);
@@ -345,7 +378,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] saveNote例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -373,7 +406,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] ノート削除エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] ノート削除成功:', dateStr);
@@ -383,7 +416,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] deleteNote例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -405,7 +438,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] ノート取得エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error), data: {} };
+                    return { success: false, error: this.#toUserMessage(error), data: {} };
                 }
                 
                 // Supabase形式 → localStorage形式に変換
@@ -417,7 +450,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] fetchAllNotes例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), data: {} };
+                return { success: false, error: this.#toUserMessage(error), data: {} };
             }
         }
         
@@ -486,7 +519,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] migrateNotesFromLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), errors };
+                return { success: false, error: this.#toUserMessage(error), errors };
                 
             } finally {
                 this.#syncInProgress = false;
@@ -530,7 +563,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] syncNotesToLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -557,7 +590,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] 経費保存エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] 経費保存成功:', data.id);
@@ -567,7 +600,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] saveExpense例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -589,7 +622,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] 経費削除エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] 経費削除成功:', expenseId);
@@ -599,7 +632,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] deleteExpense例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -620,7 +653,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] 経費取得エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                    return { success: false, error: this.#toUserMessage(error), data: [] };
                 }
                 
                 // Supabase形式 → localStorage形式に変換
@@ -632,7 +665,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] fetchAllExpenses例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                return { success: false, error: this.#toUserMessage(error), data: [] };
             }
         }
         
@@ -698,7 +731,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] migrateExpensesFromLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), errors };
+                return { success: false, error: this.#toUserMessage(error), errors };
                 
             } finally {
                 this.#syncInProgress = false;
@@ -736,7 +769,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] syncExpensesToLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -763,7 +796,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] 入出金記録保存エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] 入出金記録保存成功:', data.id);
@@ -773,7 +806,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] saveCapitalRecord例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -795,7 +828,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] 入出金記録削除エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] 入出金記録削除成功:', recordId);
@@ -805,7 +838,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] deleteCapitalRecord例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -826,7 +859,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] 入出金記録取得エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                    return { success: false, error: this.#toUserMessage(error), data: [] };
                 }
                 
                 // Supabase形式 → localStorage形式に変換
@@ -838,7 +871,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] fetchAllCapitalRecords例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), data: [] };
+                return { success: false, error: this.#toUserMessage(error), data: [] };
             }
         }
         
@@ -904,7 +937,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] migrateCapitalRecordsFromLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), errors };
+                return { success: false, error: this.#toUserMessage(error), errors };
                 
             } finally {
                 this.#syncInProgress = false;
@@ -937,7 +970,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] syncCapitalRecordsToLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -1005,7 +1038,7 @@
                 
                 if (error) {
                     console.error('[SyncModule] ユーザー設定保存エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error) };
+                    return { success: false, error: this.#toUserMessage(error) };
                 }
                 
                 console.log('[SyncModule] ユーザー設定保存成功');
@@ -1015,7 +1048,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] saveUserSettings例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         
@@ -1047,7 +1080,7 @@
                         return { success: true, data: null };
                     }
                     console.error('[SyncModule] ユーザー設定取得エラー:', error);
-                    return { success: false, error: SecureError.toUserMessage(error), data: null };
+                    return { success: false, error: this.#toUserMessage(error), data: null };
                 }
                 
                 console.log('[SyncModule] ユーザー設定取得成功');
@@ -1056,7 +1089,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] fetchUserSettings例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error), data: null };
+                return { success: false, error: this.#toUserMessage(error), data: null };
             }
         }
         
@@ -1130,7 +1163,7 @@
                 
             } catch (error) {
                 console.error('[SyncModule] syncUserSettingsToLocal例外:', error);
-                return { success: false, error: SecureError.toUserMessage(error) };
+                return { success: false, error: this.#toUserMessage(error) };
             }
         }
         

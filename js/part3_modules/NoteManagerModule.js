@@ -2,6 +2,7 @@
 // Part 3: 相場ノート機能のモジュール化
 // Trading Complete v1.0
 // 作成日: 2025-11-27
+// 更新日: 2026-01-14 - セキュリティ適用（XSS対策追加）
 
 /**
  * @module NoteManagerModule
@@ -764,8 +765,24 @@ class NoteManagerModule {
     cleanupNoteHTML(html) {
         if (!html) return '';
         
-        // 空のspan要素やタグを削除する正規表現
+        // === セキュリティ: 危険なHTMLを除去（XSS対策） ===
         let cleaned = html
+            // scriptタグを除去
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            // iframeタグを除去
+            .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+            // objectタグを除去
+            .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+            // embedタグを除去
+            .replace(/<embed\b[^>]*>/gi, '')
+            // イベントハンドラ属性を除去（onerror, onclick等）
+            .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '')
+            // javascript:プロトコルを除去
+            .replace(/javascript\s*:/gi, '');
+        
+        // 空のspan要素やタグを削除する正規表現
+        cleaned = cleaned
             .replace(/<span><\/span>/gi, '') // 空のspan
             .replace(/<span\s*style=""[^>]*><\/span>/gi, '') // スタイルが空のspan
             .replace(/(<br\s*\/?>){3,}/gi, '<br><br>') // 3つ以上の連続BRは2つに統一（空行1つ保持）
@@ -2862,7 +2879,7 @@ console.log('[NoteManagerModule] クラス定義完了、インスタンス化�
 try {
     const noteManagerInstance = new NoteManagerModule();
     window.NoteManagerModule = noteManagerInstance;
-    console.log('[NoteManagerModule] ✅ インスタンス化完了:', typeof window.NoteManagerModule);
+    console.log('[NoteManagerModule] ✅ インスタンス化完了 (with XSS protection)');
 } catch (error) {
     console.error('[NoteManagerModule] ❌ インスタンス化エラー:', error);
 }

@@ -2,7 +2,8 @@
  * @module ExpenseManagerModule
  * @description 経費管理機能 - 経費の追加、削除、集計、表示を管理
  * @author AI Assistant / コンパナ
- * @version 1.0.1
+ * @version 1.0.2
+ * @updated 2026-01-14 - セキュリティ適用（サニタイズ追加）
  */
 class ExpenseManagerModule {
     // ================
@@ -36,6 +37,22 @@ class ExpenseManagerModule {
     #eventBus = null;
     #initialized = false;
     #storageKey = 'tc_expenses';
+    
+    // ================
+    // セキュリティ: サニタイズ
+    // ================
+    
+    /**
+     * テキストをサニタイズ（XSS対策）
+     * @private
+     * @param {*} text - 入力テキスト
+     * @returns {string} サニタイズ済みテキスト
+     */
+    #sanitize(text) {
+        if (!text) return '';
+        // window.escapeHtml() を使用（script.jsで定義済み）
+        return window.escapeHtml(String(text).trim());
+    }
     
     constructor() {
         // 依存の注入
@@ -395,15 +412,17 @@ class ExpenseManagerModule {
             const month = date.getMonth() + 1;
             const taxYear = month >= 1 && month <= 3 ? year - 1 : year;
             
-            // 経費オブジェクト作成
+            // === セキュリティ: テキストフィールドをサニタイズ ===
             const expense = {
                 date: dateInput.value,
-                category: categoryInput.value,
+                category: this.#sanitize(categoryInput.value),
                 amount: amount,
-                description: descriptionInput?.value || '',
-                memo: memoInput?.value || '',
+                description: this.#sanitize(descriptionInput?.value || ''),
+                memo: this.#sanitize(memoInput?.value || ''),
                 taxYear: taxYear
             };
+            
+            console.log('[ExpenseManagerModule] サニタイズ適用完了');
             
             // 追加
             if (this.addExpense(expense)) {

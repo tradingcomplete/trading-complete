@@ -1,6 +1,7 @@
 // js/part2/TradeEdit.js
 // Part 2 モジュール化 第5段階 - トレード編集機能の分離
 // 作成日: 2025/09/17
+// 更新日: 2026/01/14 - セキュリティ適用（サニタイズ追加）
 
 /**
  * TradeEdit クラス
@@ -20,6 +21,32 @@ class TradeEdit {
         
         // EventBusリスナーを設定
         this.#setupEventBusListeners();
+    }
+    
+    // ==================== セキュリティ: サニタイズ ====================
+    
+    /**
+     * テキストをサニタイズ（XSS対策）
+     * @private
+     * @param {*} text - 入力テキスト
+     * @returns {string} サニタイズ済みテキスト
+     */
+    #sanitize(text) {
+        if (!text) return '';
+        // window.escapeHtml() を使用（script.jsで定義済み）
+        return window.escapeHtml(String(text).trim());
+    }
+    
+    /**
+     * 数値をサニタイズ
+     * @private
+     * @param {*} value - 入力値
+     * @param {number} defaultValue - デフォルト値
+     * @returns {number} サニタイズ済み数値
+     */
+    #sanitizeNumber(value, defaultValue = 0) {
+        const num = parseFloat(value);
+        return isNaN(num) ? defaultValue : num;
     }
     
     // ==================== 公開メソッド ====================
@@ -107,7 +134,7 @@ class TradeEdit {
     }
     
     /**
-     * 基本情報の保存
+     * 基本情報の保存（サニタイズ適用）
      * @param {string|number} tradeId - トレードID
      */
     saveBasicInfo(tradeId) {
@@ -116,18 +143,21 @@ class TradeEdit {
         
         const entryTimeValue = this.#getFieldValue('editEntryTime');
         
+        // === セキュリティ: テキストフィールドをサニタイズ ===
         const updates = {
-            pair: this.#getFieldValue('editPair') || trade.pair,
+            pair: this.#sanitize(this.#getFieldValue('editPair')) || trade.pair,
             direction: this.#getFieldValue('editDirection'),
-            broker: this.#getFieldValue('editBroker') || trade.broker || '',
+            broker: this.#sanitize(this.#getFieldValue('editBroker')) || trade.broker || '',
             entryTime: entryTimeValue || trade.entryTime,
             entryPrice: parseFloat(this.#getFieldValue('editEntryPrice')) || trade.entryPrice,
             lotSize: parseFloat(this.#getFieldValue('editLotSize')) || trade.lotSize,
             stopLoss: parseFloat(this.#getFieldValue('editStopLoss')) || trade.stopLoss,
             takeProfit: parseFloat(this.#getFieldValue('editTakeProfit')) || trade.takeProfit,
-            scenario: this.#getFieldValue('editScenario') || trade.scenario,
-            entryEmotion: this.#getFieldValue('editEmotion') || trade.entryEmotion
+            scenario: this.#sanitize(this.#getFieldValue('editScenario')) || trade.scenario,
+            entryEmotion: this.#sanitize(this.#getFieldValue('editEmotion')) || trade.entryEmotion
         };
+        
+        console.log('[TradeEdit] saveBasicInfo: サニタイズ適用完了');
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, updates)
         
@@ -146,19 +176,21 @@ class TradeEdit {
     }
     
     /**
-     * エントリー根拠の保存
+     * エントリー根拠の保存（サニタイズ適用）
      * @param {string|number} tradeId - トレードID
      */
     saveReasons(tradeId) {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // reasonsが存在しない場合は初期化
+        // === セキュリティ: テキストフィールドをサニタイズ ===
         const reasons = [
-            this.#getFieldValue('editReason1') || '',
-            this.#getFieldValue('editReason2') || '',
-            this.#getFieldValue('editReason3') || ''
+            this.#sanitize(this.#getFieldValue('editReason1')) || '',
+            this.#sanitize(this.#getFieldValue('editReason2')) || '',
+            this.#sanitize(this.#getFieldValue('editReason3')) || ''
         ];
+        
+        console.log('[TradeEdit] saveReasons: サニタイズ適用完了');
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, { reasons });
         
@@ -1062,7 +1094,10 @@ class TradeEdit {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        const reflectionText = this.#getFieldValue('editReflectionText');
+        // === セキュリティ: テキストフィールドをサニタイズ ===
+        const reflectionText = this.#sanitize(this.#getFieldValue('editReflectionText'));
+        
+        console.log('[TradeEdit] saveReflection: サニタイズ適用完了');
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, {
             reflection: reflectionText || ''
@@ -1498,4 +1533,4 @@ window.tradeEdit = new TradeEdit();
 // selectEditPairをグローバルに公開（onclick用）
 window.tradeEdit.selectEditPair = window.tradeEdit.selectEditPair.bind(window.tradeEdit);
 
-console.log('TradeEdit.js loaded successfully');
+console.log('TradeEdit.js loaded successfully (with sanitization)');

@@ -1,6 +1,7 @@
 // js/part2/TradeEntry.js
 // Part 2 モジュール化 第3段階 - 新規エントリー機能の分離
 // 作成日: 2025/09/15
+// 更新日: 2026/01/14 - セキュリティ適用（サニタイズ追加）
 
 /**
  * TradeEntry クラス
@@ -19,6 +20,34 @@ class TradeEntry {
         this.#calculator = window.tradeCalculator;
         this.#isProcessing = false;
     }
+    
+    // ==================== セキュリティ: サニタイズ ====================
+    
+    /**
+     * テキストをサニタイズ（XSS対策）
+     * @private
+     * @param {*} text - 入力テキスト
+     * @returns {string} サニタイズ済みテキスト
+     */
+    #sanitize(text) {
+        if (!text) return '';
+        // window.escapeHtml() を使用（script.jsで定義済み）
+        return window.escapeHtml(String(text).trim());
+    }
+    
+    /**
+     * 数値をサニタイズ
+     * @private
+     * @param {*} value - 入力値
+     * @param {number} defaultValue - デフォルト値
+     * @returns {number} サニタイズ済み数値
+     */
+    #sanitizeNumber(value, defaultValue = 0) {
+        const num = parseFloat(value);
+        return isNaN(num) ? defaultValue : num;
+    }
+    
+    // ==================== パブリックメソッド ====================
     
     /**
      * トレード記録を保存
@@ -44,7 +73,7 @@ class TradeEntry {
                 return false;
             }
             
-            // トレードデータの準備
+            // トレードデータの準備（サニタイズ含む）
             const tradeData = this.#prepareTradeData(data);
             
             // 保存処理（TradeManager経由のみ - 正規化・保存・同期を自動実行）
@@ -233,6 +262,13 @@ class TradeEntry {
         formData.improvements = document.getElementById('improvements')?.value || '';
         formData.exitReason = document.getElementById('exitReason')?.value || '';
         
+        // エントリー根拠（新フォーム用）
+        formData.reason1 = document.getElementById('reason1')?.value || '';
+        formData.reason2 = document.getElementById('reason2')?.value || '';
+        formData.reason3 = document.getElementById('reason3')?.value || '';
+        formData.scenario = document.getElementById('scenario')?.value || '';
+        formData.entryEmotion = document.getElementById('entryEmotion')?.value || '';
+        
         // 結果（WIN/LOSS）
         const resultRadio = document.querySelector('input[name="result"]:checked');
         formData.result = resultRadio?.value || (formData.netProfit >= 0 ? 'WIN' : 'LOSS');
@@ -305,17 +341,44 @@ class TradeEntry {
     }
     
     /**
-     * トレードデータの準備
+     * トレードデータの準備（サニタイズ適用）
      * @private
      */
     #prepareTradeData(formData) {
-        // TradeManagerが正規化するので、最小限のデータ準備のみ
+        // ========================================
+        // セキュリティ: テキストフィールドをサニタイズ
+        // ========================================
         const tradeData = {
             ...formData,
             id: formData.id || null,  // TradeManagerが自動生成
             
-            // フォームから取得したデータをそのまま渡す
-            // TradeManagerの_normalizeTradeDataが処理する
+            // === テキストフィールドのサニタイズ ===
+            symbol: this.#sanitize(formData.symbol),
+            broker: this.#sanitize(formData.broker),
+            reasons: this.#sanitize(formData.reasons),
+            insights: this.#sanitize(formData.insights),
+            improvements: this.#sanitize(formData.improvements),
+            exitReason: this.#sanitize(formData.exitReason),
+            
+            // エントリー根拠（新フォーム用）
+            reason1: this.#sanitize(formData.reason1),
+            reason2: this.#sanitize(formData.reason2),
+            reason3: this.#sanitize(formData.reason3),
+            scenario: this.#sanitize(formData.scenario),
+            entryEmotion: this.#sanitize(formData.entryEmotion),
+            
+            // === 数値フィールドは既にparseFloatで検証済み ===
+            // entryPrice, exitPrice, quantity, stopLoss, takeProfit,
+            // profitLoss, swap, commission, netProfit, pips, rr
+            // → XSSリスクなし
+            
+            // === 日付フィールドはそのまま ===
+            // entryDatetime, exitDatetime
+            // → DateオブジェクトでパースされるためXSSリスクなし
+            
+            // === 画像データはサニタイズしない ===
+            // chartImages
+            // → Base64/URLはそのまま保持
             
             // タグのみここで生成
             tags: this.#generateTags(formData),
@@ -324,6 +387,8 @@ class TradeEntry {
             entryMethod: 'manual',
             isBulkEntry: false
         };
+        
+        console.log('[TradeEntry] サニタイズ適用完了');
         
         // pipsとRRの計算は削除（TradeCalculatorに任せる）
         
@@ -572,4 +637,4 @@ class TradeEntry {
 // インスタンスの作成と登録
 window.tradeEntry = new TradeEntry();
 
-console.log('TradeEntry.js loaded successfully');
+console.log('TradeEntry.js loaded successfully (with sanitization)');
