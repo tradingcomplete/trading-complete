@@ -2007,10 +2007,10 @@ class NoteManagerModule {
             dayDiv.classList.remove('expanded');
             if (accordionIcon) accordionIcon.textContent = '▼';
             
-            // コンテンツを4行に制限
+            // コンテンツを制限（テキスト2-3行 + 画像サムネイル用）
             if (contentDiv) {
-                contentDiv.style.setProperty('height', '85px', 'important');
-                contentDiv.style.setProperty('max-height', '85px', 'important');
+                contentDiv.style.setProperty('height', '120px', 'important');
+                contentDiv.style.setProperty('max-height', '120px', 'important');
                 contentDiv.style.setProperty('overflow', 'hidden', 'important');
             }
             

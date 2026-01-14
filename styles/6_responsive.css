@@ -1948,7 +1948,7 @@
     }
     
     .day-preview .day-preview-content {
-        max-height: 85px;
+        max-height: 120px;
         overflow: hidden;
         transition: max-height 0.3s ease;
     }
