@@ -586,7 +586,10 @@ class TradeList {
                     trade.chartImages.slice(0, 3).forEach(img => {
                         if (img) {
                             const imgEl = document.createElement('img');
-                            imgEl.src = img;
+                            // Base64文字列とURLオブジェクト両方に対応
+                            const imgSrc = window.getImageSrc ? window.getImageSrc(img) : (typeof img === 'string' ? img : (img && img.url ? img.url : null));
+                            if (!imgSrc) return;
+                            imgEl.src = imgSrc;
                             imgEl.className = 'trade-chart-thumb';
                             imgEl.alt = 'チャート';
                             imgEl.loading = 'lazy';
@@ -598,7 +601,8 @@ class TradeList {
                             
                             imgEl.onclick = (e) => {
                                 e.stopPropagation();
-                                if (typeof window.showImageModal === 'function') window.showImageModal(img);
+                                // クリック時も正しいURLを渡す
+                                if (typeof window.showImageModal === 'function') window.showImageModal(imgSrc);
                             };
                             imagesSection.appendChild(imgEl);
                         }
