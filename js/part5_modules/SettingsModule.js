@@ -249,6 +249,7 @@ class SettingsModule {
             
             // EventBus通知
             this.#eventBus?.emit('settings:titleUpdated', { title: trimmedTitle });
+            this.#eventBus?.emit('settings:changed', { source: 'siteTitle' });
             
             console.log('SettingsModule: Title updated:', trimmedTitle);
             return true;
@@ -284,6 +285,7 @@ class SettingsModule {
             
             // EventBus通知
             this.#eventBus?.emit('settings:subtitleUpdated', { subtitle: trimmedSubtitle });
+            this.#eventBus?.emit('settings:changed', { source: 'subtitle' });
             
             console.log('SettingsModule: Subtitle updated:', trimmedSubtitle);
             return true;
