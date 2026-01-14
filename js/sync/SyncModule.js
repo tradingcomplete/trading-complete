@@ -958,11 +958,33 @@
                     return { success: false, error: 'ユーザーIDが取得できません' };
                 }
                 
-                // 4つのlocalStorageから読み取り
+                // 6つのlocalStorageから読み取り
                 const brokers = StorageValidator.safeLoad('brokers', { list: [], nextId: 1 }, StorageValidator.isBrokersFormat);
                 const favoritePairs = StorageValidator.safeLoad('favoritePairs', [], StorageValidator.isArray);
                 const monthlyMemos = StorageValidator.safeLoad('monthlyMemos', { anomaly: {}, monthly: {} }, StorageValidator.isMonthlyMemosFormat);
                 const closedPeriods = StorageValidator.safeLoad('tc_closed_periods', [], StorageValidator.isArray);
+                
+                // goals（セルフイメージ）を収集
+                const goals = {
+                    goal1: {
+                        text: localStorage.getItem('goalText1') || '',
+                        deadline: localStorage.getItem('goalDeadline1') || '',
+                        achieved: localStorage.getItem('goalAchieved1') === 'true'
+                    },
+                    goal2: {
+                        text: localStorage.getItem('goalText2') || '',
+                        deadline: localStorage.getItem('goalDeadline2') || '',
+                        achieved: localStorage.getItem('goalAchieved2') === 'true'
+                    },
+                    goal3: {
+                        text: localStorage.getItem('goalText3') || '',
+                        deadline: localStorage.getItem('goalDeadline3') || '',
+                        achieved: localStorage.getItem('goalAchieved3') === 'true'
+                    }
+                };
+                
+                // userIcon（Base64）
+                const userIcon = localStorage.getItem('userIcon') || null;
                 
                 const supabaseData = {
                     user_id: userId,
@@ -970,6 +992,8 @@
                     favorite_pairs: favoritePairs,
                     monthly_memos: monthlyMemos,
                     closed_periods: closedPeriods,
+                    goals: goals,
+                    user_icon: userIcon,
                     updated_at: new Date().toISOString()
                 };
                 
@@ -1060,7 +1084,7 @@
                 
                 const settings = result.data;
                 
-                // 4つのlocalStorageに展開
+                // 6つのlocalStorageに展開
                 if (settings.brokers) {
                     localStorage.setItem('brokers', JSON.stringify(settings.brokers));
                 }
@@ -1072,6 +1096,31 @@
                 }
                 if (settings.closed_periods) {
                     localStorage.setItem('tc_closed_periods', JSON.stringify(settings.closed_periods));
+                }
+                
+                // goals（セルフイメージ）を展開
+                if (settings.goals) {
+                    const goals = settings.goals;
+                    if (goals.goal1) {
+                        localStorage.setItem('goalText1', goals.goal1.text || '');
+                        localStorage.setItem('goalDeadline1', goals.goal1.deadline || '');
+                        localStorage.setItem('goalAchieved1', String(goals.goal1.achieved || false));
+                    }
+                    if (goals.goal2) {
+                        localStorage.setItem('goalText2', goals.goal2.text || '');
+                        localStorage.setItem('goalDeadline2', goals.goal2.deadline || '');
+                        localStorage.setItem('goalAchieved2', String(goals.goal2.achieved || false));
+                    }
+                    if (goals.goal3) {
+                        localStorage.setItem('goalText3', goals.goal3.text || '');
+                        localStorage.setItem('goalDeadline3', goals.goal3.deadline || '');
+                        localStorage.setItem('goalAchieved3', String(goals.goal3.achieved || false));
+                    }
+                }
+                
+                // userIcon を展開
+                if (settings.user_icon) {
+                    localStorage.setItem('userIcon', settings.user_icon);
                 }
                 
                 console.log('[SyncModule] ユーザー設定をlocalStorageに同期完了');
