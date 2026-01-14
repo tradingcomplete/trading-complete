@@ -90,12 +90,14 @@
     }
     
     .header-content {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         justify-content: flex-start;
         gap: 15px;
     }
     
     .header-info {
+        flex: 1;
+        min-width: 150px;
         text-align: left;
     }
     
@@ -106,7 +108,7 @@
     .goals-display {
         width: 100%;
         justify-content: center;
-        margin-top: 15px;
+        margin-top: 0;
     }
     
     .goal-item {
