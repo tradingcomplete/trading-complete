@@ -28,13 +28,18 @@ body {
     flex-wrap: wrap;
 }
 
+/* ==========================================
+   ユーザーアイコン サイズ制限（2025-01-14追加）
+   ========================================== */
 .user-icon {
+    width: 128px;
+    height: 128px;
     flex-shrink: 0;
 }
 
 .user-icon img {
-    width: 180px; 
-    height: 180px; 
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     border: 3px solid #00ff88; 
     cursor: pointer;

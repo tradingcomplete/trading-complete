@@ -6,10 +6,12 @@
  * - 認証状態の監視
  * - 認証モーダルの制御
  * - ユーザー名の管理
+ * - アカウント情報変更（ユーザーネーム、メールアドレス、パスワード）
  * 
- * @version 1.2.0
- * @date 2026-01-05
+ * @version 1.3.0
+ * @date 2026-01-14
  * @changelog
+ *   v1.3.0 (2026-01-14) - マイページ変更機能追加（ユーザーネーム、メール、パスワード）
  *   v1.2.0 (2026-01-05) - ログイン時のクラウド同期追加（syncAllDataFromCloud）
  *   v1.1.1 (2025-01-04) - SyncModule自動初期化追加
  *   v1.1.0 (2025-12-29) - セッション監視機能追加、SecureError統合
@@ -609,6 +611,354 @@ const AuthModule = (function() {
     }
 
     // ============================================
+    // アカウント情報変更
+    // ============================================
+
+    /**
+     * ユーザーネーム変更モーダルを開く
+     */
+    function openChangeUsernameModal() {
+        const modal = document.getElementById('changeUsernameModal');
+        if (!modal) {
+            console.error('[Auth] changeUsernameModal が見つかりません');
+            return;
+        }
+        
+        // 現在のユーザーネームをセット
+        const input = document.getElementById('newUsername');
+        if (input && currentUser) {
+            input.value = currentUser.user_metadata?.username || '';
+        }
+        
+        // エラーメッセージをクリア
+        const errorDiv = document.getElementById('changeUsernameError');
+        if (errorDiv) errorDiv.style.display = 'none';
+        
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * ユーザーネーム変更モーダルを閉じる
+     */
+    function closeChangeUsernameModal() {
+        const modal = document.getElementById('changeUsernameModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    /**
+     * ユーザーネームを変更
+     */
+    async function changeUsername() {
+        const input = document.getElementById('newUsername');
+        const errorDiv = document.getElementById('changeUsernameError');
+        const submitBtn = document.querySelector('#changeUsernameModal .btn-primary');
+        
+        const newUsername = input?.value.trim();
+        
+        // バリデーション
+        if (!newUsername) {
+            showError(errorDiv, 'ユーザーネームを入力してください');
+            return;
+        }
+        
+        if (newUsername.length < 2) {
+            showError(errorDiv, 'ユーザーネームは2文字以上で入力してください');
+            return;
+        }
+        
+        if (newUsername.length > 20) {
+            showError(errorDiv, 'ユーザーネームは20文字以内で入力してください');
+            return;
+        }
+        
+        // ボタン無効化
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '変更中...';
+        }
+        hideError(errorDiv);
+        
+        const supabase = getSupabase();
+        if (!supabase) {
+            showError(errorDiv, 'Supabaseに接続できません');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '変更する';
+            }
+            return;
+        }
+        
+        try {
+            const { data, error } = await supabase.auth.updateUser({
+                data: { username: newUsername }
+            });
+            
+            if (error) {
+                console.error('[Auth] ユーザーネーム変更エラー:', error);
+                showError(errorDiv, 'ユーザーネームの変更に失敗しました');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '変更する';
+                }
+                return;
+            }
+            
+            // currentUserを更新
+            currentUser = data.user;
+            
+            // 表示を更新
+            updateUserDisplay();
+            updateMyPageDisplay();
+            
+            // モーダルを閉じる
+            closeChangeUsernameModal();
+            
+            // 成功通知
+            if (typeof showToast === 'function') {
+                showToast('ユーザーネームを変更しました', 'success');
+            }
+            
+            console.log('[Auth] ユーザーネーム変更完了:', newUsername);
+            
+        } catch (err) {
+            console.error('[Auth] ユーザーネーム変更失敗:', err);
+            showError(errorDiv, '予期しないエラーが発生しました');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '変更する';
+            }
+        }
+    }
+
+    /**
+     * メールアドレス変更モーダルを開く
+     */
+    function openChangeEmailModal() {
+        const modal = document.getElementById('changeEmailModal');
+        if (!modal) {
+            console.error('[Auth] changeEmailModal が見つかりません');
+            return;
+        }
+        
+        // 現在のメールアドレスを表示
+        const currentEmailSpan = document.getElementById('currentEmailDisplay');
+        if (currentEmailSpan && currentUser) {
+            currentEmailSpan.textContent = currentUser.email || '-';
+        }
+        
+        // 入力欄をクリア
+        const input = document.getElementById('newEmail');
+        if (input) input.value = '';
+        
+        // エラーメッセージをクリア
+        const errorDiv = document.getElementById('changeEmailError');
+        if (errorDiv) errorDiv.style.display = 'none';
+        
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * メールアドレス変更モーダルを閉じる
+     */
+    function closeChangeEmailModal() {
+        const modal = document.getElementById('changeEmailModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    /**
+     * メールアドレスを変更
+     */
+    async function changeEmail() {
+        const input = document.getElementById('newEmail');
+        const errorDiv = document.getElementById('changeEmailError');
+        const submitBtn = document.querySelector('#changeEmailModal .btn-primary');
+        
+        const newEmail = input?.value.trim();
+        
+        // バリデーション
+        if (!newEmail) {
+            showError(errorDiv, '新しいメールアドレスを入力してください');
+            return;
+        }
+        
+        // 簡易的なメール形式チェック
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            showError(errorDiv, 'メールアドレスの形式が正しくありません');
+            return;
+        }
+        
+        // ボタン無効化
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '変更中...';
+        }
+        hideError(errorDiv);
+        
+        const supabase = getSupabase();
+        if (!supabase) {
+            showError(errorDiv, 'Supabaseに接続できません');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '変更する';
+            }
+            return;
+        }
+        
+        try {
+            const { data, error } = await supabase.auth.updateUser({
+                email: newEmail
+            });
+            
+            if (error) {
+                console.error('[Auth] メールアドレス変更エラー:', error);
+                showError(errorDiv, getErrorMessage(error));
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '変更する';
+                }
+                return;
+            }
+            
+            // モーダルを閉じる
+            closeChangeEmailModal();
+            
+            // 確認メール送信のお知らせ
+            if (typeof showToast === 'function') {
+                showToast('確認メールを送信しました。メール内のリンクをクリックして変更を完了してください。', 'info', 8000);
+            } else {
+                alert('確認メールを送信しました。メール内のリンクをクリックして変更を完了してください。');
+            }
+            
+            console.log('[Auth] メールアドレス変更リクエスト送信:', newEmail);
+            
+        } catch (err) {
+            console.error('[Auth] メールアドレス変更失敗:', err);
+            showError(errorDiv, '予期しないエラーが発生しました');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '変更する';
+            }
+        }
+    }
+
+    /**
+     * パスワード変更モーダルを開く
+     */
+    function openChangePasswordModal() {
+        const modal = document.getElementById('changePasswordModal');
+        if (!modal) {
+            console.error('[Auth] changePasswordModal が見つかりません');
+            return;
+        }
+        
+        // 入力欄をクリア
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmPasswordInput = document.getElementById('confirmNewPassword');
+        if (newPasswordInput) newPasswordInput.value = '';
+        if (confirmPasswordInput) confirmPasswordInput.value = '';
+        
+        // エラーメッセージをクリア
+        const errorDiv = document.getElementById('changePasswordError');
+        if (errorDiv) errorDiv.style.display = 'none';
+        
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * パスワード変更モーダルを閉じる
+     */
+    function closeChangePasswordModal() {
+        const modal = document.getElementById('changePasswordModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    /**
+     * パスワードを変更
+     */
+    async function changePassword() {
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmPasswordInput = document.getElementById('confirmNewPassword');
+        const errorDiv = document.getElementById('changePasswordError');
+        const submitBtn = document.querySelector('#changePasswordModal .btn-primary');
+        
+        const newPassword = newPasswordInput?.value;
+        const confirmPassword = confirmPasswordInput?.value;
+        
+        // バリデーション
+        if (!newPassword || !confirmPassword) {
+            showError(errorDiv, 'すべての項目を入力してください');
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            showError(errorDiv, '新しいパスワードが一致しません');
+            return;
+        }
+        
+        // パスワード強度チェック
+        const passwordError = validatePassword(newPassword);
+        if (passwordError) {
+            showError(errorDiv, passwordError);
+            return;
+        }
+        
+        // ボタン無効化
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '変更中...';
+        }
+        hideError(errorDiv);
+        
+        const supabase = getSupabase();
+        if (!supabase) {
+            showError(errorDiv, 'Supabaseに接続できません');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '変更する';
+            }
+            return;
+        }
+        
+        try {
+            const { data, error } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+            
+            if (error) {
+                console.error('[Auth] パスワード変更エラー:', error);
+                showError(errorDiv, getErrorMessage(error));
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '変更する';
+                }
+                return;
+            }
+            
+            // モーダルを閉じる
+            closeChangePasswordModal();
+            
+            // 成功通知
+            if (typeof showToast === 'function') {
+                showToast('パスワードを変更しました', 'success');
+            }
+            
+            console.log('[Auth] パスワード変更完了');
+            
+        } catch (err) {
+            console.error('[Auth] パスワード変更失敗:', err);
+            showError(errorDiv, '予期しないエラーが発生しました');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '変更する';
+            }
+        }
+    }
+
+    // ============================================
     // ヘルパー関数
     // ============================================
 
@@ -720,7 +1070,17 @@ const AuthModule = (function() {
         hideAuthModal: hideAuthModal,
         logout: handleLogout,
         logoutWithConfirm: logoutWithConfirm,
-        updateMyPageDisplay: updateMyPageDisplay
+        updateMyPageDisplay: updateMyPageDisplay,
+        // アカウント情報変更
+        openChangeUsernameModal: openChangeUsernameModal,
+        closeChangeUsernameModal: closeChangeUsernameModal,
+        changeUsername: changeUsername,
+        openChangeEmailModal: openChangeEmailModal,
+        closeChangeEmailModal: closeChangeEmailModal,
+        changeEmail: changeEmail,
+        openChangePasswordModal: openChangePasswordModal,
+        closeChangePasswordModal: closeChangePasswordModal,
+        changePassword: changePassword
     };
 
 })();

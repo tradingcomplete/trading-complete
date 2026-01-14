@@ -1953,7 +1953,7 @@
                         <label>ユーザーネーム</label>
                         <div class="mypage-value-row">
                             <span id="mypage-username" class="mypage-value">(未設定)</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangeUsernameModal()" disabled>
+                            <button class="btn btn-secondary btn-small" onclick="AuthModule.openChangeUsernameModal()">
                                 変更
                             </button>
                         </div>
@@ -1964,7 +1964,7 @@
                         <label>メールアドレス</label>
                         <div class="mypage-value-row">
                             <span id="mypage-email" class="mypage-value">-</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangeEmailModal()" disabled>
+                            <button class="btn btn-secondary btn-small" onclick="AuthModule.openChangeEmailModal()">
                                 変更
                             </button>
                         </div>
@@ -1975,7 +1975,7 @@
                         <label>パスワード</label>
                         <div class="mypage-value-row">
                             <span class="mypage-value">••••••••</span>
-                            <button class="btn btn-secondary btn-small" onclick="openChangePasswordModal()" disabled>
+                            <button class="btn btn-secondary btn-small" onclick="AuthModule.openChangePasswordModal()">
                                 変更
                             </button>
                         </div>
@@ -2858,6 +2858,89 @@
                 <button id="sessionExpiredLoginBtn" class="btn btn-primary" style="min-width: 120px;">
                     ログイン
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================== アカウント情報変更モーダル ================== -->
+    
+    <!-- ユーザーネーム変更モーダル -->
+    <div id="changeUsernameModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>ユーザーネーム変更</h2>
+                <button class="modal-close" onclick="AuthModule.closeChangeUsernameModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newUsername">新しいユーザーネーム</label>
+                    <input type="text" id="newUsername" placeholder="2〜20文字" maxlength="20" 
+                           style="width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; border-radius: 5px;">
+                </div>
+                <div id="changeUsernameError" class="error-message" style="display: none; color: #ff6b6b; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="AuthModule.closeChangeUsernameModal()">キャンセル</button>
+                <button class="btn btn-primary" onclick="AuthModule.changeUsername()">変更する</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- メールアドレス変更モーダル -->
+    <div id="changeEmailModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>メールアドレス変更</h2>
+                <button class="modal-close" onclick="AuthModule.closeChangeEmailModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>現在のメールアドレス</label>
+                    <div id="currentEmailDisplay" style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; color: rgba(255,255,255,0.7);">-</div>
+                </div>
+                <div class="form-group">
+                    <label for="newEmail">新しいメールアドレス</label>
+                    <input type="email" id="newEmail" placeholder="example@email.com" 
+                           style="width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; border-radius: 5px;">
+                </div>
+                <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 10px;">
+                    ※ 変更後、新しいメールアドレスに確認メールが送信されます
+                </p>
+                <div id="changeEmailError" class="error-message" style="display: none; color: #ff6b6b; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="AuthModule.closeChangeEmailModal()">キャンセル</button>
+                <button class="btn btn-primary" onclick="AuthModule.changeEmail()">変更する</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- パスワード変更モーダル -->
+    <div id="changePasswordModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>パスワード変更</h2>
+                <button class="modal-close" onclick="AuthModule.closeChangePasswordModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="newPassword">新しいパスワード</label>
+                    <input type="password" id="newPassword" placeholder="8文字以上、大文字・小文字・数字を含む" 
+                           style="width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; border-radius: 5px;">
+                </div>
+                <div class="form-group">
+                    <label for="confirmNewPassword">新しいパスワード（確認）</label>
+                    <input type="password" id="confirmNewPassword" placeholder="もう一度入力" 
+                           style="width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; border-radius: 5px;">
+                </div>
+                <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 10px;">
+                    ※ パスワードは8文字以上、大文字・小文字・数字を含む必要があります
+                </p>
+                <div id="changePasswordError" class="error-message" style="display: none; color: #ff6b6b; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="AuthModule.closeChangePasswordModal()">キャンセル</button>
+                <button class="btn btn-primary" onclick="AuthModule.changePassword()">変更する</button>
             </div>
         </div>
     </div>
