@@ -3,8 +3,8 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.6.0
- * @date 2026-01-14
+ * @version 1.7.0
+ * @date 2026-01-15
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
@@ -16,6 +16,7 @@
  *   v1.5.1 - #uploadTradeImages修正（文字列形式のBase64にも対応）
  *   v1.5.2 - #uploadNoteImages追加（ノート画像のStorage対応）
  *   v1.6.0 - goals/userIcon同期追加、セキュリティ強化（エラーハンドリング改善、SecureErrorフォールバック追加）
+ *   v1.7.0 - siteTitle/subtitle同期追加
  * @see Supabase導入_ロードマップ_v1_7.md Phase 4
  */
 
@@ -1019,6 +1020,10 @@
                 // userIcon（Base64）
                 const userIcon = localStorage.getItem('userIcon') || null;
                 
+                // サイトカスタマイズ設定
+                const siteTitle = localStorage.getItem('siteTitle') || null;
+                const subtitle = localStorage.getItem('subtitle') || null;
+                
                 const supabaseData = {
                     user_id: userId,
                     brokers: brokers,
@@ -1027,6 +1032,8 @@
                     closed_periods: closedPeriods,
                     goals: goals,
                     user_icon: userIcon,
+                    site_title: siteTitle,
+                    subtitle: subtitle,
                     updated_at: new Date().toISOString()
                 };
                 
@@ -1154,6 +1161,14 @@
                 // userIcon を展開
                 if (settings.user_icon) {
                     localStorage.setItem('userIcon', settings.user_icon);
+                }
+                
+                // サイトカスタマイズ設定を展開
+                if (settings.site_title) {
+                    localStorage.setItem('siteTitle', settings.site_title);
+                }
+                if (settings.subtitle) {
+                    localStorage.setItem('subtitle', settings.subtitle);
                 }
                 
                 console.log('[SyncModule] ユーザー設定をlocalStorageに同期完了');
@@ -1733,6 +1748,6 @@
     // ========== グローバル公開 ==========
     window.SyncModule = new SyncModuleClass();
     
-    console.log('[SyncModule] モジュール読み込み完了 v1.5.2');
+    console.log('[SyncModule] モジュール読み込み完了 v1.7.0');
     
 })();
