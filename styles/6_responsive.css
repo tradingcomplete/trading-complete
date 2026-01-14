@@ -90,12 +90,13 @@
     }
     
     .header-content {
-        justify-content: center;
-        text-align: center;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        gap: 15px;
     }
     
     .header-info {
-        text-align: center;
+        text-align: left;
     }
     
     .header-title {
