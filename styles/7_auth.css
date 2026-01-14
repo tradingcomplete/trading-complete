@@ -425,3 +425,14 @@ body.light-mode .mypage-item label {
 #resetPasswordModal {
     z-index: 10001;
 }
+
+/* パスワードリカバリー警告バナー */
+.recovery-warning {
+    background-color: #ff9800;
+    color: #000;
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    text-align: center;
+}

@@ -127,9 +127,10 @@ const AuthModule = (function() {
                 
                 // 少し待ってからモーダルを開く（UI描画完了を待つ）
                 setTimeout(() => {
-                    if (typeof showToast === 'function') {
-                        showToast('新しいパスワードを設定してください', 'info', 5000);
-                    }
+                    // 警告バナーを表示
+                    const warning = document.getElementById('passwordRecoveryWarning');
+                    if (warning) warning.style.display = 'block';
+                    
                     openChangePasswordModal();
                 }, 500);
                 return;
@@ -882,6 +883,9 @@ const AuthModule = (function() {
         const errorDiv = document.getElementById('changePasswordError');
         if (errorDiv) errorDiv.style.display = 'none';
         
+        // 警告バナーは通常時は非表示（リカバリー時のみsetupAuthStateListenerで表示）
+        // ここでは何もしない（リカバリー検知時に表示される）
+        
         modal.style.display = 'flex';
     }
 
@@ -891,6 +895,10 @@ const AuthModule = (function() {
     function closeChangePasswordModal() {
         const modal = document.getElementById('changePasswordModal');
         if (modal) modal.style.display = 'none';
+        
+        // 警告バナーを非表示（次回に備えてリセット）
+        const warning = document.getElementById('passwordRecoveryWarning');
+        if (warning) warning.style.display = 'none';
     }
 
     /**

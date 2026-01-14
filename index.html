@@ -2927,6 +2927,9 @@
                 <button class="modal-close" onclick="AuthModule.closeChangePasswordModal()">×</button>
             </div>
             <div class="modal-body">
+                <div id="passwordRecoveryWarning" class="recovery-warning" style="display: none;">
+                    ⚠️ パスワードをリセット中です。必ず新しいパスワードを設定してください。
+                </div>
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label for="newPassword">新しいパスワード</label>
                     <input type="password" id="newPassword" placeholder="8文字以上、大文字・小文字・数字を含む" 
