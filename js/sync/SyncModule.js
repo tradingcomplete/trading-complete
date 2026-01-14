@@ -1022,7 +1022,7 @@
                 
                 // サイトカスタマイズ設定
                 const siteTitle = localStorage.getItem('siteTitle') || null;
-                const subtitle = localStorage.getItem('subtitle') || null;
+                const subtitle = localStorage.getItem('siteSubtitle') || null;
                 
                 const supabaseData = {
                     user_id: userId,
@@ -1168,7 +1168,7 @@
                     localStorage.setItem('siteTitle', settings.site_title);
                 }
                 if (settings.subtitle) {
-                    localStorage.setItem('subtitle', settings.subtitle);
+                    localStorage.setItem('siteSubtitle', settings.subtitle);
                 }
                 
                 console.log('[SyncModule] ユーザー設定をlocalStorageに同期完了');
