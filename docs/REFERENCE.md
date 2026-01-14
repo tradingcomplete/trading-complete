@@ -1,5 +1,5 @@
 # REFERENCE.md - Trading Complete 参考資料・運用ガイド
-*更新日: 2025-12-23 | 用途: 開発ガイドライン・完了履歴・ベストプラクティス*
+*更新日: 2026-01-15 | 用途: 開発ガイドライン・完了履歴・ベストプラクティス*
 
 ---
 
@@ -275,6 +275,17 @@ docs/  フォーム制御.md（詳細情報）
 
 ## 📚 Part II: 完了履歴
 
+### 2026年1月
+
+| 日付 | タスク | 優先度 | 工数 | 主な成果 | 詳細 |
+|------|--------|--------|------|---------|------|
+| **01/14** | **Supabase画像URL自動更新・クラウド同期実装** | **CRITICAL** | **6h** | **署名付きURL期限自動更新、ログイン時クラウド同期** | [詳細](#supabase画像url自動更新クラウド同期実装) |
+| **01/15** | **レスポンシブ改善（ヘッダー・週間プレビュー・決済入力等）** | **MEDIUM** | **4h** | **横並び維持、max-height増加、フィールド幅統一、画像サイズ固定** | [詳細](#レスポンシブ改善2026-01-15) |
+| **01/15** | **Pull-to-Refresh実装** | **LOW** | **1h** | **ページ最上部スワイプでリロード、iOS対応** | [詳細](#pull-to-refresh実装2026-01-15) |
+| **01/15** | **決済記録モーダル改善** | **MEDIUM** | **1h** | **参考情報2列化、プレースホルダー短縮** | [詳細](#決済記録モーダル改善2026-01-15) |
+
+---
+
 ### 2025年11-12月
 
 | 日付 | タスク | 優先度 | 工数 | 主な成果 | 詳細 |
@@ -334,10 +345,131 @@ docs/  フォーム制御.md（詳細情報）
 - 🚀 **Netlify初回デプロイ: 本番環境公開、tradingcomplete.netlify.app**
 - 🌐 **GitHub Pages公開: 独自ドメインで本番公開、tradingcomplete.com**
 - ✨ **Week 7完了: 分析タブ期間保持、エクスポート拡張、Chart改善、コード43%削減**
+- ☁️ **Supabase画像URL自動更新: 署名付きURL期限自動更新、ログイン時クラウド同期実装**
+- 📱 **レスポンシブ改善（01/15）: ヘッダー横並び維持、週間プレビュー画像サムネイル、決済入力フィールド統一**
+- 🔄 **Pull-to-Refresh実装: ページ最上部スワイプでリロード、iOS対応**
 
 ---
 
 ### 完了タスク詳細
+
+#### ✅ レスポンシブ改善（2026-01-15）
+
+**日付**: 2026-01-15 | **工数**: 4h | **優先度**: MEDIUM
+
+**修正内容**:
+
+| ファイル | 修正内容 |
+|---------|---------|
+| 6_responsive.css | ヘッダー横並び維持（flex-wrap対応） |
+| 6_responsive.css | 週間プレビューmax-height 85px→120px |
+| 6_responsive.css | 決済入力フィールド幅統一（日付125px固定、価格flex、Lot50px） |
+| 6_responsive.css | expense-tabsスクロールバー（ダークモード/ライトモード対応） |
+| 6_responsive.css | 6タブグリッド余白修正（4行→3行） |
+| 6_responsive.css | 経費メモレスポンシブ対応 |
+| 1_base.css | 新規エントリー画像サイズ固定（180×120px、!important追加） |
+| NoteManagerModule.js | 週間プレビュー画像サムネイル表示 |
+
+**教訓**:
+- **CSS優先度**: インラインスタイル > 外部CSS。`!important`で強制適用が必要な場合がある
+- **iOS対応**: `window.scrollY === 0`が完全に0にならない場合がある。`<= 5`で判定
+
+---
+
+#### ✅ Pull-to-Refresh実装（2026-01-15）
+
+**日付**: 2026-01-15 | **工数**: 1h | **優先度**: LOW
+
+**機能**:
+- ページ最上部で下スワイプでリロード
+- 緑色インジケーター表示
+- 画面暗転 + 「🔄 更新中...」メッセージ
+- iOS（ホーム画面追加時）対応
+
+**実装ファイル**:
+- script.js: `initPullToRefresh()`関数追加
+
+---
+
+#### ✅ 決済記録モーダル改善（2026-01-15）
+
+**日付**: 2026-01-15 | **工数**: 1h | **優先度**: MEDIUM
+
+**修正内容**:
+
+| 項目 | 変更前 | 変更後 |
+|------|--------|--------|
+| 参考情報 | 4段（縦並び） | 2段（グリッド2列） |
+| プレースホルダー | 「決済価格」「決済ロット」 | 「価格」「Lot」 |
+| 入力フィールド幅 | 可変 | 日付125px固定、Lot50px固定 |
+
+**修正ファイル**:
+- TradeExit.js
+
+---
+
+#### ✅ Supabase画像URL自動更新・クラウド同期実装
+
+**日付**: 2026-01-14 | **工数**: 6h | **優先度**: CRITICAL
+
+**問題**: 
+1. Supabase無料プランで1週間非アクティブでプロジェクトが自動停止
+2. 署名付きURLの有効期限切れで画像が表示されない
+3. 別デバイスでログインしてもデータが同期されない
+
+**症状**:
+- 全画像が見えない + `ERR_NAME_NOT_RESOLVED` エラー
+- 特定の画像が「壊れた画像」アイコン + 403エラー
+- 別デバイスでログイン後、データが空
+
+**原因**:
+1. **プロジェクト停止**: 1週間アクセスがないと自動停止
+2. **URL期限切れ**: 署名付きURLは1時間〜7日で期限切れ
+3. **同期処理なし**: ログイン後にSupabaseからデータを取得する処理がなかった
+
+**解決策**:
+
+**1. imageUtils.js v1.1.0 - URL期限自動更新**:
+```javascript
+// 期限チェック
+window.isUrlExpired(img)  // true = 期限切れ
+
+// 自動更新付き画像URL取得
+const url = await window.getValidImageSrc(img);
+// 期限切れなら自動でpathから新URLを取得
+```
+
+**2. AuthModule v1.2.0 - ログイン時クラウド同期**:
+```javascript
+async syncAllDataFromCloud() {
+    await SyncModule.syncTradesToLocal();
+    await SyncModule.syncNotesToLocal();
+    await SyncModule.syncExpensesToLocal();
+    await SyncModule.syncCapitalRecordsToLocal();
+    await SyncModule.syncUserSettingsToLocal();
+}
+```
+
+**3. NoteManagerModule - 自動同期対応**:
+- `sync:notes:synced` イベントで自動更新
+- `getValidImageSrc()` で期限切れURL自動更新
+
+**修正ファイル（3件）**:
+- imageUtils.js v1.1.0
+- AuthModule.js v1.2.0
+- NoteManagerModule.js
+
+**テスト結果**:
+- プロジェクト再開後: ✅ 画像表示正常
+- URL期限切れ時: ✅ 自動更新で表示
+- 別デバイスログイン: ✅ データ同期正常
+
+**教訓**:
+- Supabase無料プランは週1回アクセス必須（教訓20）
+- 署名付きURLは期限チェックと自動更新が必要（教訓21）
+- クラウド同期は「保存」と「読込」の両方が必要（教訓22）
+
+---
 
 #### ✅ 月次カレンダー ツールチップ位置修正
 
@@ -1636,7 +1768,187 @@ grep -rn "tradePL\|swapPoints\|netProfitLoss" *.js | grep -v "yenProfitLoss"
 
 ---
 
+### 教訓20: Supabase無料プランの1週間停止
+
+**問題**: Supabase無料プランでは、**1週間非アクティブでプロジェクトが自動停止**される。
+
+**症状**:
+```
+POST https://xxx.supabase.co/auth/v1/token net::ERR_NAME_NOT_RESOLVED
+TypeError: Failed to fetch
+```
+
+**解決策**:
+1. Supabaseダッシュボードにログイン
+2. 該当プロジェクトを選択
+3. 「Restore project」または「Resume」ボタンをクリック
+
+**予防策**:
+- 週1回はアクセスする
+- リリース後はProプラン（$25/月）を検討
+
+---
+
+### 教訓21: 署名付きURL（Signed URL）の有効期限切れ
+
+**問題**: Supabase Storageの署名付きURLには**有効期限**があり、期限切れで画像が見えなくなる。
+
+**症状**:
+- ノートや取引の画像が「壊れた画像」アイコンで表示
+- コンソールで画像URLにアクセスすると403エラー
+
+**原因**:
+```javascript
+// 署名付きURLの構造
+https://xxx.supabase.co/storage/v1/object/sign/bucket/path?token=eyJ...
+
+// tokenにはexp（有効期限）が含まれる
+// デフォルトは1時間〜7日で期限切れ
+```
+
+**解決策**: imageUtils.js v1.1.0 で期限チェック＆自動更新機能を実装：
+
+```javascript
+// 期限チェック
+window.isUrlExpired(img)  // true = 期限切れ
+
+// 自動更新付き画像URL取得
+const url = await window.getValidImageSrc(img);
+// 期限切れなら自動でpathから新URLを取得
+```
+
+**重要**: 
+- localStorageのURLを更新しても、**リロード時にSupabaseから古いURLで上書きされる**
+- **Supabase側も同時に更新**する必要がある
+
+---
+
+### 教訓22: クラウド同期のデータフロー理解
+
+**問題**: 「保存する」と「読み込む」は別問題。保存が動いていても、別デバイスで読み込めないケースがある。
+
+**失敗例**:
+```
+【PC（データ作成元）】
+ノート作成 → localStorage保存 → Supabaseに保存 ✅
+
+【別デバイス】
+ログイン ✅ → データが表示されない ❌
+```
+
+**原因**: AuthModuleにログイン後の**自動同期処理がなかった**。localStorageはデバイスごとに別なので、ログイン後にSupabaseからデータを取得する処理が必要。
+
+**解決策**: AuthModule v1.2.0 で `syncAllDataFromCloud()` を追加：
+
+```javascript
+// ログイン後に自動実行
+async syncAllDataFromCloud() {
+    await SyncModule.syncTradesToLocal();
+    await SyncModule.syncNotesToLocal();
+    await SyncModule.syncExpensesToLocal();
+    await SyncModule.syncCapitalRecordsToLocal();
+    await SyncModule.syncUserSettingsToLocal();
+}
+```
+
+---
+
+### 教訓23: フィールド名の不一致問題（entryDatetime vs entryTime）
+
+**問題**: 新規トレードの `entry_time` が Supabase に NULL で保存される。
+
+**症状**:
+- localStorageには時刻データがある
+- Supabaseの `entry_time` が NULL
+- トレード一覧のソート順がおかしくなる
+
+**原因**: モジュール間でフィールド名が統一されていなかった。
+
+| モジュール | 使用フィールド名 |
+|-----------|----------------|
+| TradeEntry.js | `entryDatetime` |
+| SyncModule.js | `entryTime` |
+| TradeManager | 変換処理なし ← 問題 |
+
+**デバッグ方法**:
+```javascript
+// SyncModule.saveTradeをフックしてデータを確認
+const originalSaveTrade = window.SyncModule.saveTrade.bind(window.SyncModule);
+window.SyncModule.saveTrade = async function(localTrade) {
+    console.log('=== saveTrade 呼び出し ===');
+    console.log('entryTime:', localTrade.entryTime);
+    console.log('entryDatetime:', localTrade.entryDatetime);
+    return originalSaveTrade(localTrade);
+};
+```
+
+**解決策**: TradeManager-nomodule.js の `_normalizeTradeData` に変換処理を追加：
+
+```javascript
+// entryTime の正規化（entryDatetime → entryTime）
+if (!normalized.entryTime && trade.entryDatetime) {
+    normalized.entryTime = trade.entryDatetime;
+}
+```
+
+**教訓**:
+- モジュール間のフィールド名マッピングを文書化する
+- 正規化処理でエイリアス変換を確実に行う
+- SyncModuleに渡す前のデータをフックで確認する習慣をつける
+
+---
+
 ## 🔧 Part VI: よくある問題と解決策
+
+### 問題: Supabase画像トラブルシューティング
+
+**よくある画像表示トラブルと解決策**:
+
+| 症状 | 原因 | 解決策 |
+|------|------|--------|
+| 全画像が見えない + コンソールに `ERR_NAME_NOT_RESOLVED` | プロジェクト停止 | Supabaseダッシュボードで再開 |
+| 特定の画像が見えない + 403エラー | 署名付きURL期限切れ | `getValidImageSrc()` で再取得 |
+| 別デバイスで画像が見えない | クラウド同期未実行 | ログイン後に `syncNotesToLocal()` |
+| URL更新してもリロードで戻る | Supabase側が古いまま | Supabase側も更新が必要 |
+
+**関連成果物**:
+
+| 日付 | 成果物 | 内容 |
+|------|--------|------|
+| 2026-01-14 | imageUtils.js v1.1.0 | 署名付きURL期限自動更新 |
+| 2026-01-14 | AuthModule v1.2.0 | ログイン時クラウド同期 |
+| 2026-01-14 | NoteManagerModule | sync:notes:synced対応、getValidImageSrc使用 |
+
+---
+
+### 問題: Supabase同期のフィールド名トラブルシューティング
+
+**データがSupabaseに正しく保存されない場合の診断**:
+
+| 症状 | 確認方法 | 解決策 |
+|------|---------|--------|
+| 特定フィールドがNULL | SyncModule.saveTradeをフック | フィールド名マッピングを確認 |
+| データが保存されない | コンソールでエラー確認 | SyncModule初期化状態を確認 |
+| 古いデータで上書き | 複数環境の同時ログイン | 1環境だけでテスト |
+
+**デバッグ用フックコード**:
+```javascript
+// SyncModule.saveTradeをフックしてデータを確認
+const originalSaveTrade = window.SyncModule.saveTrade.bind(window.SyncModule);
+window.SyncModule.saveTrade = async function(localTrade) {
+    console.log('=== saveTrade 呼び出し ===');
+    console.log('送信データ:', localTrade);
+    return originalSaveTrade(localTrade);
+};
+```
+
+**関連成果物**:
+
+| 日付 | 成果物 | 内容 |
+|------|--------|------|
+| 2026-01-14 | TradeManager-nomodule.js | entryTime正規化追加 |
+
+---
 
 ### 問題: text-overflow: ellipsis で文字が切れる
 
@@ -1873,4 +2185,4 @@ Part 8: ██████████ 100% ✅（2,504行削減）
 
 ---
 
-*最終更新: 2025-12-23 | ドキュメントバージョン: 4.9.1（月次カレンダー ツールチップ位置修正追加）*
+*最終更新: 2026-01-15 | ドキュメントバージョン: 5.0.2（レスポンシブ改善・Pull-to-Refresh追加）*

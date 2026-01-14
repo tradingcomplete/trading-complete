@@ -236,6 +236,12 @@ class CapitalManagerModule {
             StorageValidator.isArray
         );
         console.log(`CapitalManagerModule: ${this.#records.length}件の入出金記録を読み込み`);
+        
+        // 残高を再計算（Supabase同期後はbalance:0なので必須）
+        if (this.#records.length > 0) {
+            this.#recalculateBalances();
+            console.log(`CapitalManagerModule: 残高再計算完了 → ¥${this.getCurrentBalance().toLocaleString()}`);
+        }
     }
     
     #save() {
