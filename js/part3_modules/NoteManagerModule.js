@@ -2190,17 +2190,16 @@ class NoteManagerModule {
         
         // 画像セクション
         if (note.images && note.images.length > 0) {
+            // 画像を非同期で表示（期限切れURLは自動更新）
+            const imagesContainer = `images-container-${Date.now()}`;
             detailHTML += `
                 <div class="detail-section">
                     <h4>画像</h4>
-                    <div class="detail-images">
+                    <div id="${imagesContainer}" class="detail-images">
+                        <span class="loading-images">画像読み込み中...</span>
+                    </div>
+                </div>
             `;
-            
-            // 画像を非同期で表示（期限切れURLは自動更新）
-            const imagesContainer = `images-container-${Date.now()}`;
-            detailHTML += `<div id="${imagesContainer}" class="detail-images">`;
-            detailHTML += '<span class="loading-images">画像読み込み中...</span>';
-            detailHTML += '</div>';
             
             // 詳細表示後に画像を非同期で読み込む
             setTimeout(async () => {
@@ -2230,11 +2229,6 @@ class NoteManagerModule {
                     }
                 }
             }, 0);
-            
-            detailHTML += `
-                    </div>
-                </div>
-            `;
         }
         
         detailHTML += '</div>';
