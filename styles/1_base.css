@@ -673,11 +673,11 @@ textarea {
 }
 
 .chart-images-container .image-upload-area {
-    flex: 0 0 auto;
-    width: 180px;
-    height: 120px;
-    min-height: 120px;
-    max-height: 120px;
+    flex: 0 0 auto !important;
+    width: 180px !important;
+    height: 120px !important;
+    min-height: 120px !important;
+    max-height: 120px !important;
     border: 2px dashed #444;
     border-radius: 8px;
     cursor: pointer;
