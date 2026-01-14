@@ -23,6 +23,7 @@
                 
                 // 基本情報
                 date: new Date().toISOString(),
+                entryTime: null,  // ← 追加: SyncModule用
                 pair: '',
                 symbol: '',
                 direction: 'long',
@@ -83,6 +84,12 @@
             const lotValue = parseFloat(trade.lot || trade.lotSize) || 1.0;
             normalized.lot = lotValue;
             normalized.lotSize = lotValue;
+            
+            // entryTime の正規化（entryDatetime → entryTime）
+            // TradeEntry.js は entryDatetime、SyncModule は entryTime を使用
+            if (!normalized.entryTime && trade.entryDatetime) {
+                normalized.entryTime = trade.entryDatetime;
+            }
             
             // すべての数値フィールドを確実に数値型に変換
             const numericFields = [
