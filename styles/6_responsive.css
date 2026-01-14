@@ -438,24 +438,24 @@
         box-sizing: border-box !important;
     }
     
-    /* 日付入力 */
+    /* 日付入力 - 固定幅で統一 */
     #exitEntriesContainer input[type="datetime-local"],
     .exit-entries input[type="datetime-local"],
     .exit-entry input[type="datetime-local"],
     .exit-time {
-        flex: 1 1 auto !important;
-        min-width: 110px !important;
+        flex: 0 0 125px !important;
+        width: 125px !important;
         font-size: 0.65rem !important;
         height: 38px !important;
         padding: 6px !important;
     }
     
-    /* 決済価格 */
+    /* 決済価格 - 残りスペースを使う */
     #exitEntriesContainer input.exit-price,
     .exit-entries input.exit-price,
     .exit-entry input.exit-price {
-        flex: 0 0 70px !important;
-        width: 70px !important;
+        flex: 1 1 auto !important;
+        min-width: 50px !important;
         text-align: center !important;
         height: 38px !important;
     }

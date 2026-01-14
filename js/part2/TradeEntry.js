@@ -355,12 +355,17 @@ class TradeEntry {
             // === テキストフィールドのサニタイズ ===
             symbol: this.#sanitize(formData.symbol),
             broker: this.#sanitize(formData.broker),
-            reasons: this.#sanitize(formData.reasons),
+            // reasons は配列として保存（SyncModule/TradeDetailとの互換性）
+            reasons: [
+                this.#sanitize(formData.reason1),
+                this.#sanitize(formData.reason2),
+                this.#sanitize(formData.reason3)
+            ],
             insights: this.#sanitize(formData.insights),
             improvements: this.#sanitize(formData.improvements),
             exitReason: this.#sanitize(formData.exitReason),
             
-            // エントリー根拠（新フォーム用）
+            // エントリー根拠（互換性のため個別も残す）
             reason1: this.#sanitize(formData.reason1),
             reason2: this.#sanitize(formData.reason2),
             reason3: this.#sanitize(formData.reason3),
