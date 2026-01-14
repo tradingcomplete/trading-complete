@@ -94,6 +94,27 @@ class NoteManagerModule {
     }
 
     /**
+     * ノートをlocalStorageとSupabaseに保存（URL更新時用）
+     * @param {string} dateStr - 日付
+     * @param {Object} note - ノートデータ
+     */
+    async #saveNoteToStorageAndCloud(dateStr, note) {
+        // localStorageに保存
+        this.#notes[dateStr] = note;
+        this.#save();
+        
+        // Supabaseにも保存（SyncModuleがあれば）
+        if (window.SyncModule?.saveNote) {
+            try {
+                await window.SyncModule.saveNote(dateStr, note);
+                console.log('[NoteManagerModule] 更新されたURLをクラウドに保存');
+            } catch (e) {
+                console.warn('[NoteManagerModule] クラウド保存エラー:', e);
+            }
+        }
+    }
+
+    /**
      * localStorageからデータを再読み込みしてUIを更新
      * クラウド同期後に呼び出される
      */
@@ -934,14 +955,33 @@ class NoteManagerModule {
             this.removeNoteImageAt(i, true);  // 内部呼び出しなので確認スキップ
         }
         
-        // 画像を復元
+        // 画像を復元（期限切れURLは自動更新）
         if (imageArray && imageArray.length > 0) {
-            imageArray.forEach((imgSrc, idx) => {
-                if (imgSrc && idx < 3) {
-                    window.pendingNoteImageIndex = idx + 1;
-                    this.displayNoteImage(imgSrc);
-                }
-            });
+            this.#restoreImagesAsync(imageArray);
+        }
+    }
+    
+    /**
+     * 画像を非同期で復元（期限切れURL自動更新対応）
+     * @param {Array} imageArray - 画像配列
+     */
+    async #restoreImagesAsync(imageArray) {
+        for (let idx = 0; idx < imageArray.length && idx < 3; idx++) {
+            const img = imageArray[idx];
+            if (!img) continue;
+            
+            // 期限切れURLは自動更新
+            let imgSrc;
+            if (window.getValidImageSrc && typeof img === 'object') {
+                imgSrc = await window.getValidImageSrc(img);
+            } else {
+                imgSrc = window.getImageSrc ? window.getImageSrc(img) : img;
+            }
+            
+            if (imgSrc) {
+                window.pendingNoteImageIndex = idx + 1;
+                this.displayNoteImage(imgSrc);
+            }
         }
     }
 
@@ -2156,13 +2196,40 @@ class NoteManagerModule {
                     <div class="detail-images">
             `;
             
-            note.images.forEach((img, index) => {
-                const imgSrc = window.getImageSrc ? window.getImageSrc(img) : 
-                    (typeof img === 'string' ? img : (img.url || img.data || ''));
-                if (imgSrc) {
-                    detailHTML += `<img src="${imgSrc}" onclick="showImageModal('${imgSrc}')" style="cursor: pointer; max-width: 200px; max-height: 150px; margin: 5px; border-radius: 8px;">`;
+            // 画像を非同期で表示（期限切れURLは自動更新）
+            const imagesContainer = `images-container-${Date.now()}`;
+            detailHTML += `<div id="${imagesContainer}" class="note-detail-images">`;
+            detailHTML += '<span class="loading-images">画像読み込み中...</span>';
+            detailHTML += '</div>';
+            
+            // 詳細表示後に画像を非同期で読み込む
+            setTimeout(async () => {
+                const container = document.getElementById(imagesContainer);
+                if (!container) return;
+                
+                let imagesHtml = '';
+                for (const img of note.images) {
+                    // 期限切れURLは自動更新
+                    const imgSrc = window.getValidImageSrc 
+                        ? await window.getValidImageSrc(img)
+                        : window.getImageSrc(img);
+                    
+                    if (imgSrc) {
+                        imagesHtml += `<img src="${imgSrc}" onclick="showImageModal('${imgSrc}')" style="cursor: pointer; max-width: 200px; max-height: 150px; margin: 5px; border-radius: 8px;">`;
+                    }
                 }
-            });
+                
+                container.innerHTML = imagesHtml || '<span class="no-images">画像なし</span>';
+                
+                // URLが更新されていたらlocalStorageとSupabaseに保存
+                if (window.isUrlExpired) {
+                    const anyExpired = note.images.some(img => window.isUrlExpired(img));
+                    if (!anyExpired && imagesHtml) {
+                        // 更新されたデータを保存
+                        this.#saveNoteToStorageAndCloud(dateStr, note);
+                    }
+                }
+            }, 0);
             
             detailHTML += `
                     </div>
