@@ -2198,7 +2198,7 @@ class NoteManagerModule {
             
             // 画像を非同期で表示（期限切れURLは自動更新）
             const imagesContainer = `images-container-${Date.now()}`;
-            detailHTML += `<div id="${imagesContainer}" class="note-detail-images">`;
+            detailHTML += `<div id="${imagesContainer}" class="detail-images">`;
             detailHTML += '<span class="loading-images">画像読み込み中...</span>';
             detailHTML += '</div>';
             
