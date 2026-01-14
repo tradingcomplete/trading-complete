@@ -419,35 +419,63 @@
     
     /* 決済エントリーの親要素を1行化 */
     #exitEntriesContainer > div,
-    .exit-entries > div {
+    .exit-entries > div,
+    .exit-entry {
         display: flex !important;
         flex-wrap: nowrap !important;
-        gap: 4px !important;
+        gap: 6px !important;
         align-items: center !important;
         margin-bottom: 8px !important;
     }
     
     #exitEntriesContainer input,
-    .exit-entries input {
-        flex: 1 !important;
+    .exit-entries input,
+    .exit-entry input {
         min-width: 0 !important;
-        font-size: 0.7rem !important;
-        padding: 4px !important;
-        height: 34px !important;
+        font-size: 0.75rem !important;
+        padding: 6px 8px !important;
+        height: 36px !important;
+        box-sizing: border-box !important;
     }
     
+    /* 日付入力 - 固定幅 */
     #exitEntriesContainer input[type="datetime-local"],
-    .exit-entries input[type="datetime-local"] {
-        flex: 2.5 !important;
-        font-size: 0.6rem !important;
+    .exit-entries input[type="datetime-local"],
+    .exit-entry input[type="datetime-local"],
+    .exit-time {
+        flex: 0 0 130px !important;
+        width: 130px !important;
+        font-size: 0.65rem !important;
+        height: 36px !important;
+    }
+    
+    /* 決済価格 */
+    #exitEntriesContainer input.exit-price,
+    .exit-entries input.exit-price,
+    .exit-entry input.exit-price {
+        flex: 1 !important;
+        text-align: center !important;
+        height: 36px !important;
+    }
+    
+    /* ロット */
+    #exitEntriesContainer input.exit-lot,
+    .exit-entries input.exit-lot,
+    .exit-entry input.exit-lot {
+        flex: 0 0 50px !important;
+        width: 50px !important;
+        text-align: center !important;
+        height: 36px !important;
     }
     
     #exitEntriesContainer button,
-    .exit-entries button {
+    .exit-entries button,
+    .exit-entry button {
         flex-shrink: 0 !important;
         font-size: 0.6rem !important;
         padding: 4px 6px !important;
-        height: 34px !important;
+        height: 36px !important;
+        box-sizing: border-box !important;
     }
     
     /* === 分析タブ - トレード履歴ヘッダーを1行に === */

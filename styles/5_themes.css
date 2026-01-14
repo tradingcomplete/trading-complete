@@ -1441,6 +1441,32 @@ body.light-mode .trade-info {
     color: #333333 !important;
 }
 
+/* 決済モーダル - 参考情報セクション（ライトモード） */
+body.light-mode .reference-info {
+    background: rgba(59, 130, 246, 0.15) !important;
+    border: 1px solid rgba(59, 130, 246, 0.5) !important;
+}
+
+body.light-mode .reference-info h4 {
+    color: #2563eb !important;
+}
+
+/* 通貨ペア、価格、未決済ロットのテキスト */
+body.light-mode .reference-info > div > div:nth-child(1),
+body.light-mode .reference-info > div > div:nth-child(3),
+body.light-mode .reference-info > div > div:nth-child(4) {
+    color: #333333 !important;
+}
+
+/* 売り/買いの色（2番目の子要素）- ダークモードより濃い色 */
+body.light-mode .reference-info > div > div:nth-child(2) {
+    color: inherit;
+}
+
+body.light-mode .reference-info span {
+    color: #2563eb !important;
+}
+
 body.light-mode .modal-content [style*="background: rgba(0, 0, 0"] {
     background: #e8e8e8 !important;
     color: #333333 !important;

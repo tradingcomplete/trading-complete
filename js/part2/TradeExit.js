@@ -70,17 +70,17 @@ class TradeExit {
         console.log('Final remainingLot:', remainingLot);
         
         content.innerHTML = `
-            <div class="reference-info" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                <h4 style="color: #60a5fa; margin: 0 0 12px 0; font-size: 0.9rem; font-weight: 600;">📊 参考情報（エントリー）</h4>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="font-size: 1.1rem; font-weight: 600; color: #e5e7eb;">${trade.pair}</div>
-                    <div style="font-size: 1rem; color: ${trade.direction === 'long' ? '#4ade80' : '#f87171'}; font-weight: 500;">
+            <div class="reference-info" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px 15px; margin-bottom: 15px;">
+                <h4 style="color: #60a5fa; margin: 0 0 10px 0; font-size: 0.85rem; font-weight: 600;">📊 参考情報（エントリー）</h4>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 4px 15px;">
+                    <div style="font-size: 1rem; font-weight: 600; color: #e5e7eb;">${trade.pair}</div>
+                    <div style="font-size: 0.85rem; color: #9ca3af; text-align: right;">
+                        未決済: <span style="color: #60a5fa; font-weight: 600;">${remainingLot.toFixed(1)} Lot</span>
+                    </div>
+                    <div style="font-size: 0.9rem; color: ${trade.direction === 'long' ? '#4ade80' : '#f87171'}; font-weight: 500;">
                         ${trade.direction === 'long' ? '買い (LONG)' : '売り (SHORT)'}
                     </div>
-                    <div style="font-size: 1rem; color: #e5e7eb;">${trade.entryPrice}</div>
-                    <div style="font-size: 0.95rem; color: #9ca3af; margin-top: 4px;">
-                        未決済ロット: <span style="color: #60a5fa; font-weight: 600;">${remainingLot.toFixed(1)} Lot</span>
-                    </div>
+                    <div style="font-size: 0.9rem; color: #e5e7eb; text-align: right;">${trade.entryPrice}</div>
                 </div>
             </div>
             
