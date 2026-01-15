@@ -1,6 +1,6 @@
 # OVERVIEW.md - Trading Complete 全体構造図
 *このファイルは変更禁止 - 全体の地図として固定*
-*最終更新: 2026-01-04 - クラウド同期機能追加（SyncModule v1.5.0, ImageHandler v1.1.0）*
+*最終更新: 2026-01-15 - Phase 5テスト完了（SyncModule v1.7.0, AuthModule v1.4.0）*
 
 ## 🗺️ システム全体図
 ```
@@ -15,9 +15,9 @@ Trading Complete（約50,000行）
 │   │   ├── supabaseClient.js（Supabase接続 ✅Phase 1）
 │   │   └── security.js（セキュリティユーティリティ ✅Phase 3.6）
 │   ├── auth/（認証モジュール ✅Phase 3完了）
-│   │   └── AuthModule.js（認証管理 v1.1.0 - セッション監視対応）
+│   │   └── AuthModule.js（認証管理 v1.4.0 - マイページ変更・パスワードリセット対応）
 │   ├── sync/（同期モジュール ✅）
-│   │   └── SyncModule.js ✅（クラウド同期 v1.5.0）
+│   │   └── SyncModule.js ✅（クラウド同期 v1.7.0）
 │   ├── part2/（10モジュール - 完成✅）
 │   │   ├── TradeCalculator.js
 │   │   ├── TradeDetail.js
@@ -145,15 +145,15 @@ Trading Complete（約50,000行）
 ✅ Phase 3: 認証実装（AuthModule.js）
 ✅ Phase 3.5: マイページUI
 ✅ Phase 3.6: セキュリティ基盤（security.js）
-✅ Phase 4: データ同期（SyncModule.js v1.5.0）✅ 完了
-⬜ Phase 5: 統合テスト・リリース
+✅ Phase 4: データ同期（SyncModule.js v1.7.0）✅ 完了
+🔄 Phase 5: 統合テスト・リリース（テスト完了、リリース準備中）
 ```
 
-**✅ クラウド同期実装完了（2026-01-04）**:
+**✅ クラウド同期実装完了（2026-01-15 Phase 5テスト完了）**:
 ```
 ✅ Supabase連携
-   - 認証（AuthModule v1.1.0）
-   - データ同期（SyncModule v1.5.0）
+   - 認証（AuthModule v1.4.0）
+   - データ同期（SyncModule v1.7.0）
    - 画像Storage（ImageHandler v1.1.0）
    - RLSによるデータ分離
    - セキュリティ基盤（security.js）
@@ -305,7 +305,7 @@ security.js              // セキュリティユーティリティ
   StorageValidator.safeLoad() // localStorage安全読込
 
 // 認証 - js/auth/
-AuthModule               // js/auth/AuthModule.js（v1.1.0）
+AuthModule               // js/auth/AuthModule.js（v1.4.0）
   .init()                 // 初期化
   .getCurrentUser()       // 現在のユーザー取得
   .getUsername()          // ユーザー名取得
@@ -314,7 +314,7 @@ AuthModule               // js/auth/AuthModule.js（v1.1.0）
   .logout()              // ログアウト
 
 // 同期 - js/sync/
-SyncModule               // js/sync/SyncModule.js（v1.5.0）
+SyncModule               // js/sync/SyncModule.js（v1.7.0）
   .initialize()           // 初期化
   .isInitialized()        // 初期化状態確認
   .saveTrade(trade)       // トレード保存（+ 画像アップロード）

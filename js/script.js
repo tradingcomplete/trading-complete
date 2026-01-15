@@ -5272,7 +5272,16 @@ window.toggleGoalsDisplay = toggleGoalsDisplay;
             `;
             document.body.appendChild(overlay);
             
-            setTimeout(() => location.reload(), 500);
+            // リロード実行（PWA対応：複数の方法を試行）
+            setTimeout(() => {
+                // 方法1: 通常のリロード
+                location.reload();
+                
+                // 方法2: 1.5秒後にまだ残っていたらURLリダイレクト
+                setTimeout(() => {
+                    window.location.href = window.location.pathname + '?t=' + Date.now();
+                }, 1500);
+            }, 500);
         }
     }, { passive: true });
     

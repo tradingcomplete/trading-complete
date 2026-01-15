@@ -1,7 +1,7 @@
-# Supabase テーブル構造（Phase 4 完了版）
+# Supabase テーブル構造（Phase 5 テスト完了版）
 
 **作成日**: 2025-12-30  
-**更新日**: 2026-01-14  
+**更新日**: 2026-01-15  
 **用途**: SyncModule.js データ変換・引き継ぎ資料
 
 ---
@@ -278,7 +278,7 @@ CREATE TABLE capital_records (
 - localStorage: `note` → Supabase: `memo`
 - `balance` は保存しない（CapitalManagerModuleが再計算）
 
-### 3.4 user_settings テーブル ✅ 同期完了（v1.5.3で拡張）
+### 3.4 user_settings テーブル ✅ 同期完了（v1.7.0で拡張）
 
 ```sql
 CREATE TABLE user_settings (
@@ -289,6 +289,9 @@ CREATE TABLE user_settings (
   closed_periods JSONB DEFAULT '[]',
   goals JSONB DEFAULT '{}',           -- v1.5.3で追加
   user_icon TEXT DEFAULT NULL,         -- v1.5.3で追加
+  site_title TEXT DEFAULT NULL,        -- v1.7.0で追加
+  subtitle TEXT DEFAULT NULL,          -- v1.7.0で追加
+  self_image TEXT DEFAULT NULL,        -- v1.7.0で追加（未使用）
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -304,14 +307,17 @@ CREATE TABLE user_settings (
 | closed_periods | `tc_closed_periods` | ClosingManagerModule |
 | goals | `goalsData`, `goalText1`〜`goalAchieved3` | SettingsModule |
 | user_icon | `userIcon` | SettingsModule |
+| site_title | `siteTitle` | SettingsModule |
+| subtitle | `siteSubtitle` | SettingsModule |
+| self_image | （未使用） | - |
 
-**同期方式**: 一括保存（6つのlocalStorageを1レコードにまとめて保存）
+**同期方式**: 一括保存（8つのlocalStorageを1レコードにまとめて保存）
 
 ---
 
 ## 4. SyncModule.js 実装状況
 
-### 4.1 SyncModule.js v1.6.0 ✅ 完成
+### 4.1 SyncModule.js v1.7.0 ✅ 完成
 
 **ファイルパス**: `js/sync/SyncModule.js`
 
@@ -347,7 +353,7 @@ CREATE TABLE user_settings (
 | `migrateCapitalRecordsFromLocal()` | capital_records | ローカル→クラウド移行 |
 | `syncCapitalRecordsToLocal()` | capital_records | クラウド→ローカル同期 |
 | **user_settings** | | |
-| `saveUserSettings()` | user_settings | 6つのlocalStorage一括保存 |
+| `saveUserSettings()` | user_settings | 8つのlocalStorage一括保存 |
 | `fetchUserSettings()` | user_settings | 設定取得 |
 | `syncUserSettingsToLocal()` | user_settings | クラウド→ローカル展開 |
 | `migrateUserSettingsFromLocal()` | user_settings | ローカル→クラウド移行 |
@@ -382,7 +388,8 @@ CREATE TABLE user_settings (
 | 2026-01-04 | ClosingManagerModule自動同期テスト（月次締め） | ✅ 成功 |
 | 2026-01-05 | Supabase Storage 画像アップロードテスト | ✅ 成功 |
 | 2026-01-09 | goals/icon 同期テスト | ✅ 成功 |
-| **2026-01-14** | **セキュリティテスト（XSS対策）** | **✅ 成功** |
+| 2026-01-14 | セキュリティテスト（XSS対策） | ✅ 成功 |
+| **2026-01-15** | **siteTitle/subtitle 同期テスト** | **✅ 成功** |
 
 ---
 
@@ -397,6 +404,38 @@ CREATE TABLE user_settings (
 | 4.7 | goals/icon同期 | 2026-01-09 |
 | 4.8 | セキュリティ適用 | 2026-01-14 |
 | 4.9 | 初回移行フロー | スキップ |
+| **4.10** | **siteTitle/subtitle同期** | **2026-01-15** |
+
+---
+
+## 6. Phase 5 テスト完了サマリー（2026-01-15）
+
+### RLSテスト結果
+
+| テーブル | テスト内容 | 結果 |
+|---------|-----------|------|
+| trades | 自分のデータのみ取得可能 | ✅ |
+| notes | 自分のデータのみ取得可能 | ✅ |
+| expenses | 自分のデータのみ取得可能 | ✅ |
+| capital_records | 自分のデータのみ取得可能 | ✅ |
+| user_settings | 自分のデータのみ取得可能 | ✅ |
+
+### 同期パフォーマンス
+
+| 項目 | 値 |
+|------|-----|
+| localStorage読み込み | 0.20 ms |
+| クラウド読み込み | 82.80 ms |
+| 現在のデータ量 | トレード52件、ノート5件、経費3件 |
+| localStorage使用率 | 2.6%（132 KB / 5,000 KB） |
+| 1年後推定使用量 | 637 KB（問題なし） |
+
+### 既知の制限
+
+| 項目 | 状態 | 対応 |
+|------|------|------|
+| オフライン保存 | リロードでクラウドに上書き | v1.1で差分マージ予定 |
+| 同時編集 | Last Write Wins（後勝ち） | 現状維持 |
 
 ---
 
@@ -407,7 +446,9 @@ CREATE TABLE user_settings (
 | Phase 2版 | 2025-12-17 | 初版（テーブル定義のみ） |
 | Phase 4版 | 2025-12-30 | trades 4カラム追加、SyncModule実装、マッピング詳細追加 |
 | Phase 4完了版 | 2026-01-04 | 全5テーブル同期完了、SyncModule v1.4.0、Supabase Storage設計追加 |
-| **Phase 4最終版** | **2026-01-14** | **Phase 4全完了、Storage実装完了、goals/icon同期追加、SyncModule v1.6.0、user_settingsカラム追加** |
+| Phase 4最終版 | 2026-01-14 | Phase 4全完了、Storage実装完了、goals/icon同期追加、SyncModule v1.6.0、user_settingsカラム追加 |
+| Phase 4最終版+ | 2026-01-15 | site_title/subtitle/self_imageカラム追加、SyncModule v1.7.0 |
+| **Phase 5テスト完了版** | **2026-01-15** | **Phase 5テスト完了、RLSテスト結果・パフォーマンス・既知の制限追記** |
 
 ---
 
