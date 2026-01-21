@@ -1390,6 +1390,8 @@
                 let base64Data = null;
                 let imgType = `image${i + 1}`;
                 let imgTimestamp = new Date().toISOString();
+                let imgTitle = '';
+                let imgDescription = '';
                 
                 if (typeof img === 'string') {
                     // 文字列形式: 'data:image/...' または 'http://...'
@@ -1399,7 +1401,9 @@
                             type: imgType,
                             url: img,
                             path: null,
-                            timestamp: imgTimestamp
+                            timestamp: imgTimestamp,
+                            title: '',
+                            description: ''
                         });
                         continue;
                     }
@@ -1407,17 +1411,39 @@
                         base64Data = img;
                     }
                 } else if (typeof img === 'object') {
-                    // オブジェクト形式: { data: '...', url: '...', type: '...' }
+                    // オブジェクト形式: { data: '...', url: '...', type: '...', title: '...', description: '...' }
                     imgType = img.type || imgType;
                     imgTimestamp = img.timestamp || imgTimestamp;
+                    imgTitle = img.title || '';
+                    imgDescription = img.description || '';
                     
                     if (img.url && img.url.startsWith('http')) {
-                        // 既にURLの場合はそのまま
-                        updatedImages.push(img);
+                        // 既にURLの場合はそのまま（title/descriptionを保持）
+                        updatedImages.push({
+                            ...img,
+                            title: imgTitle,
+                            description: imgDescription
+                        });
+                        continue;
+                    }
+                    // src形式にも対応
+                    if (img.src && img.src.startsWith('http')) {
+                        updatedImages.push({
+                            type: imgType,
+                            url: img.src,
+                            path: img.path || null,
+                            timestamp: imgTimestamp,
+                            title: imgTitle,
+                            description: imgDescription
+                        });
                         continue;
                     }
                     if (img.data && img.data.startsWith('data:image')) {
                         base64Data = img.data;
+                    }
+                    // src形式のbase64にも対応
+                    if (img.src && img.src.startsWith('data:image')) {
+                        base64Data = img.src;
                     }
                 }
                 
@@ -1439,12 +1465,14 @@
                         compress: false // 既に圧縮済み
                     });
                     
-                    // URL形式に変換
+                    // URL形式に変換（title/descriptionを保持）
                     updatedImages.push({
                         type: imgType,
                         url: result.url,
                         path: result.path,
-                        timestamp: imgTimestamp
+                        timestamp: imgTimestamp,
+                        title: imgTitle,
+                        description: imgDescription
                     });
                     
                     console.log(`[SyncModule] ノート画像アップロード成功: ${path}`);
