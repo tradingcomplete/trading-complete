@@ -1412,9 +1412,9 @@ window.openModalImageEdit = function() {
     // 拡大モーダルを閉じる
     closeImageModal();
     
-    // 少し遅延させて編集モーダルを開く
+    // 少し遅延させて編集モーダルを開く（source='modal'を指定）
     setTimeout(() => {
-        openImageCaptionEdit(context.type, context.id, context.index);
+        openImageCaptionEdit(context.type, context.id, context.index, 'modal');
     }, 100);
 };
 
@@ -1427,8 +1427,9 @@ window.openModalImageEdit = function() {
  * @param {string} type - 'trade' または 'note'
  * @param {string} id - トレードID または 日付文字列
  * @param {number} index - 画像インデックス（0始まり）
+ * @param {string} source - 'modal'=拡大モーダルから, 'detail'=詳細から（デフォルト）
  */
-window.openImageCaptionEdit = function(type, id, index) {
+window.openImageCaptionEdit = function(type, id, index, source = 'detail') {
     let imgData = null;
     
     if (type === 'trade') {
@@ -1456,8 +1457,8 @@ window.openImageCaptionEdit = function(type, id, index) {
     const normalized = window.normalizeImageData ? window.normalizeImageData(imgData) : 
                        { src: imgData, title: '', description: '' };
     
-    // コンテキストを保存
-    captionEditContext = { type, id, index };
+    // コンテキストを保存（sourceを含める）
+    captionEditContext = { type, id, index, source };
     
     // モーダルに値をセット
     const previewImg = document.getElementById('captionEditPreviewImg');
@@ -1505,7 +1506,8 @@ window.saveImageCaptionEdit = function() {
     const title = titleInput ? titleInput.value.trim() : '';
     const description = descInput ? descInput.value.trim() : '';
     
-    const { type, id, index } = captionEditContext;
+    const { type, id, index, source } = captionEditContext;
+    let updatedImgData = null;
     
     if (type === 'trade') {
         // トレードの画像を更新
@@ -1523,10 +1525,25 @@ window.saveImageCaptionEdit = function() {
             window.tradeManager.updateTrade(id, { chartImages });
             showToast('画像の説明を更新しました', 'success');
             
-            // トレード詳細を再表示
-            if (window.tradeDetail && typeof window.tradeDetail.showTradeDetail === 'function') {
-                const updatedTrade = window.tradeManager.getTradeById(id);
-                window.tradeDetail.showTradeDetail(updatedTrade);
+            // 更新後の画像データを取得
+            const updatedTrade = window.tradeManager.getTradeById(id);
+            if (updatedTrade && updatedTrade.chartImages) {
+                updatedImgData = updatedTrade.chartImages[index];
+            }
+            
+            // 戻り先に応じて処理を分岐
+            if (source === 'modal') {
+                // 拡大モーダルから来た場合 → 拡大モーダルに戻る
+                closeImageCaptionEditModal();
+                setTimeout(() => {
+                    showImageModalWithCaption(updatedImgData, { type, id, index });
+                }, 150);
+                return;
+            } else {
+                // 詳細モーダルから来た場合 → 詳細モーダルを再表示
+                if (window.tradeDetail && typeof window.tradeDetail.showTradeDetail === 'function') {
+                    window.tradeDetail.showTradeDetail(updatedTrade);
+                }
             }
         }
     } else if (type === 'note') {
@@ -1535,6 +1552,23 @@ window.saveImageCaptionEdit = function() {
             const success = window.NoteManagerModule.updateImageCaption(id, index, title, description);
             if (success) {
                 showToast('画像の説明を更新しました', 'success');
+                
+                // 更新後の画像データを取得
+                const note = window.NoteManagerModule.getNote(id);
+                if (note && note.images) {
+                    updatedImgData = note.images[index];
+                }
+                
+                // 戻り先に応じて処理を分岐
+                if (source === 'modal') {
+                    // 拡大モーダルから来た場合 → 拡大モーダルに戻る
+                    closeImageCaptionEditModal();
+                    setTimeout(() => {
+                        showImageModalWithCaption(updatedImgData, { type, id, index });
+                    }, 150);
+                    return;
+                }
+                // 詳細から来た場合は特に何もしない（ノート一覧は自動更新される）
             } else {
                 showToast('更新に失敗しました', 'error');
             }
