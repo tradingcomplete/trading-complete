@@ -857,20 +857,23 @@ class NoteManagerModule {
 
     /**
      * 画像を表示
-     * @param {string} imageSrc - 画像ソース
+     * @param {string|Object} imageData - 画像ソースまたは画像データオブジェクト
      */
-    displayNoteImage(imageSrc) {
+    displayNoteImage(imageData) {
         const container = document.getElementById('noteImages');
         if (!container) return;
         
         // 画像ソースを取得（Base64/URL/オブジェクト形式すべてに対応）
-        const actualSrc = window.getImageSrc ? window.getImageSrc(imageSrc) : 
-            (typeof imageSrc === 'string' ? imageSrc : (imageSrc?.url || imageSrc?.data || null));
+        const actualSrc = window.getImageSrc ? window.getImageSrc(imageData) : 
+            (typeof imageData === 'string' ? imageData : (imageData?.url || imageData?.src || imageData?.data || null));
         
         if (!actualSrc) {
             console.log('[NoteManagerModule] 有効な画像ソースがありません');
             return;
         }
+        
+        // 題名を取得
+        const imgTitle = window.getImageTitle ? window.getImageTitle(imageData) : (imageData?.title || '');
         
         // pendingNoteImageIndexがあればそのインデックスに、なければ最初の空枠に
         let targetIndex = window.pendingNoteImageIndex;
@@ -896,6 +899,7 @@ class NoteManagerModule {
         targetSlot.innerHTML = `
             <img src="${actualSrc}" alt="ノート画像${targetIndex}">
             <button class="note-image-delete" onclick="event.stopPropagation(); window.NoteManagerModule.removeNoteImageAt(${targetIndex})">×</button>
+            ${imgTitle ? `<div class="note-image-title">${imgTitle}</div>` : ''}
         `;
         targetSlot.onclick = () => this.addNoteImageAt(targetIndex);
         
@@ -1059,7 +1063,12 @@ class NoteManagerModule {
             
             if (imgSrc) {
                 window.pendingNoteImageIndex = idx + 1;
-                this.displayNoteImage(imgSrc);
+                // 画像データ全体を渡す（title/descriptionを含む）
+                // URLが更新された場合はsrcを更新したオブジェクトを作成
+                const imageDataWithUpdatedSrc = typeof img === 'object' 
+                    ? { ...img, src: imgSrc, url: imgSrc }
+                    : imgSrc;
+                this.displayNoteImage(imageDataWithUpdatedSrc);
             }
         }
     }
