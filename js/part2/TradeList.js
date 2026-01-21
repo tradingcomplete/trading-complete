@@ -588,6 +588,11 @@ class TradeList {
                     // 新形式（複数画像）
                     trade.chartImages.slice(0, 3).forEach(img => {
                         if (img) {
+                            // ラッパーdivを作成（画像+題名）
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'trade-image-wrapper';
+                            wrapper.style.cssText = 'display: flex; flex-direction: column; align-items: center;';
+                            
                             const imgEl = document.createElement('img');
                             // まず同期的に取得（即座に表示）
                             let imgSrc = window.getImageSrc ? window.getImageSrc(img) : (typeof img === 'string' ? img : (img && img.url ? img.url : null));
@@ -614,7 +619,7 @@ class TradeList {
                             }
                             
                             imgEl.onerror = function() {
-                                this.style.display = 'none';
+                                this.parentElement.style.display = 'none';
                             };
                             
                             // 画像データをクロージャでキャプチャ（題名・説明用）
@@ -628,7 +633,20 @@ class TradeList {
                                     window.showImageModal(imgEl.src);
                                 }
                             };
-                            imagesSection.appendChild(imgEl);
+                            
+                            wrapper.appendChild(imgEl);
+                            
+                            // 題名を表示
+                            const imgTitle = window.getImageTitle ? window.getImageTitle(img) : (img.title || '');
+                            if (imgTitle) {
+                                const titleEl = document.createElement('div');
+                                titleEl.className = 'trade-image-title';
+                                titleEl.textContent = imgTitle;
+                                titleEl.style.cssText = 'font-size: 11px; color: #888; text-align: center; margin-top: 4px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+                                wrapper.appendChild(titleEl);
+                            }
+                            
+                            imagesSection.appendChild(wrapper);
                         }
                     });
                 } else if (trade.tradeChartImage) {
