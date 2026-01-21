@@ -2169,7 +2169,7 @@
     <div id="imageModal" class="modal image-modal" onclick="closeImageModal()">
         <button class="image-modal-close" onclick="closeImageModal(); event.stopPropagation();">×</button>
         <div class="image-modal-content" onclick="event.stopPropagation()">
-            <img id="modalImage" src="" alt="拡大画像">
+            <img id="modalImage" src="" alt="拡大画像" onclick="toggleImageCaption(); event.stopPropagation();">
             <div class="image-modal-caption" id="modalImageCaption" onclick="toggleImageCaption(); event.stopPropagation();">
                 <div class="caption-content" id="captionContent">
                     <div class="caption-title" id="modalCaptionTitle"></div>

@@ -452,17 +452,30 @@ class TradeEntry {
         
         // チャート画像1, 2, 3を収集
         for (let i = 1; i <= 3; i++) {
-            const preview = document.getElementById(`tradeChartImagePreview${i}`);
-            const img = preview?.querySelector('img');
-            if (img && img.src && img.src.startsWith('data:')) {
+            // tempChartImageに保存されたデータ（title/description含む）を使用
+            const tempData = window[`tempChartImage${i}`];
+            
+            if (tempData && tempData.src && tempData.src.startsWith('data:')) {
+                // 新形式: {src, title, description}
                 images.push({
-                    type: `chart${i}`,
-                    data: img.src,
-                    timestamp: new Date().toISOString()
+                    src: tempData.src,
+                    title: tempData.title || '',
+                    description: tempData.description || ''
                 });
             } else {
-                // 画像がない場合はnull（配列のインデックスを維持）
-                images.push(null);
+                // フォールバック: プレビューからsrcを取得
+                const preview = document.getElementById(`tradeChartImagePreview${i}`);
+                const img = preview?.querySelector('img');
+                if (img && img.src && img.src.startsWith('data:')) {
+                    images.push({
+                        src: img.src,
+                        title: '',
+                        description: ''
+                    });
+                } else {
+                    // 画像がない場合はnull（配列のインデックスを維持）
+                    images.push(null);
+                }
             }
         }
         
@@ -636,6 +649,25 @@ class TradeEntry {
         if (preview) preview.innerHTML = '';
         const clearBtn = document.getElementById(`clearTradeChart${index}Btn`);
         if (clearBtn) clearBtn.style.display = 'none';
+        
+        // 枠外の題名をクリア
+        const captionEl = document.getElementById(`tradeChartCaption${index}`);
+        if (captionEl) {
+            captionEl.textContent = '';
+            captionEl.style.display = 'none';
+        }
+        
+        // 一時保存データをクリア
+        window[`tempChartImage${index}`] = null;
+        
+        // has-imageクラスを削除
+        const uploadArea = document.getElementById(`tradeChartImageUpload${index}`);
+        if (uploadArea) {
+            uploadArea.classList.remove('has-image');
+            // 「画像N」テキストを再表示
+            const pElement = uploadArea.querySelector('p');
+            if (pElement) pElement.style.display = 'block';
+        }
     }
 }
 

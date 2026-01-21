@@ -2163,6 +2163,44 @@ body.light-mode .image-caption-outside {
     }
 }
 
+/* ========================================
+   チャート画像 微調整
+   ======================================== */
+
+/* 画像枠内の「画像1」「画像2」「画像3」テキストを横一行に */
+.chart-images-container .image-upload-area p {
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    white-space: nowrap;
+}
+
+/* モバイル: 縦一列、画像左・題名右 */
+@media (max-width: 768px) {
+    .chart-images-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .chart-image-wrapper {
+        flex-direction: row;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .chart-image-wrapper .image-upload-area {
+        flex-shrink: 0;
+    }
+    
+    .image-caption-outside {
+        margin-top: 0;
+        margin-left: 10px;
+        text-align: left;
+        white-space: normal;
+        max-width: none;
+    }
+}
+
 /* 削除ボタンを右上に（画像の上に表示） */
 .image-upload-area .btn-danger,
 .image-upload-area [id^="clearTradeChart"] {
@@ -4396,8 +4434,9 @@ body.light-mode .image-caption-title {
 }
 
 .image-modal-content {
+    position: relative;
     max-width: 90%;
-    max-height: 80%;
+    max-height: 90%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -4405,16 +4444,19 @@ body.light-mode .image-caption-title {
 
 .image-modal-content img {
     max-width: 100%;
-    max-height: 70vh;
+    max-height: 85vh;
     object-fit: contain;
 }
 
 .image-modal-caption {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.7);
     padding: 12px 20px;
     border-radius: 8px;
-    margin-top: 12px;
-    max-width: 100%;
+    max-width: 80%;
     text-align: center;
     cursor: pointer;
     transition: opacity 0.2s;

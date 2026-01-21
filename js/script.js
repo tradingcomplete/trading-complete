@@ -1373,19 +1373,16 @@ window.showImageModalWithCaption = function(imgData) {
 
 // 説明の表示/非表示切り替え
 window.toggleImageCaption = function() {
-    const captionContent = document.getElementById('captionContent');
-    const captionCollapsed = document.getElementById('captionCollapsed');
+    const captionArea = document.getElementById('modalImageCaption');
     
-    if (!captionContent || !captionCollapsed) return;
+    if (!captionArea) return;
     
     window.captionVisible = !window.captionVisible;
     
     if (window.captionVisible) {
-        captionContent.style.display = 'block';
-        captionCollapsed.style.display = 'none';
+        captionArea.style.display = 'block';
     } else {
-        captionContent.style.display = 'none';
-        captionCollapsed.style.display = 'block';
+        captionArea.style.display = 'none';
     }
 };
 
