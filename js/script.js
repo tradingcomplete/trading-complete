@@ -1331,7 +1331,8 @@ function showImageModal(src) {
 }
 
 // 画像モーダル表示（題名・説明付き）
-window.showImageModalWithCaption = function(imgData) {
+// context: { type: 'trade'|'note', id: string, index: number }
+window.showImageModalWithCaption = function(imgData, context) {
     const modal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     const captionArea = document.getElementById('modalImageCaption');
@@ -1339,6 +1340,7 @@ window.showImageModalWithCaption = function(imgData) {
     const captionCollapsed = document.getElementById('captionCollapsed');
     const titleEl = document.getElementById('modalCaptionTitle');
     const descEl = document.getElementById('modalCaptionDesc');
+    const editBtn = document.getElementById('modalCaptionEditBtn');
     
     if (!modal || !modalImage) return;
     
@@ -1350,6 +1352,9 @@ window.showImageModalWithCaption = function(imgData) {
     
     // 画像を設定
     modalImage.src = normalized.src;
+    
+    // 現在表示中の画像コンテキストを保存（編集用）
+    window.currentModalImageContext = context || null;
     
     // 説明エリアの表示/非表示
     const hasCaption = normalized.title || normalized.description;
@@ -1363,6 +1368,10 @@ window.showImageModalWithCaption = function(imgData) {
             if (captionContent) captionContent.style.display = 'block';
             if (captionCollapsed) captionCollapsed.style.display = 'none';
             window.captionVisible = true;
+            // 編集ボタンの表示（コンテキストがある場合のみ）
+            if (editBtn) {
+                editBtn.style.display = context ? 'inline-block' : 'none';
+            }
         } else {
             captionArea.style.display = 'none';
         }
@@ -1388,6 +1397,26 @@ window.toggleImageCaption = function() {
 
 // 説明表示状態の初期値
 window.captionVisible = true;
+
+// 現在表示中の画像コンテキスト
+window.currentModalImageContext = null;
+
+// 拡大モーダルから編集モーダルを開く
+window.openModalImageEdit = function() {
+    const context = window.currentModalImageContext;
+    if (!context || !context.type || !context.id || context.index === undefined) {
+        showToast('編集情報がありません', 'error');
+        return;
+    }
+    
+    // 拡大モーダルを閉じる
+    closeImageModal();
+    
+    // 少し遅延させて編集モーダルを開く
+    setTimeout(() => {
+        openImageCaptionEdit(context.type, context.id, context.index);
+    }, 100);
+};
 
 // ========================================
 // 画像説明編集機能

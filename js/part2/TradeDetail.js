@@ -454,7 +454,7 @@ class TradeDetail {
                             
                             imagesHtml += `
                                 <div class="detail-image-item has-image" onclick="changeTradeImage('${trade.id}', ${i + 1})">
-                                    <img src="${imgSrc}" alt="チャート画像${i + 1}" data-img-index="${i}" onclick="event.stopPropagation(); showImageModalWithCaption(window.tempDetailImages['${trade.id}_${i}'])" onerror="this.style.opacity='0.3'">
+                                    <img src="${imgSrc}" alt="チャート画像${i + 1}" data-img-index="${i}" onclick="event.stopPropagation(); showImageModalWithCaption(window.tempDetailImages['${trade.id}_${i}'], {type: 'trade', id: '${trade.id}', index: ${i}})" onerror="this.style.opacity='0.3'">
                                     <button class="detail-image-delete" onclick="event.stopPropagation(); deleteTradeImage('${trade.id}', ${i + 1})">×</button>
                                     <button class="detail-image-edit" onclick="event.stopPropagation(); openImageCaptionEdit('trade', '${trade.id}', ${i})">✏️</button>
                                     ${imgTitle ? `<div class="image-caption-title">${imgTitle}</div>` : ''}

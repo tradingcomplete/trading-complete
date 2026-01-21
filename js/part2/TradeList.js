@@ -624,11 +624,17 @@ class TradeList {
                             
                             // 画像データをクロージャでキャプチャ（題名・説明用）
                             const capturedImgData = img;
+                            const capturedTradeId = trade.id;
+                            const capturedIndex = trade.chartImages.indexOf(img);
                             imgEl.onclick = (e) => {
                                 e.stopPropagation();
-                                // 題名・説明付きモーダルを使用
+                                // 題名・説明付きモーダルを使用（コンテキスト付き）
                                 if (typeof window.showImageModalWithCaption === 'function') {
-                                    window.showImageModalWithCaption(capturedImgData);
+                                    window.showImageModalWithCaption(capturedImgData, {
+                                        type: 'trade',
+                                        id: capturedTradeId,
+                                        index: capturedIndex
+                                    });
                                 } else if (typeof window.showImageModal === 'function') {
                                     window.showImageModal(imgEl.src);
                                 }

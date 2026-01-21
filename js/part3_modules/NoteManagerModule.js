@@ -2333,7 +2333,7 @@ class NoteManagerModule {
                         
                         imagesHtml += `
                             <div class="note-detail-image-wrapper">
-                                <img src="${imgSrc}" onclick="showImageModalWithCaption(window.tempNoteImages['${noteKey}_${idx}'])" style="cursor: pointer; max-width: 200px; max-height: 150px; border-radius: 8px;">
+                                <img src="${imgSrc}" onclick="showImageModalWithCaption(window.tempNoteImages['${noteKey}_${idx}'], {type: 'note', id: '${dateStr}', index: ${idx}})" style="cursor: pointer; max-width: 200px; max-height: 150px; border-radius: 8px;">
                                 <button class="note-image-edit-btn" onclick="openImageCaptionEdit('note', '${dateStr}', ${idx})">✏️</button>
                                 ${imgTitle ? `<div class="image-caption-title">${imgTitle}</div>` : ''}
                             </div>
