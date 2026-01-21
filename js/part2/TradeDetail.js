@@ -446,11 +446,18 @@ class TradeDetail {
                         const imgSrc = window.getImageSrc ? window.getImageSrc(imgData) : (typeof imgData === 'string' ? imgData : (imgData && imgData.url ? imgData.url : null));
                         if (imgSrc) {
                             // 画像がある場合
+                            const imgTitle = window.getImageTitle ? window.getImageTitle(imgData) : '';
                             // data-img-index を追加して後から更新できるようにする
+                            // 画像データをグローバル配列に一時保存（拡大表示用）
+                            if (!window.tempDetailImages) window.tempDetailImages = {};
+                            window.tempDetailImages[`${trade.id}_${i}`] = imgData;
+                            
                             imagesHtml += `
                                 <div class="detail-image-item has-image" onclick="changeTradeImage('${trade.id}', ${i + 1})">
-                                    <img src="${imgSrc}" alt="チャート画像${i + 1}" data-img-index="${i}" onerror="this.style.opacity='0.3'">
+                                    <img src="${imgSrc}" alt="チャート画像${i + 1}" data-img-index="${i}" onclick="event.stopPropagation(); showImageModalWithCaption(window.tempDetailImages['${trade.id}_${i}'])" onerror="this.style.opacity='0.3'">
                                     <button class="detail-image-delete" onclick="event.stopPropagation(); deleteTradeImage('${trade.id}', ${i + 1})">×</button>
+                                    <button class="detail-image-edit" onclick="event.stopPropagation(); openImageCaptionEdit('trade', '${trade.id}', ${i})">✏️</button>
+                                    ${imgTitle ? `<div class="image-caption-title">${imgTitle}</div>` : ''}
                                 </div>
                             `;
                         } else {

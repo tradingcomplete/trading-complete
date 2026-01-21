@@ -303,20 +303,29 @@
 
                 <h3 style="margin: 30px 0 15px;">チャート画像（最大3枚）</h3>
                 <div class="chart-images-container">
-                    <div class="image-upload-area" id="tradeChartImageUpload1" onclick="showImageUploadOptions('tradeChart1')" style="position: relative;">
-                        <div id="tradeChartImagePreview1"></div>
-                        <p>画像1</p>
-                        <button id="clearTradeChart1Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(1, event)">×</button>
+                    <div class="chart-image-wrapper">
+                        <div class="image-upload-area" id="tradeChartImageUpload1" onclick="showImageUploadOptions('tradeChart1')" style="position: relative;">
+                            <div id="tradeChartImagePreview1"></div>
+                            <p>画像1</p>
+                            <button id="clearTradeChart1Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(1, event)">×</button>
+                        </div>
+                        <div class="image-caption-outside" id="tradeChartCaption1"></div>
                     </div>
-                    <div class="image-upload-area" id="tradeChartImageUpload2" onclick="showImageUploadOptions('tradeChart2')" style="position: relative;">
-                        <div id="tradeChartImagePreview2"></div>
-                        <p>画像2</p>
-                        <button id="clearTradeChart2Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(2, event)">×</button>
+                    <div class="chart-image-wrapper">
+                        <div class="image-upload-area" id="tradeChartImageUpload2" onclick="showImageUploadOptions('tradeChart2')" style="position: relative;">
+                            <div id="tradeChartImagePreview2"></div>
+                            <p>画像2</p>
+                            <button id="clearTradeChart2Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(2, event)">×</button>
+                        </div>
+                        <div class="image-caption-outside" id="tradeChartCaption2"></div>
                     </div>
-                    <div class="image-upload-area" id="tradeChartImageUpload3" onclick="showImageUploadOptions('tradeChart3')" style="position: relative;">
-                        <div id="tradeChartImagePreview3"></div>
-                        <p>画像3</p>
-                        <button id="clearTradeChart3Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(3, event)">×</button>
+                    <div class="chart-image-wrapper">
+                        <div class="image-upload-area" id="tradeChartImageUpload3" onclick="showImageUploadOptions('tradeChart3')" style="position: relative;">
+                            <div id="tradeChartImagePreview3"></div>
+                            <p>画像3</p>
+                            <button id="clearTradeChart3Btn" class="btn btn-small btn-danger" style="position: absolute; top: 5px; right: 5px; display: none;" onclick="clearTradeChartImage(3, event)">×</button>
+                        </div>
+                        <div class="image-caption-outside" id="tradeChartCaption3"></div>
                     </div>
                 </div>
 
@@ -2049,13 +2058,13 @@
                 <button class="modal-close" id="imageAddModalClose" aria-label="閉じる">×</button>
             </div>
             
-            <!-- メインコンテンツ -->
-            <div class="image-add-body">
-                <!-- ドラッグ＆ドロップエリア -->
+            <!-- Step 1: 画像選択エリア -->
+            <div class="image-add-body" id="imageAddStep1">
+                <!-- ドラッグ&ドロップエリア -->
                 <div class="drop-zone" id="imageDropZone">
                     <div class="drop-zone-content">
                         <div class="drop-zone-icon">📁</div>
-                        <p class="drop-zone-text">ここにドラッグ＆ドロップ</p>
+                        <p class="drop-zone-text">ここにドラッグ&ドロップ</p>
                         <p class="drop-zone-or">または</p>
                         <button type="button" class="btn btn-primary" id="selectFileBtn">
                             ファイルを選択
@@ -2087,10 +2096,64 @@
                             placeholder="https://example.com/image.png"
                         >
                         <button type="button" class="btn btn-secondary" id="addUrlBtn">
-                            追加
+                            次へ
                         </button>
                     </div>
                     <p class="url-hint">Google Drive、Dropbox等の共有リンク</p>
+                </div>
+            </div>
+            
+            <!-- Step 2: プレビュー＆説明入力エリア（初期非表示） -->
+            <div class="image-add-body" id="imageAddStep2" style="display: none;">
+                <!-- プレビュー画像 -->
+                <div class="image-preview-section">
+                    <img id="imagePreviewImg" src="" alt="プレビュー" class="image-preview-img">
+                    <button type="button" class="btn btn-small btn-secondary" id="changeImageBtn">
+                        画像を変更
+                    </button>
+                </div>
+                
+                <!-- 説明入力エリア -->
+                <div class="image-caption-section">
+                    <h4>📝 画像の説明（任意）</h4>
+                    
+                    <div class="form-group">
+                        <label for="imageTitleInput">題名</label>
+                        <div class="input-with-counter">
+                            <input 
+                                type="text" 
+                                id="imageTitleInput" 
+                                class="form-control"
+                                maxlength="30" 
+                                placeholder="例: エントリー時の日足"
+                            >
+                            <span class="char-counter"><span id="titleCharCount">0</span>/30</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="imageDescInput">説明</label>
+                        <div class="input-with-counter">
+                            <textarea 
+                                id="imageDescInput" 
+                                class="form-control"
+                                maxlength="100" 
+                                rows="2" 
+                                placeholder="例: サポートラインブレイク後ロールリバーサルした"
+                            ></textarea>
+                            <span class="char-counter"><span id="descCharCount">0</span>/100</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- アクションボタン -->
+                <div class="image-add-actions">
+                    <button type="button" class="btn btn-secondary" id="backToStep1Btn">
+                        戻る
+                    </button>
+                    <button type="button" class="btn btn-primary" id="confirmAddImageBtn">
+                        追加する
+                    </button>
                 </div>
             </div>
             
@@ -2103,10 +2166,72 @@
     <div id="toast" class="toast"></div>
 
     <!-- 画像モーダル（画像拡大用） -->
-    <div id="imageModal" class="modal" onclick="closeImageModal()">
-        <div class="modal-content" style="max-width: 90%; max-height: 90%; padding: 0; background: transparent; border: none;" onclick="event.stopPropagation()">
-            <span class="modal-close" onclick="closeImageModal()" style="position: absolute; top: -40px; right: 0; color: #fff; font-size: 2rem; cursor: pointer;">×</span>
-            <img id="modalImage" src="" alt="拡大画像" style="width: 100%; height: auto; display: block;">
+    <div id="imageModal" class="modal image-modal" onclick="closeImageModal()">
+        <button class="image-modal-close" onclick="closeImageModal(); event.stopPropagation();">×</button>
+        <div class="image-modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" src="" alt="拡大画像">
+            <div class="image-modal-caption" id="modalImageCaption" onclick="toggleImageCaption(); event.stopPropagation();">
+                <div class="caption-content" id="captionContent">
+                    <div class="caption-title" id="modalCaptionTitle"></div>
+                    <div class="caption-description" id="modalCaptionDesc"></div>
+                </div>
+                <div class="caption-collapsed" id="captionCollapsed" style="display: none;">
+                    📝 タップで説明を表示
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像説明編集モーダル -->
+    <div id="imageCaptionEditModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>📝 画像の説明を編集</h2>
+                <button class="modal-close" onclick="closeImageCaptionEditModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- プレビュー画像 -->
+                <div class="caption-edit-preview">
+                    <img id="captionEditPreviewImg" src="" alt="プレビュー">
+                </div>
+                
+                <!-- 入力欄 -->
+                <div class="form-group">
+                    <label for="captionEditTitle">題名</label>
+                    <div class="input-with-counter">
+                        <input 
+                            type="text" 
+                            id="captionEditTitle" 
+                            class="form-control"
+                            maxlength="30" 
+                            placeholder="例: エントリー時の日足"
+                        >
+                        <span class="char-counter"><span id="captionEditTitleCount">0</span>/30</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="captionEditDesc">説明</label>
+                    <div class="input-with-counter">
+                        <textarea 
+                            id="captionEditDesc" 
+                            class="form-control"
+                            maxlength="100" 
+                            rows="3" 
+                            placeholder="例: サポートラインブレイク後ロールリバーサルした"
+                        ></textarea>
+                        <span class="char-counter"><span id="captionEditDescCount">0</span>/100</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeImageCaptionEditModal()">
+                    キャンセル
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveImageCaptionEdit()">
+                    保存
+                </button>
+            </div>
         </div>
     </div>
 

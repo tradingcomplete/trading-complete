@@ -230,6 +230,39 @@ class NoteManagerModule {
     }
 
     /**
+     * 画像の題名・説明を更新
+     * @param {string} dateStr - 日付文字列
+     * @param {number} index - 画像インデックス
+     * @param {string} title - 新しい題名
+     * @param {string} description - 新しい説明
+     * @returns {boolean} 成功したかどうか
+     */
+    updateImageCaption(dateStr, index, title, description) {
+        const note = this.getNote(dateStr);
+        if (!note || !note.images || !note.images[index]) {
+            return false;
+        }
+        
+        const images = [...note.images];
+        const currentImg = images[index];
+        
+        // 新形式に更新
+        images[index] = window.updateImageCaption 
+            ? window.updateImageCaption(currentImg, title, description)
+            : { src: window.getImageSrc(currentImg), title, description };
+        
+        note.images = images;
+        
+        // 保存
+        this.#saveNoteToStorageAndCloud(dateStr, note);
+        
+        // 詳細表示を更新
+        this.displayNoteDetail(dateStr);
+        
+        return true;
+    }
+
+    /**
      * デバッグ用ステータス取得
      * @returns {Object} モジュール状態
      */
@@ -2280,14 +2313,31 @@ class NoteManagerModule {
                 if (!container) return;
                 
                 let imagesHtml = '';
-                for (const img of note.images) {
+                // 画像データを一時保存用の配列を初期化
+                if (!window.tempNoteImages) window.tempNoteImages = {};
+                const noteKey = dateStr.replace(/\//g, '-');
+                
+                for (let idx = 0; idx < note.images.length; idx++) {
+                    const img = note.images[idx];
                     // 期限切れURLは自動更新
                     const imgSrc = window.getValidImageSrc 
                         ? await window.getValidImageSrc(img)
                         : window.getImageSrc(img);
                     
                     if (imgSrc) {
-                        imagesHtml += `<img src="${imgSrc}" onclick="showImageModal('${imgSrc}')" style="cursor: pointer; max-width: 200px; max-height: 150px; margin: 5px; border-radius: 8px;">`;
+                        const imgTitle = window.getImageTitle ? window.getImageTitle(img) : '';
+                        // 画像データを一時保存（拡大表示用）
+                        const normalized = window.normalizeImageData ? window.normalizeImageData(img) : { src: imgSrc, title: '', description: '' };
+                        normalized.src = imgSrc; // 更新されたsrcを設定
+                        window.tempNoteImages[`${noteKey}_${idx}`] = normalized;
+                        
+                        imagesHtml += `
+                            <div class="note-detail-image-wrapper">
+                                <img src="${imgSrc}" onclick="showImageModalWithCaption(window.tempNoteImages['${noteKey}_${idx}'])" style="cursor: pointer; max-width: 200px; max-height: 150px; border-radius: 8px;">
+                                <button class="note-image-edit-btn" onclick="openImageCaptionEdit('note', '${dateStr}', ${idx})">✏️</button>
+                                ${imgTitle ? `<div class="image-caption-title">${imgTitle}</div>` : ''}
+                            </div>
+                        `;
                     }
                 }
                 
