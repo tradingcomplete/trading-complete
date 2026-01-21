@@ -2001,18 +2001,34 @@ class NoteManagerModule {
             const imagesDiv = document.createElement('div');
             imagesDiv.className = 'day-preview-images';
             
+            // 画像データを一時保存（拡大表示用）- 既存パターンと一貫性を保持
+            if (!window.tempDayPreviewImages) window.tempDayPreviewImages = {};
+            
             note.images.slice(0, 3).forEach((img, index) => {
                 const imgSrc = window.getImageSrc ? window.getImageSrc(img) : 
                     (typeof img === 'string' ? img : (img?.url || img?.data || null));
                 
                 if (imgSrc) {
+                    // 画像データを一時保存
+                    const tempKey = `dayPreview_${dateStr}_${index}`;
+                    window.tempDayPreviewImages[tempKey] = img;
+                    
                     const thumb = document.createElement('img');
                     thumb.src = imgSrc;
                     thumb.alt = `画像${index + 1}`;
                     thumb.className = 'day-preview-thumb';
                     thumb.onclick = (e) => {
                         e.stopPropagation();
-                        this.showImageFullscreen(img);
+                        // 題名・説明付きモーダルを使用
+                        if (typeof window.showImageModalWithCaption === 'function') {
+                            window.showImageModalWithCaption(window.tempDayPreviewImages[tempKey], {
+                                type: 'note',
+                                id: dateStr,
+                                index: index
+                            });
+                        } else {
+                            this.showImageFullscreen(img);
+                        }
                     };
                     imagesDiv.appendChild(thumb);
                 }
