@@ -1270,7 +1270,7 @@
                         base64Data = img;
                     }
                 } else if (typeof img === 'object') {
-                    // オブジェクト形式: { src, title, description } または { data, url, type }
+                    // オブジェクト形式: { data: '...', url: '...', type: '...', title: '...', description: '...' }
                     imgType = img.type || imgType;
                     imgTimestamp = img.timestamp || imgTimestamp;
                     imgTitle = img.title || '';
@@ -1285,13 +1285,24 @@
                         });
                         continue;
                     }
-                    // 新形式: srcプロパティ
-                    if (img.src && img.src.startsWith('data:')) {
-                        base64Data = img.src;
+                    // src形式にも対応
+                    if (img.src && img.src.startsWith('http')) {
+                        updatedImages.push({
+                            type: imgType,
+                            url: img.src,
+                            path: img.path || null,
+                            timestamp: imgTimestamp,
+                            title: imgTitle,
+                            description: imgDescription
+                        });
+                        continue;
                     }
-                    // 旧形式: dataプロパティ
-                    else if (img.data && img.data.startsWith('data:image')) {
+                    if (img.data && img.data.startsWith('data:image')) {
                         base64Data = img.data;
+                    }
+                    // src形式のbase64にも対応
+                    if (img.src && img.src.startsWith('data:image')) {
+                        base64Data = img.src;
                     }
                 }
                 
