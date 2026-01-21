@@ -1,9 +1,9 @@
 // js/part2/bridge.js
-// Part 2モジュール化 - 互換性維持層（更新版）
-// 最終更新: 2025/09/15 - TradeEntry追加
+// Part 2ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«åŒ– - äº’æ›æ€§ç¶­æŒå±¤ï¼ˆæ›´æ–°ç‰ˆï¼‰
+// æœ€çµ‚æ›´æ–°: 2025/09/15 - TradeEntryè¿½åŠ 
 
 // ==================== TradeValidator Bridge ====================
-// 第1段階で実装済み
+// ç¬¬1æ®µéšŽã§å®Ÿè£…æ¸ˆã¿
 window.validatePriceLogic = function(entryPrice, exitPrice, stopLoss, takeProfit, direction) {
     if (!window.tradeValidator) {
         console.warn('TradeValidator not loaded');
@@ -12,49 +12,49 @@ window.validatePriceLogic = function(entryPrice, exitPrice, stopLoss, takeProfit
     return window.tradeValidator.validatePriceLogic(entryPrice, exitPrice, stopLoss, takeProfit, direction);
 };
 
-// 新規エントリー時の価格バリデーション（exitPriceなし）
+// æ–°è¦ã‚¨ãƒ³ãƒˆãƒªãƒ¼æ™‚ã®ä¾¡æ ¼ãƒãƒªãƒ‡ãƒ¼ã‚·ãƒ§ãƒ³ï¼ˆexitPriceãªã—ï¼‰
 window.validateEntryPrices = function(entryPrice, stopLoss, takeProfit, direction) {
     const errors = [];
     
-    // 数値チェック
+    // æ•°å€¤ãƒã‚§ãƒƒã‚¯
     if (!entryPrice || !stopLoss || !takeProfit || !direction) {
-        return errors; // 空配列を返す（必須チェックは別で行う）
+        return errors; // ç©ºé…åˆ—ã‚’è¿”ã™ï¼ˆå¿…é ˆãƒã‚§ãƒƒã‚¯ã¯åˆ¥ã§è¡Œã†ï¼‰
     }
     
-    // 数値型に変換
+    // æ•°å€¤åž‹ã«å¤‰æ›
     const entry = parseFloat(entryPrice);
     const stop = parseFloat(stopLoss);
     const target = parseFloat(takeProfit);
     
-    // NaNチェック
+    // NaNãƒã‚§ãƒƒã‚¯
     if (isNaN(entry) || isNaN(stop) || isNaN(target)) {
-        errors.push('価格は数値で入力してください');
+        errors.push('ä¾¡æ ¼ã¯æ•°å€¤ã§å…¥åŠ›ã—ã¦ãã ã•ã„');
         return errors;
     }
     
-    // ロングの場合
+    // ãƒ­ãƒ³ã‚°ã®å ´åˆ
     if (direction === 'long') {
-        // 利確目標価格はエントリー価格より高くなければならない
+        // åˆ©ç¢ºç›®æ¨™ä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šé«˜ããªã‘ã‚Œã°ãªã‚‰ãªã„
         if (target <= entry) {
-            errors.push('買いの場合、利確目標価格はエントリー価格より高く設定してください');
+            errors.push('è²·ã„ã®å ´åˆã€åˆ©ç¢ºç›®æ¨™ä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šé«˜ãè¨­å®šã—ã¦ãã ã•ã„');
         }
         
-        // 損切り価格はエントリー価格より低くなければならない
+        // æåˆ‡ã‚Šä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šä½Žããªã‘ã‚Œã°ãªã‚‰ãªã„
         if (stop >= entry) {
-            errors.push('買いの場合、損切り価格はエントリー価格より低く設定してください');
+            errors.push('è²·ã„ã®å ´åˆã€æåˆ‡ã‚Šä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šä½Žãè¨­å®šã—ã¦ãã ã•ã„');
         }
     }
     
-    // ショートの場合
+    // ã‚·ãƒ§ãƒ¼ãƒˆã®å ´åˆ
     if (direction === 'short') {
-        // 利確目標価格はエントリー価格より低くなければならない
+        // åˆ©ç¢ºç›®æ¨™ä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šä½Žããªã‘ã‚Œã°ãªã‚‰ãªã„
         if (target >= entry) {
-            errors.push('売りの場合、利確目標価格はエントリー価格より低く設定してください');
+            errors.push('å£²ã‚Šã®å ´åˆã€åˆ©ç¢ºç›®æ¨™ä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šä½Žãè¨­å®šã—ã¦ãã ã•ã„');
         }
         
-        // 損切り価格はエントリー価格より高くなければならない
+        // æåˆ‡ã‚Šä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šé«˜ããªã‘ã‚Œã°ãªã‚‰ãªã„
         if (stop <= entry) {
-            errors.push('売りの場合、損切り価格はエントリー価格より高く設定してください');
+            errors.push('å£²ã‚Šã®å ´åˆã€æåˆ‡ã‚Šä¾¡æ ¼ã¯ã‚¨ãƒ³ãƒˆãƒªãƒ¼ä¾¡æ ¼ã‚ˆã‚Šé«˜ãè¨­å®šã—ã¦ãã ã•ã„');
         }
     }
     
@@ -71,7 +71,7 @@ window.validateExitDateTime = function(entryDatetime, exitDatetime) {
 };
 
 // ==================== TradeCalculator Bridge ====================
-// 第2段階で実装済み
+// ç¬¬2æ®µéšŽã§å®Ÿè£…æ¸ˆã¿
 window.calculatePips = function(entryPrice, exitPrice, direction, symbol) {
     if (!window.tradeCalculator) {
         console.warn('TradeCalculator not loaded');
@@ -113,18 +113,18 @@ window.calculateTradeRR = function(trade) {
 };
 
 window.updateRiskReward = function() {
-    // 入力値を取得
+    // å…¥åŠ›å€¤ã‚’å–å¾—
     const entryPrice = parseFloat(document.getElementById('entryPrice')?.value);
     const stopLoss = parseFloat(document.getElementById('stopLoss')?.value);
     const takeProfit = parseFloat(document.getElementById('takeProfit')?.value);
     const direction = document.getElementById('direction')?.value;
     
-    // 表示要素を取得
+    // è¡¨ç¤ºè¦ç´ ã‚’å–å¾—
     const riskPipsEl = document.getElementById('riskPips');
     const rewardPipsEl = document.getElementById('rewardPips');
     const rrRatioEl = document.getElementById('rrRatio');
     
-    // 値が不足している場合は "-:-" を表示
+    // å€¤ãŒä¸è¶³ã—ã¦ã„ã‚‹å ´åˆã¯ "-:-" ã‚’è¡¨ç¤º
     if (!entryPrice || !stopLoss || !takeProfit || !direction) {
         if (riskPipsEl) riskPipsEl.textContent = '- Pips';
         if (rewardPipsEl) rewardPipsEl.textContent = '- Pips';
@@ -132,14 +132,14 @@ window.updateRiskReward = function() {
         return;
     }
     
-    // tradeCalculatorが存在しない場合
+    // tradeCalculatorãŒå­˜åœ¨ã—ãªã„å ´åˆ
     if (!window.tradeCalculator) {
         console.warn('TradeCalculator not loaded');
         return;
     }
     
     try {
-        // リスクリワード計算（正しい引数順序: entryPrice, stopLoss, takeProfit, direction）
+        // ãƒªã‚¹ã‚¯ãƒªãƒ¯ãƒ¼ãƒ‰è¨ˆç®—ï¼ˆæ­£ã—ã„å¼•æ•°é †åº: entryPrice, stopLoss, takeProfit, directionï¼‰
         const result = window.tradeCalculator.calculateRiskReward(
             entryPrice,
             stopLoss,
@@ -147,43 +147,43 @@ window.updateRiskReward = function() {
             direction
         );
         
-        // 通貨ペアがJPYペアかどうかを判定
+        // é€šè²¨ãƒšã‚¢ãŒJPYãƒšã‚¢ã‹ã©ã†ã‹ã‚’åˆ¤å®š
         const pair = document.getElementById('pair')?.value || '';
         const isJPY = pair.includes('JPY');
         const pipMultiplier = isJPY ? 100 : 10000;
         
-        // Pips計算
+        // Pipsè¨ˆç®—
         const riskPips = Math.abs(result.risk * pipMultiplier);
         const rewardPips = Math.abs(result.reward * pipMultiplier);
         const rrRatio = result.ratio;
         
-        // DOM更新
+        // DOMæ›´æ–°
         if (riskPipsEl) riskPipsEl.textContent = `${riskPips.toFixed(1)} Pips`;
         if (rewardPipsEl) rewardPipsEl.textContent = `${rewardPips.toFixed(1)} Pips`;
         if (rrRatioEl) rrRatioEl.textContent = `1:${rrRatio.toFixed(2)}`;
         
     } catch (error) {
         console.error('updateRiskReward error:', error);
-        // エラー時は "-:-" を表示
+        // ã‚¨ãƒ©ãƒ¼æ™‚ã¯ "-:-" ã‚’è¡¨ç¤º
         if (riskPipsEl) riskPipsEl.textContent = '- Pips';
         if (rewardPipsEl) rewardPipsEl.textContent = '- Pips';
         if (rrRatioEl) rrRatioEl.textContent = '-:-';
     }
 };
 
-// チェックリスト（トレードプラン）の表示を更新
+// ãƒã‚§ãƒƒã‚¯ãƒªã‚¹ãƒˆï¼ˆãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ—ãƒ©ãƒ³ï¼‰ã®è¡¨ç¤ºã‚’æ›´æ–°
 window.updateConditionStatus = function() {
-    // TradeEntryが存在しない場合
+    // TradeEntryãŒå­˜åœ¨ã—ãªã„å ´åˆ
     if (!window.tradeEntry) {
         console.warn('TradeEntry not loaded');
         return;
     }
     
     try {
-        // checkEntryConditions()を呼び出してカウント
+        // checkEntryConditions()ã‚’å‘¼ã³å‡ºã—ã¦ã‚«ã‚¦ãƒ³ãƒˆ
         const result = window.tradeEntry.checkEntryConditions();
         
-        // conditionStatus要素を取得
+        // conditionStatusè¦ç´ ã‚’å–å¾—
         const statusEl = document.getElementById('conditionStatus');
         
         if (!statusEl) {
@@ -191,16 +191,16 @@ window.updateConditionStatus = function() {
             return;
         }
         
-        // テキスト更新
-        statusEl.textContent = `トレードプラン：${result.metConditions}/3`;
+        // ãƒ†ã‚­ã‚¹ãƒˆæ›´æ–°
+        statusEl.textContent = `ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ—ãƒ©ãƒ³ï¼š${result.metConditions}/3`;
         
-        // スタイル更新
+        // ã‚¹ã‚¿ã‚¤ãƒ«æ›´æ–°
         if (result.isValid) {
-            // 3つすべて入力済み
+            // 3ã¤ã™ã¹ã¦å…¥åŠ›æ¸ˆã¿
             statusEl.classList.remove('not-ready');
             statusEl.classList.add('ready');
         } else {
-            // まだ入力が不足
+            // ã¾ã å…¥åŠ›ãŒä¸è¶³
             statusEl.classList.remove('ready');
             statusEl.classList.add('not-ready');
         }
@@ -214,10 +214,10 @@ window.updateConditionStatus = function() {
 window.calculateRemainingLot = function(trade) {
     if (!window.tradeCalculator) {
         console.warn('TradeCalculator not loaded');
-        return 0;  // 数値を返すように変更
+        return 0;  // æ•°å€¤ã‚’è¿”ã™ã‚ˆã†ã«å¤‰æ›´
     }
     const result = window.tradeCalculator.calculateRemainingLot(trade);
-    // 結果がオブジェクトの場合は remaining の値を返す
+    // çµæžœãŒã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®å ´åˆã¯ remaining ã®å€¤ã‚’è¿”ã™
     return typeof result === 'object' ? (result.remaining || 0) : result;
 };
 
@@ -230,15 +230,15 @@ window.calculateHoldingTime = function(entryDatetime, exitDatetime) {
 };
 
 // ==================== TradeEntry Bridge ====================
-// 第3段階で新規追加 - ID差異を吸収する修正版
+// ç¬¬3æ®µéšŽã§æ–°è¦è¿½åŠ  - IDå·®ç•°ã‚’å¸åŽã™ã‚‹ä¿®æ­£ç‰ˆ
 window.saveTradeRecord = function(formData = null) {
-    // フォームデータの準備（IDの差異を吸収）
+    // ãƒ•ã‚©ãƒ¼ãƒ ãƒ‡ãƒ¼ã‚¿ã®æº–å‚™ï¼ˆIDã®å·®ç•°ã‚’å¸åŽï¼‰
     if (!formData) {
         formData = {
             symbol: document.getElementById('pair')?.value || '',
             direction: document.getElementById('direction')?.value || 'long',
             broker: document.getElementById('broker')?.value?.trim() || '',
-            entryDatetime: document.getElementById('entryTime')?.value || '',  // entryTimeからentryDatetimeに変更
+            entryDatetime: document.getElementById('entryTime')?.value || '',  // entryTimeã‹ã‚‰entryDatetimeã«å¤‰æ›´
             entryPrice: document.getElementById('entryPrice')?.value || '',
             lot: document.getElementById('lotSize')?.value || '1.0',
             stopLoss: document.getElementById('stopLoss')?.value || '',
@@ -250,40 +250,57 @@ window.saveTradeRecord = function(formData = null) {
             entryEmotion: document.getElementById('entryEmotion')?.value || ''
         };
         
-        // チャート画像を収集（3枚対応）
+        // チャート画像を収集（3枚対応）- 題名・説明も含む
         const chartImages = [];
         for (let i = 1; i <= 3; i++) {
-            const preview = document.getElementById('tradeChartImagePreview' + i);
-            const img = preview?.querySelector('img');
-            if (img && img.src && img.src.startsWith('data:image')) {
-                chartImages.push(img.src);
+            // tempChartImageを優先（題名・説明を含むオブジェクト）
+            const tempData = window[`tempChartImage${i}`];
+            
+            if (tempData && tempData.src && tempData.src.startsWith('data:')) {
+                // 新形式: オブジェクト {src, title, description}
+                chartImages.push({
+                    src: tempData.src,
+                    title: tempData.title || '',
+                    description: tempData.description || ''
+                });
             } else {
-                chartImages.push(null);
+                // フォールバック: プレビューから取得（題名なし）
+                const preview = document.getElementById('tradeChartImagePreview' + i);
+                const img = preview?.querySelector('img');
+                if (img && img.src && img.src.startsWith('data:image')) {
+                    chartImages.push({
+                        src: img.src,
+                        title: '',
+                        description: ''
+                    });
+                } else {
+                    chartImages.push(null);
+                }
             }
         }
         formData.chartImages = chartImages;
     }
     
-    // TradeEntryが存在する場合は使用、そうでなければ直接保存
+    // TradeEntryãŒå­˜åœ¨ã™ã‚‹å ´åˆã¯ä½¿ç”¨ã€ãã†ã§ãªã‘ã‚Œã°ç›´æŽ¥ä¿å­˜
     if (window.tradeEntry && window.tradeEntry.saveTradeRecord) {
         const result = window.tradeEntry.saveTradeRecord(formData);
-        // 保存成功時に一覧を更新
+        // ä¿å­˜æˆåŠŸæ™‚ã«ä¸€è¦§ã‚’æ›´æ–°
         if (result && typeof window.displayAllTrades === 'function') {
             setTimeout(() => window.displayAllTrades(), 100);
         }
         return result;
     } else {
-        // TradeEntryがない場合は直接保存
-        // バリデーション
+        // TradeEntryãŒãªã„å ´åˆã¯ç›´æŽ¥ä¿å­˜
+        // ãƒãƒªãƒ‡ãƒ¼ã‚·ãƒ§ãƒ³
         if (!formData.symbol) {
-            alert('通貨ペアを入力してください');
+            alert('é€šè²¨ãƒšã‚¢ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„');
             return false;
         }
         
-        // トレードレコードの作成
+        // ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ¬ã‚³ãƒ¼ãƒ‰ã®ä½œæˆ
         const trade = {
             id: 'trade_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            date: formData.entryDatetime || new Date().toISOString(),  // entryTimeからentryDatetimeに変更
+            date: formData.entryDatetime || new Date().toISOString(),  // entryTimeã‹ã‚‰entryDatetimeã«å¤‰æ›´
             pair: formData.symbol,
             symbol: formData.symbol,
             direction: formData.direction,
@@ -294,31 +311,31 @@ window.saveTradeRecord = function(formData = null) {
             reason: [formData.reason1, formData.reason2, formData.reason3].filter(r => r).join(' / '),
             scenario: formData.scenario,
             emotion: formData.entryEmotion,
-            entryTime: formData.entryDatetime,  // entryTimeからentryDatetimeに変更
+            entryTime: formData.entryDatetime,  // entryTimeã‹ã‚‰entryDatetimeã«å¤‰æ›´
             status: 'open'
         };
         
-        // 保存
+        // ä¿å­˜
         try {
             const trades = JSON.parse(localStorage.getItem('trades') || '[]');
             trades.unshift(trade);
             localStorage.setItem('trades', JSON.stringify(trades));
             
-            alert('トレードを保存しました');
+            alert('ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚’ä¿å­˜ã—ã¾ã—ãŸ');
             
-            // フォームをクリア
+            // ãƒ•ã‚©ãƒ¼ãƒ ã‚’ã‚¯ãƒªã‚¢
             if (typeof window.clearForm === 'function') {
                 window.clearForm();
             }
             
-            // 一覧を更新
+            // ä¸€è¦§ã‚’æ›´æ–°
             if (typeof window.displayAllTrades === 'function') {
                 setTimeout(() => window.displayAllTrades(), 100);
             }
             
             return true;
         } catch(e) {
-            alert('保存に失敗しました: ' + e.message);
+            alert('ä¿å­˜ã«å¤±æ•—ã—ã¾ã—ãŸ: ' + e.message);
             return false;
         }
     }
@@ -329,22 +346,22 @@ window.clearForm = function() {
         return window.tradeEntry.clearForm();
     }
     
-    // TradeEntryがない場合は直接クリア
-    // フォーム要素をクリア（実際のIDを使用）
+    // TradeEntryãŒãªã„å ´åˆã¯ç›´æŽ¥ã‚¯ãƒªã‚¢
+    // ãƒ•ã‚©ãƒ¼ãƒ è¦ç´ ã‚’ã‚¯ãƒªã‚¢ï¼ˆå®Ÿéš›ã®IDã‚’ä½¿ç”¨ï¼‰
     const clearIds = ['pair', 'entryPrice', 'stopLoss', 'takeProfit', 'reason1', 'reason2', 'reason3', 'scenario', 'entryEmotion'];
     clearIds.forEach(id => {
         const elem = document.getElementById(id);
         if (elem) elem.value = '';
     });
     
-    // デフォルト値を設定
+    // ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’è¨­å®š
     const directionElem = document.getElementById('direction');
     if (directionElem) directionElem.value = 'long';
     
     const lotElem = document.getElementById('lotSize');
     if (lotElem) lotElem.value = '1.0';
     
-    // 現在時刻を設定
+    // ç¾åœ¨æ™‚åˆ»ã‚’è¨­å®š
     const entryTimeElem = document.getElementById('entryTime');
     if (entryTimeElem) {
         const now = new Date();
@@ -352,7 +369,7 @@ window.clearForm = function() {
         entryTimeElem.value = localISOTime.slice(0, 16);
     }
     
-    console.log('フォームをクリアしました');
+    console.log('ãƒ•ã‚©ãƒ¼ãƒ ã‚’ã‚¯ãƒªã‚¢ã—ã¾ã—ãŸ');
 };
 
 window.checkEntryConditions = function() {
@@ -360,8 +377,8 @@ window.checkEntryConditions = function() {
         return window.tradeEntry.checkEntryConditions();
     }
     
-    // TradeEntryがない場合は直接チェック
-    // エントリー根拠のテキスト入力をチェック
+    // TradeEntryãŒãªã„å ´åˆã¯ç›´æŽ¥ãƒã‚§ãƒƒã‚¯
+    // ã‚¨ãƒ³ãƒˆãƒªãƒ¼æ ¹æ‹ ã®ãƒ†ã‚­ã‚¹ãƒˆå…¥åŠ›ã‚’ãƒã‚§ãƒƒã‚¯
     const reasons = [
         document.getElementById('reason1')?.value,
         document.getElementById('reason2')?.value,
@@ -381,12 +398,12 @@ window.checkEntryConditions = function() {
         metConditions: filledReasons,
         totalConditions: 3,
         percentage: Math.round((filledReasons / 3) * 100),
-        isValid: filledReasons >= 1  // 最低1つは入力が必要
+        isValid: filledReasons >= 1  // æœ€ä½Ž1ã¤ã¯å…¥åŠ›ãŒå¿…è¦
     };
 };
 
-// ==================== 画像処理 Bridge ====================
-// 第3段階で追加（画像処理機能）
+// ==================== ç”»åƒå‡¦ç† Bridge ====================
+// ç¬¬3æ®µéšŽã§è¿½åŠ ï¼ˆç”»åƒå‡¦ç†æ©Ÿèƒ½ï¼‰
 window.handlePaste = function(e) {
     if (!window.tradeEntry) {
         console.error('TradeEntry not loaded');
@@ -419,16 +436,16 @@ window.clearTradeChartImage = function(index, event) {
     return window.tradeEntry.clearTradeChartImage(index, event);
 };
 
-// ==================== 確認用ログ ====================
+// ==================== ç¢ºèªç”¨ãƒ­ã‚° ====================
 console.log('Bridge.js updated with TradeEntry and image processing functions');
 
-// ========== TradeList.js 関連の追加 ==========
-// TradeListインスタンスの作成
+// ========== TradeList.js é–¢é€£ã®è¿½åŠ  ==========
+// TradeListã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ä½œæˆ
 const tradeList = new window.TradeList(window.tradeManager);
-// 初期化
+// åˆæœŸåŒ–
 tradeList.initialize();
-// グローバル関数として公開（互換性維持）
-// 古い実装を確実に上書き
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«é–¢æ•°ã¨ã—ã¦å…¬é–‹ï¼ˆäº’æ›æ€§ç¶­æŒï¼‰
+// å¤ã„å®Ÿè£…ã‚’ç¢ºå®Ÿã«ä¸Šæ›¸ã
 window.displayAllTrades = function() {
     console.log('displayAllTrades called via bridge (FIXED)');
     if (window.tradeList) {
@@ -454,35 +471,35 @@ window.createTradeCard = function(trade, showActions) {
         return null;
     }
 };
-// TradeListインスタンスもグローバルに公開
+// TradeListã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚‚ã‚°ãƒ­ãƒ¼ãƒãƒ«ã«å…¬é–‹
 window.tradeList = tradeList;
-console.log('✅ TradeList bridge connections established');
+console.log('âœ… TradeList bridge connections established');
 
-// ==================== 円建て損益編集の修正 ====================
-// 既存のeditYenProfitLoss関数を正しく呼び出す修正
-console.log('=== 既存デザインを使用する修正 ===');
+// ==================== å††å»ºã¦æç›Šç·¨é›†ã®ä¿®æ­£ ====================
+// æ—¢å­˜ã®editYenProfitLossé–¢æ•°ã‚’æ­£ã—ãå‘¼ã³å‡ºã™ä¿®æ­£
+console.log('=== æ—¢å­˜ãƒ‡ã‚¶ã‚¤ãƒ³ã‚’ä½¿ç”¨ã™ã‚‹ä¿®æ­£ ===');
 
-// 1. 作成したカスタムモーダルを削除
+// 1. ä½œæˆã—ãŸã‚«ã‚¹ã‚¿ãƒ ãƒ¢ãƒ¼ãƒ€ãƒ«ã‚’å‰Šé™¤
 const customModal = document.getElementById('yenProfitLossModal');
 if (customModal && !customModal.querySelector('.yen-profit-modal')) {
     customModal.remove();
-    console.log('カスタムモーダルを削除');
+    console.log('ã‚«ã‚¹ã‚¿ãƒ ãƒ¢ãƒ¼ãƒ€ãƒ«ã‚’å‰Šé™¤');
 }
 
-// 2. script.jsのオリジナル関数を探して保存
+// 2. script.jsã®ã‚ªãƒªã‚¸ãƒŠãƒ«é–¢æ•°ã‚’æŽ¢ã—ã¦ä¿å­˜
 if (!window.originalEditYenProfitLoss && window.editYenProfitLoss) {
     window.originalEditYenProfitLoss = window.editYenProfitLoss;
 }
 
-// 3. editYenProfitLoss関数の修正（既存機能を呼び出す）
+// 3. editYenProfitLossé–¢æ•°ã®ä¿®æ­£ï¼ˆæ—¢å­˜æ©Ÿèƒ½ã‚’å‘¼ã³å‡ºã™ï¼‰
 window.editYenProfitLoss = function(tradeId) {
     const trade = trades.find(t => t.id === String(tradeId));
     if (!trade) {
-        console.error('トレードが見つかりません:', tradeId);
+        console.error('ãƒˆãƒ¬ãƒ¼ãƒ‰ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“:', tradeId);
         return;
     }
     
-    // 通常トレードでもyenProfitLossを初期化（エラー回避）
+    // é€šå¸¸ãƒˆãƒ¬ãƒ¼ãƒ‰ã§ã‚‚yenProfitLossã‚’åˆæœŸåŒ–ï¼ˆã‚¨ãƒ©ãƒ¼å›žé¿ï¼‰
     if (!trade.yenProfitLoss) {
         trade.yenProfitLoss = {
             profitLoss: 0,
@@ -490,39 +507,39 @@ window.editYenProfitLoss = function(tradeId) {
             commission: 0,
             netProfit: 0
         };
-        console.log('yenProfitLossを初期化');
+        console.log('yenProfitLossã‚’åˆæœŸåŒ–');
         
-        // データを保存（重要）
+        // ãƒ‡ãƒ¼ã‚¿ã‚’ä¿å­˜ï¼ˆé‡è¦ï¼‰
         saveTrades();
     }
     
-    // script.jsの元の処理を実行
+    // script.jsã®å…ƒã®å‡¦ç†ã‚’å®Ÿè¡Œ
     if (typeof window.originalEditYenProfitLoss === 'function') {
-        console.log('既存のeditYenProfitLoss関数を呼び出し');
+        console.log('æ—¢å­˜ã®editYenProfitLossé–¢æ•°ã‚’å‘¼ã³å‡ºã—');
         return window.originalEditYenProfitLoss.call(this, tradeId);
     } else {
-        console.error('オリジナルのeditYenProfitLoss関数が見つかりません');
+        console.error('ã‚ªãƒªã‚¸ãƒŠãƒ«ã®editYenProfitLossé–¢æ•°ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“');
     }
 };
 
-// 4. saveYenProfitLoss関数も同様に修正
+// 4. saveYenProfitLossé–¢æ•°ã‚‚åŒæ§˜ã«ä¿®æ­£
 if (!window.originalSaveYenProfitLoss && window.saveYenProfitLoss) {
     window.originalSaveYenProfitLoss = window.saveYenProfitLoss;
 }
 
 window.saveYenProfitLoss = function(tradeId) {
-    // 文字列に変換
+    // æ–‡å­—åˆ—ã«å¤‰æ›
     if (typeof tradeId !== 'string') {
         tradeId = String(tradeId);
     }
     
-    // 元の関数を呼び出し
+    // å…ƒã®é–¢æ•°ã‚’å‘¼ã³å‡ºã—
     if (typeof window.originalSaveYenProfitLoss === 'function') {
         return window.originalSaveYenProfitLoss.call(this, tradeId);
     }
 };
 
-// 5. グローバル変数定義（onclick属性エラー対策）
+// 5. ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°å®šç¾©ï¼ˆonclickå±žæ€§ã‚¨ãƒ©ãƒ¼å¯¾ç­–ï¼‰
 if (window.trades) {
     trades.forEach(trade => {
         if (trade.id) {
@@ -531,14 +548,14 @@ if (window.trades) {
     });
 }
 
-console.log('✅ 既存デザインを使用する修正完了');
-console.log('通常トレードの円建て損益編集ボタンをクリックしてください');
+console.log('âœ… æ—¢å­˜ãƒ‡ã‚¶ã‚¤ãƒ³ã‚’ä½¿ç”¨ã™ã‚‹ä¿®æ­£å®Œäº†');
+console.log('é€šå¸¸ãƒˆãƒ¬ãƒ¼ãƒ‰ã®å††å»ºã¦æç›Šç·¨é›†ãƒœã‚¿ãƒ³ã‚’ã‚¯ãƒªãƒƒã‚¯ã—ã¦ãã ã•ã„');
 
-// ========== TradeEdit.js 関連 ==========
-// TradeEditインスタンスの作成
+// ========== TradeEdit.js é–¢é€£ ==========
+// TradeEditã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ä½œæˆ
 const tradeEdit = new window.TradeEdit();
 
-// グローバル関数として公開（互換性維持）
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«é–¢æ•°ã¨ã—ã¦å…¬é–‹ï¼ˆäº’æ›æ€§ç¶­æŒï¼‰
 window.editTrade = function(tradeId) {
     console.log('editTrade called via bridge');
     tradeEdit.editTrade(tradeId);
@@ -599,11 +616,11 @@ window.editExitInfo = function(tradeId) {
     tradeEdit.editExitInfo(tradeId);
 };
 
-// TradeEditインスタンスもグローバルに公開
+// TradeEditã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚‚ã‚°ãƒ­ãƒ¼ãƒãƒ«ã«å…¬é–‹
 window.tradeEdit = tradeEdit;
-console.log('✅ TradeEdit bridge connections established');
+console.log('âœ… TradeEdit bridge connections established');
 
-// エイリアス関数（互換性維持）
+// ã‚¨ã‚¤ãƒªã‚¢ã‚¹é–¢æ•°ï¼ˆäº’æ›æ€§ç¶­æŒï¼‰
 window.editTradeBasicInfo = function(tradeId) {
     console.log('editTradeBasicInfo called via bridge');
     tradeEdit.editBasicInfo(tradeId);
@@ -614,71 +631,71 @@ window.editTradeExitInfo = function(tradeId) {
     tradeEdit.editExitInfo(tradeId);
 };
 
-console.log('✅ TradeEdit エイリアス関数追加');
+console.log('âœ… TradeEdit ã‚¨ã‚¤ãƒªã‚¢ã‚¹é–¢æ•°è¿½åŠ ');
 
 // ========================================
-// TradeEdit.js エイリアス関数（名前の不一致を解決）
-// TradeDetail.jsが期待する関数名との互換性維持
-// 作成日: 2025-09-28
+// TradeEdit.js ã‚¨ã‚¤ãƒªã‚¢ã‚¹é–¢æ•°ï¼ˆåå‰ã®ä¸ä¸€è‡´ã‚’è§£æ±ºï¼‰
+// TradeDetail.jsãŒæœŸå¾…ã™ã‚‹é–¢æ•°åã¨ã®äº’æ›æ€§ç¶­æŒ
+// ä½œæˆæ—¥: 2025-09-28
 // ========================================
 
-// 📍 editEntryInfo → editBasicInfo のエイリアス
+// ðŸ“ editEntryInfo â†’ editBasicInfo ã®ã‚¨ã‚¤ãƒªã‚¢ã‚¹
 window.editEntryInfo = function(tradeId) {
     console.log('editEntryInfo called via bridge (alias for editBasicInfo)');
     
-    // トレードIDの自動解決
+    // ãƒˆãƒ¬ãƒ¼ãƒ‰IDã®è‡ªå‹•è§£æ±º
     if (!tradeId) {
         tradeId = window.currentEditingTradeId || window.currentTradeId;
-        // TradeDetailモーダルから取得を試みる
+        // TradeDetailãƒ¢ãƒ¼ãƒ€ãƒ«ã‹ã‚‰å–å¾—ã‚’è©¦ã¿ã‚‹
         const modal = document.getElementById('tradeDetailModal');
         if (modal && modal.dataset && modal.dataset.tradeId) {
             tradeId = modal.dataset.tradeId;
         }
     }
     
-    // 実際の関数（editBasicInfo）を呼び出し
+    // å®Ÿéš›ã®é–¢æ•°ï¼ˆeditBasicInfoï¼‰ã‚’å‘¼ã³å‡ºã—
     if (typeof window.editBasicInfo === 'function') {
         window.editBasicInfo(tradeId);
     } else if (window.tradeEdit && typeof window.tradeEdit.editBasicInfo === 'function') {
         window.tradeEdit.editBasicInfo(tradeId);
     } else {
         console.error('editBasicInfo function not found');
-        showToast('エラー: 編集機能が見つかりません', 'error');
+        showToast('ã‚¨ãƒ©ãƒ¼: ç·¨é›†æ©Ÿèƒ½ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“', 'error');
     }
 };
 
-// 🎯 editEntryReason → editTradeReasons のエイリアス
+// ðŸŽ¯ editEntryReason â†’ editTradeReasons ã®ã‚¨ã‚¤ãƒªã‚¢ã‚¹
 window.editEntryReason = function(tradeId) {
     console.log('editEntryReason called via bridge (alias for editTradeReasons)');
     
-    // トレードIDの自動解決
+    // ãƒˆãƒ¬ãƒ¼ãƒ‰IDã®è‡ªå‹•è§£æ±º
     if (!tradeId) {
         tradeId = window.currentEditingTradeId || window.currentTradeId;
-        // TradeDetailモーダルから取得を試みる
+        // TradeDetailãƒ¢ãƒ¼ãƒ€ãƒ«ã‹ã‚‰å–å¾—ã‚’è©¦ã¿ã‚‹
         const modal = document.getElementById('tradeDetailModal');
         if (modal && modal.dataset && modal.dataset.tradeId) {
             tradeId = modal.dataset.tradeId;
         }
     }
     
-    // 実際の関数（editTradeReasons）を呼び出し
+    // å®Ÿéš›ã®é–¢æ•°ï¼ˆeditTradeReasonsï¼‰ã‚’å‘¼ã³å‡ºã—
     if (typeof window.editTradeReasons === 'function') {
         window.editTradeReasons(tradeId);
     } else if (window.tradeEdit && typeof window.tradeEdit.editTradeReasons === 'function') {
         window.tradeEdit.editTradeReasons(tradeId);
     } else {
         console.error('editTradeReasons function not found');
-        showToast('エラー: 編集機能が見つかりません', 'error');
+        showToast('ã‚¨ãƒ©ãƒ¼: ç·¨é›†æ©Ÿèƒ½ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“', 'error');
     }
 };
 
-console.log('✅ TradeDetail-TradeEdit 互換性エイリアス追加完了');
+console.log('âœ… TradeDetail-TradeEdit äº’æ›æ€§ã‚¨ã‚¤ãƒªã‚¢ã‚¹è¿½åŠ å®Œäº†');
 
-// ========== TradeExit.js 関連 ==========
-// TradeExitインスタンスの作成
+// ========== TradeExit.js é–¢é€£ ==========
+// TradeExitã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ä½œæˆ
 const tradeExit = new window.TradeExit();
 
-// グローバル関数として公開（互換性維持）
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«é–¢æ•°ã¨ã—ã¦å…¬é–‹ï¼ˆäº’æ›æ€§ç¶­æŒï¼‰
 window.openExitModal = function(tradeId) {
     console.log('openExitModal called via bridge:', tradeId);
     tradeExit.openExitModal(tradeId);
@@ -704,20 +721,20 @@ window.closeExitModal = function() {
     tradeExit.closeExitModal();
 };
 
-// saveExitのエイリアス（互換性維持）
+// saveExitã®ã‚¨ã‚¤ãƒªã‚¢ã‚¹ï¼ˆäº’æ›æ€§ç¶­æŒï¼‰
 window.saveExit = function(tradeId) {
     console.log('saveExit called via bridge (alias):', tradeId);
     tradeExit.saveExitRecord(tradeId);
 };
 
-// TradeExitインスタンスもグローバルに公開
+// TradeExitã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚‚ã‚°ãƒ­ãƒ¼ãƒãƒ«ã«å…¬é–‹
 window.tradeExit = tradeExit;
-console.log('✅ TradeExit bridge connections established');
+console.log('âœ… TradeExit bridge connections established');
 
-// ========== TradeDetail.js 関連 ==========
-// TradeDetailインスタンスの作成
+// ========== TradeDetail.js é–¢é€£ ==========
+// TradeDetailã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ä½œæˆ
 const tradeDetail = new window.TradeDetail();
-// グローバル関数として公開（互換性維持）
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«é–¢æ•°ã¨ã—ã¦å…¬é–‹ï¼ˆäº’æ›æ€§ç¶­æŒï¼‰
 window.showTradeDetail = function(tradeOrId) {
     console.log('showTradeDetail called via bridge');
     tradeDetail.showTradeDetail(tradeOrId);
@@ -738,11 +755,11 @@ window.closeReflectionEditModal = function() {
     console.log('closeReflectionEditModal called via bridge');
     tradeDetail.closeReflectionEditModal();
 };
-// TradeDetailインスタンスもグローバルに公開
+// TradeDetailã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚‚ã‚°ãƒ­ãƒ¼ãƒãƒ«ã«å…¬é–‹
 window.tradeDetail = tradeDetail;
-console.log('✅ TradeDetail bridge connections established');
+console.log('âœ… TradeDetail bridge connections established');
 
-// ========== フィルター関数の公開 ==========
+// ========== ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼é–¢æ•°ã®å…¬é–‹ ==========
 window.filterTrades = function() {
     console.log('filterTrades called via bridge');
     if (window.tradeList) {
@@ -752,7 +769,7 @@ window.filterTrades = function() {
     }
 };
 
-// updateFilterOptionsも公開（フィルター選択肢の更新用）
+// updateFilterOptionsã‚‚å…¬é–‹ï¼ˆãƒ•ã‚£ãƒ«ã‚¿ãƒ¼é¸æŠžè‚¢ã®æ›´æ–°ç”¨ï¼‰
 window.updateFilterOptions = function() {
     console.log('updateFilterOptions called via bridge');
     if (window.tradeList) {
@@ -762,7 +779,7 @@ window.updateFilterOptions = function() {
     }
 };
 
-// ページロード後に再度上書き（念のため）
+// ãƒšãƒ¼ã‚¸ãƒ­ãƒ¼ãƒ‰å¾Œã«å†åº¦ä¸Šæ›¸ãï¼ˆå¿µã®ãŸã‚ï¼‰
 document.addEventListener('DOMContentLoaded', function() {
     window.displayAllTrades = function() {
         console.log('displayAllTrades called via bridge (FIXED after DOM)');
@@ -773,38 +790,38 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ===================================
-// Step 3.5: 価格入力のstep属性最適化
+// Step 3.5: ä¾¡æ ¼å…¥åŠ›ã®stepå±žæ€§æœ€é©åŒ–
 // ===================================
-// 追加日: 2025-11-22
-// 目的: 通貨ペア選択時に価格入力欄のstep属性を自動で最適化
+// è¿½åŠ æ—¥: 2025-11-22
+// ç›®çš„: é€šè²¨ãƒšã‚¢é¸æŠžæ™‚ã«ä¾¡æ ¼å…¥åŠ›æ¬„ã®stepå±žæ€§ã‚’è‡ªå‹•ã§æœ€é©åŒ–
 
 /**
- * 通貨ペア選択時に価格入力欄のstep属性を更新
- * @param {string} pairId - 通貨ペアID（例: 'usdjpy'）
+ * é€šè²¨ãƒšã‚¢é¸æŠžæ™‚ã«ä¾¡æ ¼å…¥åŠ›æ¬„ã®stepå±žæ€§ã‚’æ›´æ–°
+ * @param {string} pairId - é€šè²¨ãƒšã‚¢IDï¼ˆä¾‹: 'usdjpy'ï¼‰
  */
 /**
- * 価格入力欄のstep属性を更新
- * @param {string|number} pairIdOrPipValue - 通貨ペアID（文字列）またはpipValue（数値）
+ * ä¾¡æ ¼å…¥åŠ›æ¬„ã®stepå±žæ€§ã‚’æ›´æ–°
+ * @param {string|number} pairIdOrPipValue - é€šè²¨ãƒšã‚¢IDï¼ˆæ–‡å­—åˆ—ï¼‰ã¾ãŸã¯pipValueï¼ˆæ•°å€¤ï¼‰
  */
 window.updatePriceInputSteps = function(pairIdOrPipValue) {
     try {
         let stepValue;
         
-        // 引数が数値の場合は直接pipValueとして使用
+        // å¼•æ•°ãŒæ•°å€¤ã®å ´åˆã¯ç›´æŽ¥pipValueã¨ã—ã¦ä½¿ç”¨
         if (typeof pairIdOrPipValue === 'number') {
             stepValue = pairIdOrPipValue;
-            console.log(`✅ Price step updated (direct): ${stepValue}`);
+            console.log(`âœ… Price step updated (direct): ${stepValue}`);
         } else {
-            // 文字列の場合はpairIdとして検索
+            // æ–‡å­—åˆ—ã®å ´åˆã¯pairIdã¨ã—ã¦æ¤œç´¢
             const pairId = pairIdOrPipValue;
             
-            // ID形式または表示名形式でマッチを試みる
+            // IDå½¢å¼ã¾ãŸã¯è¡¨ç¤ºåå½¢å¼ã§ãƒžãƒƒãƒã‚’è©¦ã¿ã‚‹
             let preset = null;
             if (window.getPresetPairById) {
                 preset = window.getPresetPairById(pairId);
             }
             
-            // マッチしない場合は表示名形式で再検索
+            // ãƒžãƒƒãƒã—ãªã„å ´åˆã¯è¡¨ç¤ºåå½¢å¼ã§å†æ¤œç´¢
             if (!preset && window.PRESET_CURRENCY_PAIRS) {
                 const normalizedValue = pairId.toLowerCase().replace('/', '');
                 preset = window.PRESET_CURRENCY_PAIRS.find(p => 
@@ -816,10 +833,10 @@ window.updatePriceInputSteps = function(pairIdOrPipValue) {
             }
             
             stepValue = preset ? preset.pipValue : 0.00001;
-            console.log(`✅ Price step updated: ${stepValue} for ${pairId}`);
+            console.log(`âœ… Price step updated: ${stepValue} for ${pairId}`);
         }
         
-        // 価格入力欄のstep属性を更新
+        // ä¾¡æ ¼å…¥åŠ›æ¬„ã®stepå±žæ€§ã‚’æ›´æ–°
         const entryPrice = document.getElementById('entryPrice');
         const stopLoss = document.getElementById('stopLoss');
         const takeProfit = document.getElementById('takeProfit');
@@ -834,15 +851,15 @@ window.updatePriceInputSteps = function(pairIdOrPipValue) {
 };
 
 // ===================================
-// イベントリスナーの追加
+// ã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒŠãƒ¼ã®è¿½åŠ 
 // ===================================
-// ページロード時に通貨ペア入力欄にイベントリスナーを追加
+// ãƒšãƒ¼ã‚¸ãƒ­ãƒ¼ãƒ‰æ™‚ã«é€šè²¨ãƒšã‚¢å…¥åŠ›æ¬„ã«ã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒŠãƒ¼ã‚’è¿½åŠ 
 
 document.addEventListener('DOMContentLoaded', function() {
     const pairInput = document.getElementById('pair');
     
     if (pairInput) {
-        // 入力時（リアルタイム更新）
+        // å…¥åŠ›æ™‚ï¼ˆãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ æ›´æ–°ï¼‰
         pairInput.addEventListener('input', function(e) {
             const value = e.target.value.trim().toLowerCase().replace('/', '');
             if (value) {
@@ -850,7 +867,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // 変更時（フォーカス外れ時）
+        // å¤‰æ›´æ™‚ï¼ˆãƒ•ã‚©ãƒ¼ã‚«ã‚¹å¤–ã‚Œæ™‚ï¼‰
         pairInput.addEventListener('change', function(e) {
             const value = e.target.value.trim().toLowerCase().replace('/', '');
             if (value) {
@@ -858,10 +875,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        console.log('✅ Price step event listeners added to #pair');
+        console.log('âœ… Price step event listeners added to #pair');
     } else {
-        console.warn('⚠️ #pair element not found');
+        console.warn('âš ï¸ #pair element not found');
     }
 });
 
-console.log('✅ Step 3.5: Price step optimization loaded');
+console.log('âœ… Step 3.5: Price step optimization loaded');
