@@ -896,12 +896,22 @@ class NoteManagerModule {
         // 枠を画像ありの状態に変更
         targetSlot.classList.remove('empty');
         targetSlot.classList.add('has-image');
+        
+        // 現在の日付を取得（編集用コンテキスト）
+        const currentDateStr = document.getElementById('noteDate')?.value || '';
+        
+        // 画像データを一時保存（拡大表示用）
+        const tempKey = `noteEdit_${targetIndex}`;
+        if (!window.tempNoteEditImages) window.tempNoteEditImages = {};
+        window.tempNoteEditImages[tempKey] = imageData;
+        
         targetSlot.innerHTML = `
-            <img src="${actualSrc}" alt="ノート画像${targetIndex}">
+            <img src="${actualSrc}" alt="ノート画像${targetIndex}" onclick="event.stopPropagation(); showImageModalWithCaption(window.tempNoteEditImages['${tempKey}'], {type: 'note', id: '${currentDateStr}', index: ${targetIndex - 1}})">
             <button class="note-image-delete" onclick="event.stopPropagation(); window.NoteManagerModule.removeNoteImageAt(${targetIndex})">×</button>
             ${imgTitle ? `<div class="note-image-title">${imgTitle}</div>` : ''}
         `;
-        targetSlot.onclick = () => this.addNoteImageAt(targetIndex);
+        // 枠のクリックは何もしない（画像クリックで拡大、×で削除）
+        targetSlot.onclick = null;
         
         // リセット
         window.pendingNoteImageIndex = null;
