@@ -1,24 +1,24 @@
 /**
- * TradeList.js - トレード一覧表示モジュール
- * Trading Complete Part 2 モジュール化
- * 元の実装を正確に再現
+ * TradeList.js - ãƒˆãƒ¬ãƒ¼ãƒ‰ä¸€è¦§è¡¨ç¤ºãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+ * Trading Complete Part 2 ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«åŒ–
+ * å…ƒã®å®Ÿè£…ã‚’æ­£ç¢ºã«å†ç¾
  */
 
 console.log('TradeList.js loading...');
 
 class TradeList {
     /**
-     * コンストラクタ
-     * @param {Object} tradeManager - TradeManagerインスタンス
+     * ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
+     * @param {Object} tradeManager - TradeManagerã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹
      */
     constructor(tradeManager) {
         this.tradeManager = tradeManager;
         
-        // ページネーション設定
+        // ãƒšãƒ¼ã‚¸ãƒãƒ¼ã‚·ãƒ§ãƒ³è¨­å®š
         this.currentPage = 1;
         this.itemsPerPage = 10;
         
-        // フィルタ設定
+        // ãƒ•ã‚£ãƒ«ã‚¿è¨­å®š
         this.filters = {
             pair: '',
             status: '',
@@ -27,17 +27,17 @@ class TradeList {
             profitType: '' // profit, loss, all
         };
         
-        // ソート設定
+        // ã‚½ãƒ¼ãƒˆè¨­å®š
         this.sortOrder = 'desc';
         this.sortBy = 'entryDate';
         
-        // キャッシュ
+        // ã‚­ãƒ£ãƒƒã‚·ãƒ¥
         this.filteredTrades = [];
         this.displayedTrades = [];
     }
 
     /**
-     * 初期化処理
+     * åˆæœŸåŒ–å‡¦ç†
      */
     initialize() {
         console.log('TradeList module initialized');
@@ -46,19 +46,19 @@ class TradeList {
     }
 
     /**
-     * イベントリスナーの設定
+     * ã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒŠãƒ¼ã®è¨­å®š
      */
     setupEventListeners() {
-        // フィルタ関連のイベントリスナー設定
-        // ページネーション関連のイベントリスナー設定
-        // ソート関連のイベントリスナー設定
+        // ãƒ•ã‚£ãƒ«ã‚¿é–¢é€£ã®ã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒŠãƒ¼è¨­å®š
+        // ãƒšãƒ¼ã‚¸ãƒãƒ¼ã‚·ãƒ§ãƒ³é–¢é€£ã®ã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒŠãƒ¼è¨­å®š
+        // ã‚½ãƒ¼ãƒˆé–¢é€£ã®ã‚¤ãƒ™ãƒ³ãƒˆãƒªã‚¹ãƒŠãƒ¼è¨­å®š
     }
 
     /**
-     * 設定の読み込み
+     * è¨­å®šã®èª­ã¿è¾¼ã¿
      */
     loadSettings() {
-        // LocalStorageから表示設定を読み込み
+        // LocalStorageã‹ã‚‰è¡¨ç¤ºè¨­å®šã‚’èª­ã¿è¾¼ã¿
         const settings = localStorage.getItem('tradeListSettings');
         if (settings) {
             const parsed = JSON.parse(settings);
@@ -69,7 +69,7 @@ class TradeList {
     }
 
     /**
-     * 設定の保存
+     * è¨­å®šã®ä¿å­˜
      */
     saveSettings() {
         const settings = {
@@ -81,81 +81,81 @@ class TradeList {
     }
 
     /**
-     * トレードデータの取得
-     * @returns {Array} トレードデータ配列
+     * ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ‡ãƒ¼ã‚¿ã®å–å¾—
+     * @returns {Array} ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ‡ãƒ¼ã‚¿é…åˆ—
      */
     getAllTrades() {
-        // TradeManagerから取得、またはグローバル変数から取得
+        // TradeManagerã‹ã‚‰å–å¾—ã€ã¾ãŸã¯ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°ã‹ã‚‰å–å¾—
         if (this.tradeManager && typeof this.tradeManager.getAllTrades === 'function') {
             return this.tradeManager.getAllTrades();
         }
         
-        // window.tradesから取得
+        // window.tradesã‹ã‚‰å–å¾—
         if (window.trades && Array.isArray(window.trades)) {
             return window.trades;
         }
         
-        // フォールバック：localStorageから直接取得
+        // ãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯ï¼šlocalStorageã‹ã‚‰ç›´æŽ¥å–å¾—
         const trades = localStorage.getItem('trades');
         return trades ? JSON.parse(trades) : [];
     }
 
     /**
-     * メイン表示メソッド（元の実装を再現）
-     * @param {string} containerId - 表示先のコンテナID
+     * ãƒ¡ã‚¤ãƒ³è¡¨ç¤ºãƒ¡ã‚½ãƒƒãƒ‰ï¼ˆå…ƒã®å®Ÿè£…ã‚’å†ç¾ï¼‰
+     * @param {string} containerId - è¡¨ç¤ºå…ˆã®ã‚³ãƒ³ãƒ†ãƒŠID
      */
     displayAllTrades(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
-        // トレードデータを取得して日付でソート（新しい順）
+        // ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—ã—ã¦æ—¥ä»˜ã§ã‚½ãƒ¼ãƒˆï¼ˆæ–°ã—ã„é †ï¼‰
         const sortedTrades = [...this.getAllTrades()].sort((a, b) => {
             const dateA = new Date(a.entryTime || a.entryDatetime || a.date);
             const dateB = new Date(b.entryTime || b.entryDatetime || b.date);
-            return dateB - dateA; // 新しい順（降順）
+            return dateB - dateA; // æ–°ã—ã„é †ï¼ˆé™é †ï¼‰
         });
-        const maxDisplay = 50; // 初期表示を50件に制限
+        const maxDisplay = 50; // åˆæœŸè¡¨ç¤ºã‚’50ä»¶ã«åˆ¶é™
         const displayTrades = sortedTrades.slice(0, maxDisplay);
         
-        // TradeListRendererを使用
+        // TradeListRendererã‚’ä½¿ç”¨
         if (window.TradeListRenderer) {
             window.TradeListRenderer.render(displayTrades, container, true);
         } else {
-            // フォールバック
+            // ãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯
             container.innerHTML = '';
             displayTrades.forEach(trade => {
                 container.appendChild(this.createTradeCard(trade, true));
             });
         }
         
-        // 残りがある場合は「さらに表示」ボタンを追加
+        // æ®‹ã‚ŠãŒã‚ã‚‹å ´åˆã¯ã€Œã•ã‚‰ã«è¡¨ç¤ºã€ãƒœã‚¿ãƒ³ã‚’è¿½åŠ 
         if (sortedTrades.length > maxDisplay) {
             const loadMoreBtn = document.createElement('button');
             loadMoreBtn.className = 'btn btn-secondary';
             loadMoreBtn.style.width = '100%';
             loadMoreBtn.style.marginTop = '20px';
-            loadMoreBtn.textContent = `さらに表示 (${sortedTrades.length - maxDisplay}件)`;
+            loadMoreBtn.textContent = `ã•ã‚‰ã«è¡¨ç¤º (${sortedTrades.length - maxDisplay}ä»¶)`;
             loadMoreBtn.onclick = () => this.displayAllTradesComplete(containerId);
             container.appendChild(loadMoreBtn);
         }
         
-        // フィルターオプションを更新
+        // ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã‚’æ›´æ–°
         this.updateFilterOptions();
     }
 
     /**
-     * 完全版表示メソッド（全件表示）
-     * @param {string} containerId - 表示先のコンテナID
+     * å®Œå…¨ç‰ˆè¡¨ç¤ºãƒ¡ã‚½ãƒƒãƒ‰ï¼ˆå…¨ä»¶è¡¨ç¤ºï¼‰
+     * @param {string} containerId - è¡¨ç¤ºå…ˆã®ã‚³ãƒ³ãƒ†ãƒŠID
      */
     displayAllTradesComplete(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
-        // トレードデータを取得して日付でソート（新しい順）
+        // ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—ã—ã¦æ—¥ä»˜ã§ã‚½ãƒ¼ãƒˆï¼ˆæ–°ã—ã„é †ï¼‰
         const sortedTrades = [...this.getAllTrades()].sort((a, b) => {
             const dateA = new Date(a.entryTime || a.entryDatetime || a.date);
             const dateB = new Date(b.entryTime || b.entryDatetime || b.date);
-            return dateB - dateA; // 新しい順（降順）
+            return dateB - dateA; // æ–°ã—ã„é †ï¼ˆé™é †ï¼‰
         });
         
         if (window.TradeListRenderer) {
@@ -169,18 +169,18 @@ class TradeList {
     }
 
     /**
-     * トレードカードの生成（元の実装を完全再現）
-     * @param {Object} trade - トレードデータ
-     * @param {boolean} showActions - アクションボタンを表示するか
-     * @returns {HTMLElement} トレードカード要素
+     * ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚«ãƒ¼ãƒ‰ã®ç”Ÿæˆï¼ˆå…ƒã®å®Ÿè£…ã‚’å®Œå…¨å†ç¾ï¼‰
+     * @param {Object} trade - ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒ‡ãƒ¼ã‚¿
+     * @param {boolean} showActions - ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ãƒœã‚¿ãƒ³ã‚’è¡¨ç¤ºã™ã‚‹ã‹
+     * @returns {HTMLElement} ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚«ãƒ¼ãƒ‰è¦ç´ 
      */
     createTradeCard(trade, showActions = false) {
-        // exitsの初期化
+        // exitsã®åˆæœŸåŒ–
         if (!trade.exits) {
             trade.exits = [];
         }
         
-        // pips計算
+        // pipsè¨ˆç®—
         let pips = 0;
         if (typeof window.calculateTradePips === 'function') {
             pips = window.calculateTradePips(trade);
@@ -194,18 +194,18 @@ class TradeList {
         
         const isOpen = trade.exits.length === 0;
         
-        // remainingLot計算
+        // remainingLotè¨ˆç®—
         let remainingLot = 0;
         if (typeof window.calculateRemainingLot === 'function') {
             const result = window.calculateRemainingLot(trade);
             remainingLot = typeof result === 'object' ? result.remaining : result;
         }
         
-        // 結果表示の判定
+        // çµæžœè¡¨ç¤ºã®åˆ¤å®š
         let resultClass, resultText;
         if (isOpen) {
             resultClass = 'open-position';
-            resultText = '保有中';
+            resultText = 'ä¿æœ‰ä¸­';
         } else {
             resultClass = pips > 0 ? 'profit' : (pips < 0 ? 'loss' : 'draw');
             resultText = `${pips >= 0 ? '+' : ''}${pips.toFixed(1)} Pips`;
@@ -241,17 +241,17 @@ class TradeList {
             }
         };
         
-        // 未決済ロット表示バッジ
+        // æœªæ±ºæ¸ˆãƒ­ãƒƒãƒˆè¡¨ç¤ºãƒãƒƒã‚¸
         if (remainingLot > 0) {
             const badge = document.createElement('div');
             badge.className = 'remaining-lot-badge';
-            // remainingLotは既に数値なのでtoFixedが安全に使える
-            badge.textContent = `未決済: ${remainingLot.toFixed(1)}Lot`;
+            // remainingLotã¯æ—¢ã«æ•°å€¤ãªã®ã§toFixedãŒå®‰å…¨ã«ä½¿ãˆã‚‹
+            badge.textContent = `æœªæ±ºæ¸ˆ: ${remainingLot.toFixed(1)}Lot`;
             badge.style.cssText = 'position: absolute; top: 10px; right: 10px; background: rgba(255, 193, 7, 0.2); color: #ffd700; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; z-index: 10;';
             card.appendChild(badge);
         }
         
-        // ヘッダー部分
+        // ãƒ˜ãƒƒãƒ€ãƒ¼éƒ¨åˆ†
         const header = document.createElement('div');
         header.className = 'trade-header';
         header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
@@ -260,16 +260,16 @@ class TradeList {
         headerLeft.className = 'trade-header-left';
         headerLeft.style.cssText = 'display: flex; align-items: center; gap: 15px;';
         
-        // アイコン画像（円形・大きめ）
+        // ã‚¢ã‚¤ã‚³ãƒ³ç”»åƒï¼ˆå††å½¢ãƒ»å¤§ãã‚ï¼‰
         if (trade.chartImage) {
             const img = document.createElement('img');
             img.src = trade.chartImage;
             img.className = 'trade-image';
-            img.alt = 'アイコン';
+            img.alt = 'ã‚¢ã‚¤ã‚³ãƒ³';
             img.loading = 'lazy';
             img.style.cssText = 'width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.15);';
             img.onerror = function() {
-                // エラー時は画像を非表示にして、デフォルトアイコンも表示しない
+                // ã‚¨ãƒ©ãƒ¼æ™‚ã¯ç”»åƒã‚’éžè¡¨ç¤ºã«ã—ã¦ã€ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã‚¢ã‚¤ã‚³ãƒ³ã‚‚è¡¨ç¤ºã—ãªã„
                 this.style.display = 'none';
             };
             img.onclick = (e) => {
@@ -278,9 +278,9 @@ class TradeList {
             };
             headerLeft.appendChild(img);
         }
-        // chartImageがない場合はアイコンを表示しない
+        // chartImageãŒãªã„å ´åˆã¯ã‚¢ã‚¤ã‚³ãƒ³ã‚’è¡¨ç¤ºã—ãªã„
         
-        // 通貨ペアとポジション
+        // é€šè²¨ãƒšã‚¢ã¨ãƒã‚¸ã‚·ãƒ§ãƒ³
         const pairContainer = document.createElement('div');
         const pairSpan = document.createElement('span');
         pairSpan.className = 'trade-pair';
@@ -304,7 +304,7 @@ class TradeList {
         pairContainer.appendChild(pairSpan);
         pairContainer.appendChild(directionBadge);
         
-        // ブローカーバッジを追加
+        // ãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼ãƒãƒƒã‚¸ã‚’è¿½åŠ 
         if (trade.broker) {
             const brokerBadge = document.createElement('span');
             brokerBadge.className = 'broker-badge';
@@ -324,19 +324,19 @@ class TradeList {
         
         headerLeft.appendChild(pairContainer);
         
-        // 右上（結果バッジと編集・削除ボタン）
+        // å³ä¸Šï¼ˆçµæžœãƒãƒƒã‚¸ã¨ç·¨é›†ãƒ»å‰Šé™¤ãƒœã‚¿ãƒ³ï¼‰
         const headerRight = document.createElement('div');
         headerRight.style.cssText = 'display: flex; align-items: center; gap: 12px;';
         
-        // 決済・削除ボタン（ホバー時に表示、左側に配置）
+        // æ±ºæ¸ˆãƒ»å‰Šé™¤ãƒœã‚¿ãƒ³ï¼ˆãƒ›ãƒãƒ¼æ™‚ã«è¡¨ç¤ºã€å·¦å´ã«é…ç½®ï¼‰
         if (showActions) {
             let exitBtn = null;
             
-            // 保有中または未決済ロットがある場合のみ決済ボタンを表示
+            // ä¿æœ‰ä¸­ã¾ãŸã¯æœªæ±ºæ¸ˆãƒ­ãƒƒãƒˆãŒã‚ã‚‹å ´åˆã®ã¿æ±ºæ¸ˆãƒœã‚¿ãƒ³ã‚’è¡¨ç¤º
             if (isOpen || remainingLot > 0) {
                 exitBtn = document.createElement('button');
                 exitBtn.className = 'btn btn-small exit-btn';
-                exitBtn.textContent = '決済';
+                exitBtn.textContent = 'æ±ºæ¸ˆ';
                 exitBtn.style.cssText = `
                     padding: 6px 14px;
                     background: transparent;
@@ -370,7 +370,7 @@ class TradeList {
             
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-small delete-btn';
-            deleteBtn.textContent = '削除';
+            deleteBtn.textContent = 'å‰Šé™¤';
             deleteBtn.style.cssText = `
                 padding: 6px 14px;
                 background: transparent;
@@ -398,47 +398,47 @@ class TradeList {
                 if (typeof window.deleteTrade === 'function') window.deleteTrade(trade.id);
             };
             
-            // ボタンを左側に配置
+            // ãƒœã‚¿ãƒ³ã‚’å·¦å´ã«é…ç½®
             headerRight.appendChild(deleteBtn);
             
-            // カードホバー時にボタンを表示し、バッジを半透明に
+            // ã‚«ãƒ¼ãƒ‰ãƒ›ãƒãƒ¼æ™‚ã«ãƒœã‚¿ãƒ³ã‚’è¡¨ç¤ºã—ã€ãƒãƒƒã‚¸ã‚’åŠé€æ˜Žã«
             card.addEventListener('mouseenter', function() {
-                // 決済ボタンを表示（存在する場合）
+                // æ±ºæ¸ˆãƒœã‚¿ãƒ³ã‚’è¡¨ç¤ºï¼ˆå­˜åœ¨ã™ã‚‹å ´åˆï¼‰
                 if (exitBtn) {
                     exitBtn.style.opacity = '1';
                     exitBtn.style.visibility = 'visible';
                 }
-                // 削除ボタンを表示
+                // å‰Šé™¤ãƒœã‚¿ãƒ³ã‚’è¡¨ç¤º
                 deleteBtn.style.opacity = '1';
                 deleteBtn.style.visibility = 'visible';
-                // バッジを半透明にする
+                // ãƒãƒƒã‚¸ã‚’åŠé€æ˜Žã«ã™ã‚‹
                 if (resultDiv) {
                     resultDiv.style.opacity = '0.4';
                 }
             });
             
             card.addEventListener('mouseleave', function() {
-                // 決済ボタンを非表示（存在する場合）
+                // æ±ºæ¸ˆãƒœã‚¿ãƒ³ã‚’éžè¡¨ç¤ºï¼ˆå­˜åœ¨ã™ã‚‹å ´åˆï¼‰
                 if (exitBtn) {
                     exitBtn.style.opacity = '0';
                     exitBtn.style.visibility = 'hidden';
                 }
-                // 削除ボタンを非表示
+                // å‰Šé™¤ãƒœã‚¿ãƒ³ã‚’éžè¡¨ç¤º
                 deleteBtn.style.opacity = '0';
                 deleteBtn.style.visibility = 'hidden';
-                // バッジを通常表示に戻す
+                // ãƒãƒƒã‚¸ã‚’é€šå¸¸è¡¨ç¤ºã«æˆ»ã™
                 if (resultDiv) {
                     resultDiv.style.opacity = '1';
                 }
             });
         }
         
-        // 結果バッジ（保有中・Pips）を最後に追加（右端に配置）
+        // çµæžœãƒãƒƒã‚¸ï¼ˆä¿æœ‰ä¸­ãƒ»Pipsï¼‰ã‚’æœ€å¾Œã«è¿½åŠ ï¼ˆå³ç«¯ã«é…ç½®ï¼‰
         const resultDiv = document.createElement('div');
         resultDiv.className = `trade-result ${resultClass}`;
         resultDiv.textContent = resultText;
         
-        // スタイル設定
+        // ã‚¹ã‚¿ã‚¤ãƒ«è¨­å®š
         if (isOpen) {
             resultDiv.style.cssText = 'background: rgba(33, 150, 243, 0.25); color: #2196f3; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 1.05rem; border: 1px solid rgba(33, 150, 243, 0.4); transition: opacity 0.3s ease; margin-left: auto;';
         } else if (pips > 0) {
@@ -454,25 +454,25 @@ class TradeList {
         
         card.appendChild(header);
         
-        // サブタイトル（エントリー・クローズ日時、保有期間）
+        // ã‚µãƒ–ã‚¿ã‚¤ãƒˆãƒ«ï¼ˆã‚¨ãƒ³ãƒˆãƒªãƒ¼ãƒ»ã‚¯ãƒ­ãƒ¼ã‚ºæ—¥æ™‚ã€ä¿æœ‰æœŸé–“ï¼‰
         const subtitle = document.createElement('div');
         subtitle.className = 'trade-subtitle';
         subtitle.style.cssText = 'color: rgba(255,255,255,0.6); font-size: 0.95rem; margin-bottom: 16px; line-height: 1.5;';
         
-        // ロット数を取得（型変換を追加）
+        // ãƒ­ãƒƒãƒˆæ•°ã‚’å–å¾—ï¼ˆåž‹å¤‰æ›ã‚’è¿½åŠ ï¼‰
         const safeLotSize = parseFloat(trade.lotSize) || parseFloat(trade.lot) || 0;
         
-        // エントリー行
+        // ã‚¨ãƒ³ãƒˆãƒªãƒ¼è¡Œ
         const entryLine = `Entry: ${typeof window.formatDateTimeForDisplay === 'function' ? 
             window.formatDateTimeForDisplay(trade.entryTime || trade.entryDatetime || trade.date) : entryDate.toLocaleString('ja-JP')}`;
         
-        // クローズ時刻の表示（決済済みの場合）
+        // ã‚¯ãƒ­ãƒ¼ã‚ºæ™‚åˆ»ã®è¡¨ç¤ºï¼ˆæ±ºæ¸ˆæ¸ˆã¿ã®å ´åˆï¼‰
         if (!isOpen && trade.exits && trade.exits.length > 0) {
             const lastExit = trade.exits[trade.exits.length - 1];
             if (lastExit && lastExit.time) {
                 const exitDate = new Date(lastExit.time);
                 
-                // 保有時間計算
+                // ä¿æœ‰æ™‚é–“è¨ˆç®—
                 const duration = exitDate - entryDate;
                 const days = Math.floor(duration / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((duration % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -481,19 +481,19 @@ class TradeList {
                 const exitLine = `Exit: ${typeof window.formatDateTimeForDisplay === 'function' ? 
                     window.formatDateTimeForDisplay(exitDate) : exitDate.toLocaleString('ja-JP')} (${durationText}) ${safeLotSize.toFixed(1)}Lot`;
                 
-                // 2行で表示
+                // 2è¡Œã§è¡¨ç¤º
                 subtitle.innerHTML = `<div>${entryLine}</div><div>${exitLine}</div>`;
             }
         } else {
-            // 保有中の場合は1行のみ
+            // ä¿æœ‰ä¸­ã®å ´åˆã¯1è¡Œã®ã¿
             subtitle.innerHTML = `<div>${entryLine}</div><div style="color: rgba(255,255,255,0.5);">${safeLotSize.toFixed(1)}Lot</div>`;
         }
         
         card.appendChild(subtitle);
         
-        // 損益情報セクション（決済済みの場合）
+        // æç›Šæƒ…å ±ã‚»ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆæ±ºæ¸ˆæ¸ˆã¿ã®å ´åˆï¼‰
         if (!isOpen) {
-            // 円建て損益がない場合の警告表示
+            // å††å»ºã¦æç›ŠãŒãªã„å ´åˆã®è­¦å‘Šè¡¨ç¤º
             if (!trade.yenProfitLoss || (!trade.yenProfitLoss.profitLoss && !trade.yenProfitLoss.netProfit)) {
                 const warningDiv = document.createElement('div');
                 warningDiv.style.cssText = `
@@ -509,15 +509,15 @@ class TradeList {
                     gap: 8px;
                 `;
                 warningDiv.innerHTML = `
-                    <span style="font-size: 1.1rem;">⚠️</span>
-                    <span>円建て損益が未入力です</span>
+                    <span style="font-size: 1.1rem;">âš ï¸</span>
+                    <span>å††å»ºã¦æç›ŠãŒæœªå…¥åŠ›ã§ã™</span>
                 `;
                 card.appendChild(warningDiv);
             } else {
                 const profitSection = document.createElement('div');
                 profitSection.style.cssText = 'margin-bottom: 16px;';
                 
-                // 損益行（ブローカーバッジ付き）
+                // æç›Šè¡Œï¼ˆãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼ãƒãƒƒã‚¸ä»˜ãï¼‰
                 const plRow = document.createElement('div');
                 plRow.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1rem;';
                 
@@ -526,39 +526,39 @@ class TradeList {
                 
                 const plLabel = document.createElement('span');
                 plLabel.className = 'yen-label';
-                plLabel.textContent = '損益:';
+                plLabel.textContent = 'æç›Š:';
                 plLeft.appendChild(plLabel);
                 
                 const plValue = document.createElement('span');
                 const yenPL = trade.yenProfitLoss ? (trade.yenProfitLoss.profitLoss || 0) : 0;
                 plValue.className = yenPL >= 0 ? 'yen-value positive' : 'yen-value negative';
-                plValue.textContent = `¥${yenPL.toLocaleString('ja-JP')}`;
+                plValue.textContent = `Â¥${yenPL.toLocaleString('ja-JP')}`;
                 
                 plRow.appendChild(plLeft);
                 plRow.appendChild(plValue);
                 profitSection.appendChild(plRow);
                 
-                // スワップ（値がある場合のみ）
+                // ã‚¹ãƒ¯ãƒƒãƒ—ï¼ˆå€¤ãŒã‚ã‚‹å ´åˆã®ã¿ï¼‰
                 const swapValue = trade.yenProfitLoss ? (trade.yenProfitLoss.swap || 0) : 0;
                 if (swapValue !== 0) {
                     const swapRow = document.createElement('div');
                     swapRow.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1rem;';
                     swapRow.innerHTML = `
-                        <span class="yen-label">スワップ:</span>
-                        <span class="yen-value swap">¥${swapValue.toLocaleString('ja-JP')}</span>
+                        <span class="yen-label">ã‚¹ãƒ¯ãƒƒãƒ—:</span>
+                        <span class="yen-value swap">Â¥${swapValue.toLocaleString('ja-JP')}</span>
                     `;
                     profitSection.appendChild(swapRow);
                 }
                 
-                // 純損益（損益＋スワップ－手数料）
+                // ç´”æç›Šï¼ˆæç›Šï¼‹ã‚¹ãƒ¯ãƒƒãƒ—ï¼æ‰‹æ•°æ–™ï¼‰
                 const netPL = trade.yenProfitLoss ? 
                     (trade.yenProfitLoss.netProfit || 0) : 0;
                 
                 const netRow = document.createElement('div');
                 netRow.className = 'net-profit-row';
                 netRow.innerHTML = `
-                    <span class="yen-label">純損益:</span>
-                    <span class="yen-value ${netPL >= 0 ? 'positive' : 'negative'}">¥${netPL.toLocaleString('ja-JP')}</span>
+                    <span class="yen-label">ç´”æç›Š:</span>
+                    <span class="yen-value ${netPL >= 0 ? 'positive' : 'negative'}">Â¥${netPL.toLocaleString('ja-JP')}</span>
                 `;
                 profitSection.appendChild(netRow);
                 
@@ -566,7 +566,7 @@ class TradeList {
             }
         }
         
-        // チャート画像と振り返りの横並び表示
+        // ãƒãƒ£ãƒ¼ãƒˆç”»åƒã¨æŒ¯ã‚Šè¿”ã‚Šã®æ¨ªä¸¦ã³è¡¨ç¤º
         const hasImages = (trade.chartImages && trade.chartImages.length > 0) || trade.tradeChartImage;
         const hasReflection = trade.reflection && trade.reflection.trim();
         
@@ -575,37 +575,37 @@ class TradeList {
             contentRow.className = 'trade-content-row';
             contentRow.style.cssText = 'display: flex; gap: 16px; margin-top: 16px;';
             
-            // 画像セクション（左側）
+            // ç”»åƒã‚»ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆå·¦å´ï¼‰
             if (hasImages) {
                 const imagesSection = document.createElement('div');
                 imagesSection.className = 'trade-images-section';
                 imagesSection.style.cssText = 'display: flex; gap: 10px;';
                 
                 if (trade.chartImages && trade.chartImages.length > 0) {
-                    // 新形式（複数画像）
+                    // æ–°å½¢å¼ï¼ˆè¤‡æ•°ç”»åƒï¼‰
                     trade.chartImages.slice(0, 3).forEach(img => {
                         if (img) {
                             const imgEl = document.createElement('img');
-                            // まず同期的に取得（即座に表示）
+                            // ã¾ãšåŒæœŸçš„ã«å–å¾—ï¼ˆå³åº§ã«è¡¨ç¤ºï¼‰
                             let imgSrc = window.getImageSrc ? window.getImageSrc(img) : (typeof img === 'string' ? img : (img && img.url ? img.url : null));
                             if (!imgSrc) return;
                             imgEl.src = imgSrc;
                             imgEl.className = 'trade-chart-thumb';
-                            imgEl.alt = 'チャート';
+                            imgEl.alt = 'ãƒãƒ£ãƒ¼ãƒˆ';
                             imgEl.loading = 'lazy';
                             imgEl.style.cssText = 'width: 160px; height: 120px; border-radius: 8px; object-fit: cover; cursor: pointer;';
                             
-                            // 署名付きURL期限切れの場合は非同期で更新
+                            // ç½²åä»˜ãURLæœŸé™åˆ‡ã‚Œã®å ´åˆã¯éžåŒæœŸã§æ›´æ–°
                             if (window.isUrlExpired && window.isUrlExpired(img)) {
                                 (async () => {
                                     try {
                                         const validSrc = await window.getValidImageSrc(img);
                                         if (validSrc) {
                                             imgEl.src = validSrc;
-                                            imgSrc = validSrc; // クリック用にも更新
+                                            imgSrc = validSrc; // ã‚¯ãƒªãƒƒã‚¯ç”¨ã«ã‚‚æ›´æ–°
                                         }
                                     } catch (e) {
-                                        console.warn('[TradeList] 画像URL更新失敗:', e);
+                                        console.warn('[TradeList] ç”»åƒURLæ›´æ–°å¤±æ•—:', e);
                                     }
                                 })();
                             }
@@ -614,20 +614,26 @@ class TradeList {
                                 this.style.display = 'none';
                             };
                             
+                            // 画像データをクロージャでキャプチャ（題名・説明用）
+                            const capturedImgData = img;
                             imgEl.onclick = (e) => {
                                 e.stopPropagation();
-                                // クリック時も正しいURLを渡す
-                                if (typeof window.showImageModal === 'function') window.showImageModal(imgEl.src);
+                                // 題名・説明付きモーダルを使用
+                                if (typeof window.showImageModalWithCaption === 'function') {
+                                    window.showImageModalWithCaption(capturedImgData);
+                                } else if (typeof window.showImageModal === 'function') {
+                                    window.showImageModal(imgEl.src);
+                                }
                             };
                             imagesSection.appendChild(imgEl);
                         }
                     });
                 } else if (trade.tradeChartImage) {
-                    // 旧形式（単一画像）の互換性維持
+                    // æ—§å½¢å¼ï¼ˆå˜ä¸€ç”»åƒï¼‰ã®äº’æ›æ€§ç¶­æŒ
                     const imgEl = document.createElement('img');
                     imgEl.src = trade.tradeChartImage;
                     imgEl.className = 'trade-chart-thumb';
-                    imgEl.alt = 'チャート';
+                    imgEl.alt = 'ãƒãƒ£ãƒ¼ãƒˆ';
                     imgEl.loading = 'lazy';
                     imgEl.style.cssText = 'width: 160px; height: 120px; border-radius: 8px; object-fit: cover; cursor: pointer;';
                     
@@ -645,7 +651,7 @@ class TradeList {
                 contentRow.appendChild(imagesSection);
             }
             
-            // 振り返りセクション（右側）
+            // æŒ¯ã‚Šè¿”ã‚Šã‚»ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆå³å´ï¼‰
             if (hasReflection) {
                 const reflectionSection = document.createElement('div');
                 reflectionSection.className = 'trade-reflection-section';
@@ -653,7 +659,7 @@ class TradeList {
                 
                 const header = document.createElement('div');
                 header.className = 'reflection-header';
-                header.innerHTML = '📝 振り返り:';
+                header.innerHTML = 'ðŸ“ æŒ¯ã‚Šè¿”ã‚Š:';
                 header.style.cssText = 'color: rgba(255,255,255,0.7); font-size: 0.9rem; margin-bottom: 8px; font-weight: 500;';
                 
                 const text = document.createElement('div');
@@ -663,7 +669,7 @@ class TradeList {
                 const lines = trade.reflection.split('\n');
                 const displayLines = lines.slice(0, 3);
                 
-                // 3行目が長い場合は省略
+                // 3è¡Œç›®ãŒé•·ã„å ´åˆã¯çœç•¥
                 if (lines.length > 3) {
                     const lastLine = displayLines[2];
                     if (lastLine && lastLine.length > 40) {
@@ -678,7 +684,7 @@ class TradeList {
                     }
                 }
                 
-                // HTMLエスケープ処理
+                // HTMLã‚¨ã‚¹ã‚±ãƒ¼ãƒ—å‡¦ç†
                 const escapedLines = displayLines.map(line => {
                     const div = document.createElement('div');
                     div.textContent = line;
@@ -698,29 +704,29 @@ class TradeList {
     }
 
     /**
-     * フィルターオプションの更新（元の実装を再現）
+     * ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã®æ›´æ–°ï¼ˆå…ƒã®å®Ÿè£…ã‚’å†ç¾ï¼‰
      */
     updateFilterOptions() {
         const trades = this.getAllTrades();
         
-        // 年フィルター
+        // å¹´ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼
         const yearFilter = document.getElementById('yearFilter');
         if (yearFilter) {
             const years = [...new Set(trades.map(t => new Date(t.entryTime || t.entryDatetime || t.date).getFullYear()))].sort((a, b) => b - a);
-            yearFilter.innerHTML = '<option value="">全て</option>';
+            yearFilter.innerHTML = '<option value="">å…¨ã¦</option>';
             years.forEach(year => {
                 const option = document.createElement('option');
                 option.value = year;
-                option.textContent = `${year}年`;
+                option.textContent = `${year}å¹´`;
                 yearFilter.appendChild(option);
             });
         }
         
-        // ペアフィルター
+        // ãƒšã‚¢ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼
         const pairFilter = document.getElementById('pairFilter');
         if (pairFilter) {
             const pairs = [...new Set(trades.map(t => t.pair).filter(p => p))].sort();
-            pairFilter.innerHTML = '<option value="">全て</option>';
+            pairFilter.innerHTML = '<option value="">å…¨ã¦</option>';
             pairs.forEach(pair => {
                 const option = document.createElement('option');
                 option.value = pair;
@@ -731,7 +737,7 @@ class TradeList {
     }
 
     /**
-     * フィルタートレード（元の実装を再現）
+     * ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼ãƒˆãƒ¬ãƒ¼ãƒ‰ï¼ˆå…ƒã®å®Ÿè£…ã‚’å†ç¾ï¼‰
      */
     filterTrades() {
         const periodFilter = document.getElementById('periodFilter')?.value || 'all';
@@ -742,26 +748,26 @@ class TradeList {
         
         let filteredTrades = [...this.getAllTrades()];
         
-        // 年フィルター
+        // å¹´ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼
         if (yearFilter) {
             filteredTrades = filteredTrades.filter(t => {
                 return new Date(t.entryTime || t.entryDatetime || t.date).getFullYear() == yearFilter;
             });
         }
         
-        // 月フィルター
+        // æœˆãƒ•ã‚£ãƒ«ã‚¿ãƒ¼
         if (monthFilter) {
             filteredTrades = filteredTrades.filter(t => {
                 return new Date(t.entryTime || t.entryDatetime || t.date).getMonth() + 1 == monthFilter;
             });
         }
         
-        // ペアフィルター
+        // ãƒšã‚¢ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼
         if (pairFilter) {
             filteredTrades = filteredTrades.filter(t => t.pair === pairFilter);
         }
         
-        // ステータスフィルター
+        // ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼
         if (statusFilter) {
             if (statusFilter === 'active') {
                 filteredTrades = filteredTrades.filter(t => !t.exits || t.exits.length === 0);
@@ -770,14 +776,14 @@ class TradeList {
             }
         }
         
-        // 表示
+        // è¡¨ç¤º
         const container = document.getElementById('tradeRecordsList');
         if (container) {
-            // 日付でソート（新しい順）
+            // æ—¥ä»˜ã§ã‚½ãƒ¼ãƒˆï¼ˆæ–°ã—ã„é †ï¼‰
             filteredTrades = filteredTrades.sort((a, b) => {
                 const dateA = new Date(a.entryTime || a.entryDatetime || a.date);
                 const dateB = new Date(b.entryTime || b.entryDatetime || b.date);
-                return dateB - dateA; // 新しい順（降順）
+                return dateB - dateA; // æ–°ã—ã„é †ï¼ˆé™é †ï¼‰
             });
             if (window.TradeListRenderer) {
                 window.TradeListRenderer.render(filteredTrades, container, true);
@@ -791,12 +797,12 @@ class TradeList {
     }
 
     /**
-     * エラー表示
-     * @param {string} message - エラーメッセージ
+     * ã‚¨ãƒ©ãƒ¼è¡¨ç¤º
+     * @param {string} message - ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
      */
     showError(message) {
         console.error(message);
-        // UIにエラーメッセージを表示する処理
+        // UIã«ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’è¡¨ç¤ºã™ã‚‹å‡¦ç†
         const errorDiv = document.createElement('div');
         errorDiv.className = 'error-message';
         errorDiv.textContent = message;
@@ -808,6 +814,6 @@ class TradeList {
     }
 }
 
-// グローバルに公開（bridge.jsから参照可能にする）
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«ã«å…¬é–‹ï¼ˆbridge.jsã‹ã‚‰å‚ç…§å¯èƒ½ã«ã™ã‚‹ï¼‰
 window.TradeList = TradeList;
 console.log('TradeList.js loaded, window.TradeList =', window.TradeList);
