@@ -2,10 +2,12 @@
  * imageUtils.js - 画像ユーティリティ
  * 
  * chartImagesの両形式（Base64文字列 / URLオブジェクト）に対応
+ * v1.1.0: 署名付きURL期限切れ自動更新機能
  * v1.2.0: 画像説明（題名・説明）機能に対応
+ * v1.3.0: v1.1.0とv1.2.0の機能をマージ
  * 
- * @version 1.2.0
- * @date 2026-01-17
+ * @version 1.3.0
+ * @date 2026-01-22
  */
 
 (function() {
@@ -254,6 +256,180 @@
     }
     
     // ========================================
+    // 署名付きURL期限チェック＆自動更新（v1.1.0）
+    // ========================================
+    
+    /**
+     * 署名付きURLの有効期限を取得
+     * 
+     * @param {string} url - 署名付きURL
+     * @returns {Date|null} 有効期限（取得できない場合はnull）
+     */
+    function getUrlExpiration(url) {
+        if (!url || typeof url !== 'string') return null;
+        
+        try {
+            const tokenMatch = url.match(/token=([^&]+)/);
+            if (!tokenMatch) return null;
+            
+            const token = tokenMatch[1];
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            
+            if (payload.exp) {
+                return new Date(payload.exp * 1000);
+            }
+        } catch (e) {
+            console.warn('[imageUtils] JWT解析エラー:', e);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 署名付きURLが期限切れかどうかを確認
+     * 余裕を持って1時間前から期限切れとみなす
+     * 
+     * @param {string|Object} img - 画像データ
+     * @returns {boolean} 期限切れかどうか
+     */
+    function isUrlExpired(img) {
+        // Base64は期限なし
+        if (isBase64Image(img)) return false;
+        
+        const url = typeof img === 'object' ? (img.url || img.src) : img;
+        if (!url || !url.includes('token=')) return false;
+        
+        const expiration = getUrlExpiration(url);
+        if (!expiration) return false;
+        
+        // 1時間の余裕を持つ
+        const now = new Date();
+        const buffer = 60 * 60 * 1000; // 1時間
+        
+        return expiration.getTime() - buffer < now.getTime();
+    }
+    
+    /**
+     * 有効な画像URLを取得（期限切れなら自動更新）
+     * 
+     * @param {string|Object} img - 画像データ
+     * @param {Object} options - オプション
+     * @param {number} options.expiresIn - 新URLの有効期間（秒）デフォルト7日
+     * @returns {Promise<string|null>} 有効な画像URL
+     */
+    async function getValidImageSrc(img, options = {}) {
+        // null/undefinedの場合
+        if (!img) return null;
+        
+        // Base64の場合はそのまま返す
+        if (isBase64Image(img)) {
+            return getImageSrc(img);
+        }
+        
+        // URL形式でない場合
+        if (!isUrlImage(img)) {
+            return getImageSrc(img);
+        }
+        
+        // 期限切れでない場合はそのまま返す
+        if (!isUrlExpired(img)) {
+            return getImageSrc(img);
+        }
+        
+        // 期限切れの場合：pathから新しいURLを取得
+        const path = typeof img === 'object' ? img.path : null;
+        if (!path) {
+            console.warn('[imageUtils] pathがないため更新できません');
+            return getImageSrc(img);
+        }
+        
+        // Supabaseが利用可能か確認
+        if (typeof getSupabase !== 'function') {
+            console.warn('[imageUtils] Supabaseが利用できません');
+            return getImageSrc(img);
+        }
+        
+        try {
+            const expiresIn = options.expiresIn || 604800; // デフォルト7日
+            const { data, error } = await getSupabase()
+                .storage
+                .from('trade-images')
+                .createSignedUrl(path, expiresIn);
+            
+            if (error) {
+                console.error('[imageUtils] URL更新エラー:', error);
+                return getImageSrc(img);
+            }
+            
+            if (data?.signedUrl) {
+                console.log('[imageUtils] URL自動更新:', path);
+                
+                // 元のオブジェクトも更新（参照渡しなので反映される）
+                if (typeof img === 'object') {
+                    img.url = data.signedUrl;
+                    if (img.src && img.src.startsWith('http')) {
+                        img.src = data.signedUrl;
+                    }
+                }
+                
+                return data.signedUrl;
+            }
+        } catch (e) {
+            console.error('[imageUtils] URL更新例外:', e);
+        }
+        
+        return getImageSrc(img);
+    }
+    
+    /**
+     * ノートの全画像URLを検証・更新
+     * 
+     * @param {Object} note - ノートデータ
+     * @returns {Promise<boolean>} 更新があったかどうか
+     */
+    async function refreshNoteImageUrls(note) {
+        if (!note?.images || note.images.length === 0) return false;
+        
+        let updated = false;
+        
+        for (let i = 0; i < note.images.length; i++) {
+            const img = note.images[i];
+            if (isUrlExpired(img) && img?.path) {
+                const newUrl = await getValidImageSrc(img);
+                if (newUrl && newUrl !== getImageSrc(note.images[i])) {
+                    updated = true;
+                }
+            }
+        }
+        
+        return updated;
+    }
+    
+    /**
+     * トレードの全画像URLを検証・更新
+     * 
+     * @param {Object} trade - トレードデータ
+     * @returns {Promise<boolean>} 更新があったかどうか
+     */
+    async function refreshTradeImageUrls(trade) {
+        if (!trade?.chartImages || trade.chartImages.length === 0) return false;
+        
+        let updated = false;
+        
+        for (let i = 0; i < trade.chartImages.length; i++) {
+            const img = trade.chartImages[i];
+            if (isUrlExpired(img) && img?.path) {
+                const newUrl = await getValidImageSrc(img);
+                if (newUrl && newUrl !== getImageSrc(trade.chartImages[i])) {
+                    updated = true;
+                }
+            }
+        }
+        
+        return updated;
+    }
+    
+    // ========================================
     // グローバルに公開
     // ========================================
     
@@ -263,7 +439,7 @@
     window.isUrlImage = isUrlImage;
     window.isBase64Image = isBase64Image;
     
-    // 新規関数（v1.2.0）
+    // 新規関数（v1.2.0 - 説明機能）
     window.normalizeImageData = normalizeImageData;
     window.hasImageCaption = hasImageCaption;
     window.getImageTitle = getImageTitle;
@@ -271,12 +447,19 @@
     window.createImageData = createImageData;
     window.updateImageCaption = updateImageCaption;
     
+    // v1.1.0 機能（期限切れURL処理）
+    window.getUrlExpiration = getUrlExpiration;
+    window.isUrlExpired = isUrlExpired;
+    window.getValidImageSrc = getValidImageSrc;
+    window.refreshNoteImageUrls = refreshNoteImageUrls;
+    window.refreshTradeImageUrls = refreshTradeImageUrls;
+    
     // 定数も公開（他モジュールで参照可能に）
     window.IMAGE_CAPTION_LIMITS = {
         maxTitleLength: MAX_TITLE_LENGTH,
         maxDescriptionLength: MAX_DESCRIPTION_LENGTH
     };
     
-    console.log('[imageUtils] 画像ユーティリティ読み込み完了 v1.2.0（説明機能対応）');
+    console.log('[imageUtils] 画像ユーティリティ読み込み完了 v1.3.0（説明機能+URL自動更新）');
     
 })();
