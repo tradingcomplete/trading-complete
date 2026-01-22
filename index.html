@@ -2139,7 +2139,12 @@
             <div class="modal-body">
                 <!-- プレビュー画像 + 変更ボタン -->
                 <div class="caption-edit-preview">
-                    <img id="captionEditPreviewImg" src="" alt="プレビュー">
+                    <div class="preview-image-container">
+                        <img id="captionEditPreviewImg" src="" alt="プレビュー">
+                        <button type="button" class="delete-image-btn" id="deleteImageInEditBtn" onclick="deleteImageInEdit()" title="画像を削除">
+                            ×
+                        </button>
+                    </div>
                     <button type="button" class="btn btn-small btn-outline" id="changeImageInEditBtn" onclick="changeImageInEdit()">
                         画像を変更
                     </button>

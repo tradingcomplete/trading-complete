@@ -263,6 +263,32 @@ class NoteManagerModule {
     }
 
     /**
+     * 画像を削除
+     * @param {string} dateStr - ノートの日付キー
+     * @param {number} index - 画像インデックス（0始まり）
+     * @returns {boolean} 成功/失敗
+     */
+    deleteImage(dateStr, index) {
+        const note = this.getNote(dateStr);
+        if (!note || !note.images || !note.images[index]) {
+            return false;
+        }
+        
+        const images = [...note.images];
+        images.splice(index, 1);  // 該当画像を削除
+        
+        note.images = images;
+        
+        // 保存
+        this.#saveNoteToStorageAndCloud(dateStr, note);
+        
+        // 詳細表示を更新
+        this.displayNoteDetail(dateStr);
+        
+        return true;
+    }
+
+    /**
      * デバッグ用ステータス取得
      * @returns {Object} モジュール状態
      */

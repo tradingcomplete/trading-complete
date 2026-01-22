@@ -698,6 +698,14 @@ function setupEventListeners() {
     // backToStep1Btn, confirmAddImageBtn, changeImageBtn, imageTitleInput, imageDescInput
     // これらのイベントリスナーは不要になりました
     
+    // Step2の×ボタン（キャンセル）- 後方互換用
+    const cancelAddImageBtn = document.getElementById('cancelAddImageBtn');
+    if (cancelAddImageBtn) {
+        cancelAddImageBtn.addEventListener('click', function() {
+            backToImageAddStep1();
+        });
+    }
+    
     // 外部URL「次へ」ボタンの処理
     const addUrlBtn = document.getElementById('addUrlBtn');
     if (addUrlBtn) {
@@ -1067,6 +1075,25 @@ window.showImageAddStep2 = function(imageSrc) {
 };
 
 /**
+ * Step1に戻る（画像追加キャンセル）
+ */
+window.backToImageAddStep1 = function() {
+    pendingImageSrc = null;
+    
+    const step1 = document.getElementById('imageAddStep1');
+    const step2 = document.getElementById('imageAddStep2');
+    
+    if (step1) step1.style.display = 'block';
+    if (step2) step2.style.display = 'none';
+    
+    // 入力欄をクリア（旧Step2用、後方互換）
+    const titleInput = document.getElementById('imageTitleInput');
+    const descInput = document.getElementById('imageDescInput');
+    if (titleInput) titleInput.value = '';
+    if (descInput) descInput.value = '';
+};
+
+/**
  * 画像を変更（編集モーダルからStep1に戻る）
  */
 window.changeImageInEdit = function() {
@@ -1085,6 +1112,51 @@ window.changeImageInEdit = function() {
     
     if (modal) modal.style.display = 'flex';
     if (step1) step1.style.display = 'block';
+};
+
+/**
+ * 画像を削除（編集モーダルから）
+ */
+window.deleteImageInEdit = function() {
+    // 編集モードでのみ動作
+    if (!captionEditContext) {
+        showToast('削除対象が不明です', 'error');
+        return;
+    }
+    
+    if (!confirm('この画像を削除しますか？')) {
+        return;
+    }
+    
+    const { type, id, index } = captionEditContext;
+    
+    if (type === 'trade') {
+        const trade = window.tradeManager ? window.tradeManager.getTradeById(id) : null;
+        if (trade && trade.chartImages) {
+            const chartImages = [...trade.chartImages];
+            chartImages.splice(index, 1);  // 該当画像を削除
+            
+            window.tradeManager.updateTrade(id, { chartImages });
+            showToast('画像を削除しました', 'success');
+            
+            // トレード詳細を再表示
+            if (window.tradeDetail && typeof window.tradeDetail.showTradeDetail === 'function') {
+                const updatedTrade = window.tradeManager.getTradeById(id);
+                window.tradeDetail.showTradeDetail(updatedTrade);
+            }
+        }
+    } else if (type === 'note') {
+        if (window.NoteManagerModule && typeof window.NoteManagerModule.deleteImage === 'function') {
+            const success = window.NoteManagerModule.deleteImage(id, index);
+            if (success) {
+                showToast('画像を削除しました', 'success');
+            } else {
+                showToast('削除に失敗しました', 'error');
+            }
+        }
+    }
+    
+    closeImageCaptionEditModal();
 };
 
 // 処理済み画像のハンドリング
@@ -1479,9 +1551,9 @@ window.openImageCaptionEdit = function(type, id, index, source = 'detail') {
     const saveBtn = document.getElementById('captionEditSaveBtn');
     if (saveBtn) saveBtn.textContent = '保存';
     
-    // 「画像を変更」ボタンを非表示（編集モードでは不要）
+    // 「画像を変更」ボタンを表示
     const changeBtn = document.getElementById('changeImageInEditBtn');
-    if (changeBtn) changeBtn.style.display = 'none';
+    if (changeBtn) changeBtn.style.display = 'block';
     
     // モーダルを表示
     const modal = document.getElementById('imageCaptionEditModal');

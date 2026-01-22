@@ -4682,4 +4682,63 @@ body.light-mode .note-image-edit-btn:hover {
     }
 }
 
+/* ========================================
+   画像モーダル - デザイン統一
+   ======================================== */
+
+/* プレビュー画像コンテナ（位置指定用） */
+.preview-image-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* 画像削除ボタン（×） */
+.delete-image-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: #ff4d4d;
+    color: white;
+    border: 2px solid #222;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, transform 0.2s;
+    z-index: 10;
+}
+
+.delete-image-btn:hover {
+    background-color: #ff1a1a;
+    transform: scale(1.1);
+}
+
+/* Step2用のcaption-edit-preview適用 */
+#imageAddStep2 .caption-edit-preview {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#imageAddStep2 .caption-edit-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    object-fit: contain;
+}
+
+/* Step2用のmodal-footer適用 */
+#imageAddStep2 .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #444;
+}
 /* ========== 6_responsive.css 終了 ========== */
