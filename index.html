@@ -2103,60 +2103,6 @@
                 </div>
             </div>
             
-            <!-- Step 2: プレビュー＆説明入力エリア（初期非表示） -->
-            <div class="image-add-body" id="imageAddStep2" style="display: none;">
-                <!-- プレビュー画像 -->
-                <div class="image-preview-section">
-                    <img id="imagePreviewImg" src="" alt="プレビュー" class="image-preview-img">
-                    <button type="button" class="btn btn-small btn-secondary" id="changeImageBtn">
-                        画像を変更
-                    </button>
-                </div>
-                
-                <!-- 説明入力エリア -->
-                <div class="image-caption-section">
-                    <h4>📝 画像の説明（任意）</h4>
-                    
-                    <div class="form-group">
-                        <label for="imageTitleInput">題名</label>
-                        <div class="input-with-counter">
-                            <input 
-                                type="text" 
-                                id="imageTitleInput" 
-                                class="form-control"
-                                maxlength="30" 
-                                placeholder="例: エントリー時の日足"
-                            >
-                            <span class="char-counter"><span id="titleCharCount">0</span>/30</span>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="imageDescInput">説明</label>
-                        <div class="input-with-counter">
-                            <textarea 
-                                id="imageDescInput" 
-                                class="form-control"
-                                maxlength="100" 
-                                rows="2" 
-                                placeholder="例: サポートラインブレイク後ロールリバーサルした"
-                            ></textarea>
-                            <span class="char-counter"><span id="descCharCount">0</span>/100</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- アクションボタン -->
-                <div class="image-add-actions">
-                    <button type="button" class="btn btn-secondary" id="backToStep1Btn">
-                        戻る
-                    </button>
-                    <button type="button" class="btn btn-primary" id="confirmAddImageBtn">
-                        追加する
-                    </button>
-                </div>
-            </div>
-            
             <!-- 非表示のファイル入力 -->
             <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
         </div>
@@ -2187,13 +2133,16 @@
     <div id="imageCaptionEditModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h2>📝 画像の説明を編集</h2>
+                <h2 id="captionEditModalTitle">📝 画像の説明を編集</h2>
                 <button class="modal-close" onclick="closeImageCaptionEditModal()">×</button>
             </div>
             <div class="modal-body">
-                <!-- プレビュー画像 -->
+                <!-- プレビュー画像 + 変更ボタン -->
                 <div class="caption-edit-preview">
                     <img id="captionEditPreviewImg" src="" alt="プレビュー">
+                    <button type="button" class="btn btn-small btn-outline" id="changeImageInEditBtn" onclick="changeImageInEdit()">
+                        画像を変更
+                    </button>
                 </div>
                 
                 <!-- 入力欄 -->
@@ -2229,7 +2178,7 @@
                 <button type="button" class="btn btn-secondary" onclick="closeImageCaptionEditModal()">
                     キャンセル
                 </button>
-                <button type="button" class="btn btn-primary" onclick="saveImageCaptionEdit()">
+                <button type="button" class="btn btn-primary" id="captionEditSaveBtn" onclick="saveImageCaptionEdit()">
                     保存
                 </button>
             </div>

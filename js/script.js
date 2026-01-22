@@ -137,6 +137,8 @@ let pendingImageSrc = null;  // Step2用：一時保存する画像データ
 
 // 説明編集用
 let captionEditContext = null;  // { type: 'trade'|'note', id, index }
+let captionEditMode = 'edit';   // 'edit' または 'add'
+let pendingImageForAdd = null;  // 追加モード用の一時画像データ
 let currentNoteId = null;
 
 // タイマー用
@@ -692,36 +694,9 @@ function setupEventListeners() {
     // キーボードショートカットを設定
     setupKeyboardShortcuts();
     
-    // 画像追加モーダル - Step2関連
-    const backToStep1Btn = document.getElementById('backToStep1Btn');
-    const confirmAddImageBtn = document.getElementById('confirmAddImageBtn');
-    const changeImageBtn = document.getElementById('changeImageBtn');
-    const imageTitleInput = document.getElementById('imageTitleInput');
-    const imageDescInput = document.getElementById('imageDescInput');
-    
-    if (backToStep1Btn) {
-        backToStep1Btn.addEventListener('click', backToImageAddStep1);
-    }
-    if (confirmAddImageBtn) {
-        confirmAddImageBtn.addEventListener('click', confirmAddImage);
-    }
-    if (changeImageBtn) {
-        changeImageBtn.addEventListener('click', backToImageAddStep1);
-    }
-    
-    // 文字数カウンター
-    if (imageTitleInput) {
-        imageTitleInput.addEventListener('input', function() {
-            const count = document.getElementById('titleCharCount');
-            if (count) count.textContent = this.value.length;
-        });
-    }
-    if (imageDescInput) {
-        imageDescInput.addEventListener('input', function() {
-            const count = document.getElementById('descCharCount');
-            if (count) count.textContent = this.value.length;
-        });
-    }
+    // 注意: Step2は削除され、imageCaptionEditModalに統合されました
+    // backToStep1Btn, confirmAddImageBtn, changeImageBtn, imageTitleInput, imageDescInput
+    // これらのイベントリスナーは不要になりました
     
     // 外部URL「次へ」ボタンの処理
     const addUrlBtn = document.getElementById('addUrlBtn');
@@ -1043,58 +1018,73 @@ window.processLocalImage = async function(file) {
 
 // Step2を表示（プレビュー＆説明入力）
 window.showImageAddStep2 = function(imageSrc) {
+    // 追加モード用の一時データを保存
     pendingImageSrc = imageSrc;
+    pendingImageForAdd = imageSrc;
+    captionEditMode = 'add';
     
-    const step1 = document.getElementById('imageAddStep1');
-    const step2 = document.getElementById('imageAddStep2');
-    const previewImg = document.getElementById('imagePreviewImg');
+    // imageAddModalを閉じる
+    closeImageAddModal();
     
-    if (step1) step1.style.display = 'none';
-    if (step2) step2.style.display = 'block';
+    // プレビュー画像設定
+    const previewImg = document.getElementById('captionEditPreviewImg');
     if (previewImg) previewImg.src = imageSrc;
-};
-
-// Step1に戻る
-window.backToImageAddStep1 = function() {
-    pendingImageSrc = null;
     
-    const step1 = document.getElementById('imageAddStep1');
-    const step2 = document.getElementById('imageAddStep2');
+    // 入力欄を設定（一時保存があれば復元）
+    const titleInput = document.getElementById('captionEditTitle');
+    const descInput = document.getElementById('captionEditDesc');
+    const titleCount = document.getElementById('captionEditTitleCount');
+    const descCount = document.getElementById('captionEditDescCount');
     
-    if (step1) step1.style.display = 'block';
-    if (step2) step2.style.display = 'none';
-    
-    // 入力欄をクリア
-    const titleInput = document.getElementById('imageTitleInput');
-    const descInput = document.getElementById('imageDescInput');
-    if (titleInput) titleInput.value = '';
-    if (descInput) descInput.value = '';
-    // カウンターリセット
-    const titleCount = document.getElementById('titleCharCount');
-    const descCount = document.getElementById('descCharCount');
-    if (titleCount) titleCount.textContent = '0';
-    if (descCount) descCount.textContent = '0';
-};
-
-// 画像追加を確定
-window.confirmAddImage = function() {
-    if (!pendingImageSrc) {
-        showToast('画像が選択されていません', 'error');
-        return;
+    if (titleInput) {
+        titleInput.value = window.tempCaptionTitle || '';
+        if (titleCount) titleCount.textContent = titleInput.value.length;
+    }
+    if (descInput) {
+        descInput.value = window.tempCaptionDesc || '';
+        if (descCount) descCount.textContent = descInput.value.length;
     }
     
-    const titleInput = document.getElementById('imageTitleInput');
-    const descInput = document.getElementById('imageDescInput');
+    // 一時保存をクリア
+    window.tempCaptionTitle = null;
+    window.tempCaptionDesc = null;
     
-    const title = titleInput ? titleInput.value.trim() : '';
-    const description = descInput ? descInput.value.trim() : '';
+    // タイトル変更
+    const modalTitle = document.getElementById('captionEditModalTitle');
+    if (modalTitle) modalTitle.textContent = '📷 画像を追加';
     
-    // 新形式の画像データを作成
-    const imageData = window.createImageData ? window.createImageData(pendingImageSrc, title, description) : pendingImageSrc;
+    // ボタンテキスト変更
+    const saveBtn = document.getElementById('captionEditSaveBtn');
+    if (saveBtn) saveBtn.textContent = '追加する';
     
-    // 既存の処理に渡す
-    handleProcessedImage(imageData);
-    closeImageAddModal();
+    // 「画像を変更」ボタンを表示
+    const changeBtn = document.getElementById('changeImageInEditBtn');
+    if (changeBtn) changeBtn.style.display = 'block';
+    
+    // モーダル表示
+    const modal = document.getElementById('imageCaptionEditModal');
+    if (modal) modal.style.display = 'flex';
+};
+
+/**
+ * 画像を変更（編集モーダルからStep1に戻る）
+ */
+window.changeImageInEdit = function() {
+    // 現在の入力値を保持
+    const titleInput = document.getElementById('captionEditTitle');
+    const descInput = document.getElementById('captionEditDesc');
+    window.tempCaptionTitle = titleInput ? titleInput.value : '';
+    window.tempCaptionDesc = descInput ? descInput.value : '';
+    
+    // 編集モーダルを閉じる
+    document.getElementById('imageCaptionEditModal').style.display = 'none';
+    
+    // Step1を表示（pendingImageTypeは維持）
+    const modal = document.getElementById('imageAddModal');
+    const step1 = document.getElementById('imageAddStep1');
+    
+    if (modal) modal.style.display = 'flex';
+    if (step1) step1.style.display = 'block';
 };
 
 // 処理済み画像のハンドリング
@@ -1430,6 +1420,10 @@ window.openModalImageEdit = function() {
  * @param {string} source - 'modal'=拡大モーダルから, 'detail'=詳細から（デフォルト）
  */
 window.openImageCaptionEdit = function(type, id, index, source = 'detail') {
+    // 編集モードに設定
+    captionEditMode = 'edit';
+    pendingImageForAdd = null;
+    
     let imgData = null;
     
     if (type === 'trade') {
@@ -1477,6 +1471,18 @@ window.openImageCaptionEdit = function(type, id, index, source = 'detail') {
         if (descCount) descCount.textContent = descInput.value.length;
     }
     
+    // タイトル設定（編集モード）
+    const modalTitle = document.getElementById('captionEditModalTitle');
+    if (modalTitle) modalTitle.textContent = '📝 画像の説明を編集';
+    
+    // ボタンテキスト設定（編集モード）
+    const saveBtn = document.getElementById('captionEditSaveBtn');
+    if (saveBtn) saveBtn.textContent = '保存';
+    
+    // 「画像を変更」ボタンを非表示（編集モードでは不要）
+    const changeBtn = document.getElementById('changeImageInEditBtn');
+    if (changeBtn) changeBtn.style.display = 'none';
+    
     // モーダルを表示
     const modal = document.getElementById('imageCaptionEditModal');
     if (modal) modal.style.display = 'flex';
@@ -1489,22 +1495,45 @@ window.closeImageCaptionEditModal = function() {
     const modal = document.getElementById('imageCaptionEditModal');
     if (modal) modal.style.display = 'none';
     captionEditContext = null;
+    captionEditMode = 'edit';
+    pendingImageForAdd = null;
 };
 
 /**
- * 画像説明を保存
+ * 画像説明を保存（追加モード/編集モード両対応）
  */
 window.saveImageCaptionEdit = function() {
-    if (!captionEditContext) {
-        showToast('編集対象が不明です', 'error');
-        return;
-    }
-    
     const titleInput = document.getElementById('captionEditTitle');
     const descInput = document.getElementById('captionEditDesc');
     
     const title = titleInput ? titleInput.value.trim() : '';
     const description = descInput ? descInput.value.trim() : '';
+    
+    // 追加モードの場合
+    if (captionEditMode === 'add') {
+        if (!pendingImageSrc && !pendingImageForAdd) {
+            showToast('画像が選択されていません', 'error');
+            return;
+        }
+        
+        const imageSrc = pendingImageForAdd || pendingImageSrc;
+        
+        // 新形式の画像データを作成
+        const imageData = window.createImageData 
+            ? window.createImageData(imageSrc, title, description) 
+            : imageSrc;
+        
+        // 既存の処理に渡す
+        handleProcessedImage(imageData);
+        closeImageCaptionEditModal();
+        return;
+    }
+    
+    // 編集モードの場合
+    if (!captionEditContext) {
+        showToast('編集対象が不明です', 'error');
+        return;
+    }
     
     const { type, id, index, source } = captionEditContext;
     let updatedImgData = null;

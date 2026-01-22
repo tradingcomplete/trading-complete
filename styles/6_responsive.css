@@ -4627,8 +4627,21 @@ body.light-mode .image-caption-title {
 
 /* 説明編集モーダル */
 .caption-edit-preview {
+    position: relative;
     text-align: center;
     margin-bottom: 20px;
+}
+
+.caption-edit-preview .btn {
+    margin-top: 12px;
+}
+
+/* 画像を変更ボタン */
+#changeImageInEditBtn {
+    display: block;
+    margin: 12px auto 0;
+    padding: 8px 16px;
+    font-size: 0.9rem;
 }
 
 .caption-edit-preview img {
