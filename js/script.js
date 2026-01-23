@@ -1570,7 +1570,12 @@ window.openImageCaptionEdit = function(type, id, index, source = 'detail') {
         }
     } else if (type === 'note') {
         // 相場ノートの画像
-        if (window.NoteManagerModule) {
+        // まずtempNoteEditImagesから取得を試みる（編集中の最新データ）
+        const tempKey = 'noteEdit_' + (index + 1);
+        if (window.tempNoteEditImages && window.tempNoteEditImages[tempKey]) {
+            imgData = window.tempNoteEditImages[tempKey];
+        } else if (window.NoteManagerModule) {
+            // tempNoteEditImagesにない場合はNoteManagerModuleから取得
             const note = window.NoteManagerModule.getNote(id);
             if (note && note.images && note.images[index]) {
                 imgData = note.images[index];
