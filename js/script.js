@@ -1189,7 +1189,7 @@ window.handleProcessedImage = function(imageData) {
         const captionEl = document.getElementById('tradeChartCaption1');
         if (preview) {
             const title = window.getImageTitle ? window.getImageTitle(imageData) : '';
-            preview.innerHTML = `<img src="${imageSrc}" style="width: 100%; height: auto; border-radius: 8px;" alt="チャート画像1" onclick="showImageModalWithCaption(window.tempChartImage1); event.stopPropagation();">`;
+            preview.innerHTML = `<img src="${imageSrc}" style="width: 100%; height: auto; border-radius: 8px;" alt="チャート画像1" onclick="showImageModalWithCaption(window.tempChartImage1, {type: 'newEntry', id: null, index: 0}); event.stopPropagation();">`;
             window.tempChartImage1 = imageData;
             // 枠外に題名を表示
             if (captionEl) {
@@ -1211,7 +1211,7 @@ window.handleProcessedImage = function(imageData) {
         const captionEl = document.getElementById('tradeChartCaption2');
         if (preview) {
             const title = window.getImageTitle ? window.getImageTitle(imageData) : '';
-            preview.innerHTML = `<img src="${imageSrc}" style="width: 100%; height: auto; border-radius: 8px;" alt="チャート画像2" onclick="showImageModalWithCaption(window.tempChartImage2); event.stopPropagation();">`;
+            preview.innerHTML = `<img src="${imageSrc}" style="width: 100%; height: auto; border-radius: 8px;" alt="チャート画像2" onclick="showImageModalWithCaption(window.tempChartImage2, {type: 'newEntry', id: null, index: 1}); event.stopPropagation();">`;
             window.tempChartImage2 = imageData;
             // 枠外に題名を表示
             if (captionEl) {
@@ -1233,7 +1233,7 @@ window.handleProcessedImage = function(imageData) {
         const captionEl = document.getElementById('tradeChartCaption3');
         if (preview) {
             const title = window.getImageTitle ? window.getImageTitle(imageData) : '';
-            preview.innerHTML = `<img src="${imageSrc}" style="width: 100%; height: auto; border-radius: 8px;" alt="チャート画像3" onclick="showImageModalWithCaption(window.tempChartImage3); event.stopPropagation();">`;
+            preview.innerHTML = `<img src="${imageSrc}" style="width: 100%; height: auto; border-radius: 8px;" alt="チャート画像3" onclick="showImageModalWithCaption(window.tempChartImage3, {type: 'newEntry', id: null, index: 2}); event.stopPropagation();">`;
             window.tempChartImage3 = imageData;
             // 枠外に題名を表示
             if (captionEl) {
@@ -1437,7 +1437,15 @@ window.showImageModalWithCaption = function(imgData, context) {
                 editBtn.style.display = context ? 'inline-block' : 'none';
             }
         } else {
-            captionArea.style.display = 'none';
+            // 題名・説明がなくても編集ボタン表示のためエリアは表示
+            if (titleEl) titleEl.textContent = '';
+            if (descEl) descEl.textContent = '';
+            if (captionContent) captionContent.style.display = 'block';
+            if (captionCollapsed) captionCollapsed.style.display = 'none';
+            window.captionVisible = true;
+            if (editBtn) {
+                editBtn.style.display = context ? 'inline-block' : 'none';
+            }
         }
     }
     
@@ -1468,6 +1476,60 @@ window.currentModalImageContext = null;
 // 拡大モーダルから編集モーダルを開く
 window.openModalImageEdit = function() {
     const context = window.currentModalImageContext;
+    
+    // 新規エントリーの場合の処理
+    if (context && context.type === 'newEntry') {
+        const index = context.index;
+        const tempImages = [window.tempChartImage1, window.tempChartImage2, window.tempChartImage3];
+        const imgData = tempImages[index];
+        
+        if (!imgData) {
+            showToast('画像が見つかりません', 'error');
+            return;
+        }
+        
+        pendingImageType = 'tradeChart' + (index + 1);
+        pendingImageForAdd = imgData;
+        captionEditMode = 'add';
+        
+        const previewImg = document.getElementById('captionEditPreviewImg');
+        const imageSrc = window.getImageSrc ? window.getImageSrc(imgData) : imgData;
+        if (previewImg) previewImg.src = imageSrc;
+        
+        const titleInput = document.getElementById('captionEditTitle');
+        const descInput = document.getElementById('captionEditDesc');
+        const titleCount = document.getElementById('captionEditTitleCount');
+        const descCount = document.getElementById('captionEditDescCount');
+        
+        const currentTitle = window.getImageTitle ? window.getImageTitle(imgData) : '';
+        const currentDesc = window.getImageDescription ? window.getImageDescription(imgData) : '';
+        
+        if (titleInput) {
+            titleInput.value = currentTitle;
+            if (titleCount) titleCount.textContent = currentTitle.length;
+        }
+        if (descInput) {
+            descInput.value = currentDesc;
+            if (descCount) descCount.textContent = currentDesc.length;
+        }
+        
+        const modalTitle = document.getElementById('captionEditModalTitle');
+        if (modalTitle) modalTitle.textContent = '📝 画像の説明を編集';
+        
+        const saveBtn = document.getElementById('captionEditSaveBtn');
+        if (saveBtn) saveBtn.textContent = '保存する';
+        
+        const changeBtn = document.getElementById('changeImageInEditBtn');
+        if (changeBtn) changeBtn.style.display = 'block';
+        
+        closeImageModal();
+        
+        const modal = document.getElementById('imageCaptionEditModal');
+        if (modal) modal.style.display = 'flex';
+        
+        return;
+    }
+    
     if (!context || !context.type || !context.id || context.index === undefined) {
         showToast('編集情報がありません', 'error');
         return;
