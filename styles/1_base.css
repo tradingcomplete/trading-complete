@@ -32,8 +32,8 @@ body {
    ユーザーアイコン サイズ制限（2025-01-14追加）
    ========================================== */
 .user-icon {
-    width: 60px;
-    height: 60px;
+    width: 128px;
+    height:128px;
     flex-shrink: 0;
 }
 
