@@ -1656,10 +1656,13 @@ window.saveImageCaptionEdit = function() {
         
         const imageSrc = pendingImageForAdd || pendingImageSrc;
         
+        // オブジェクトの場合は実際のsrcを取り出す（二重ネスト防止）
+        const actualSrc = window.getImageSrc ? window.getImageSrc(imageSrc) : imageSrc;
+        
         // 新形式の画像データを作成
         const imageData = window.createImageData 
-            ? window.createImageData(imageSrc, title, description) 
-            : imageSrc;
+            ? window.createImageData(actualSrc, title, description) 
+            : { src: actualSrc, title, description };
         
         // 既存の処理に渡す
         handleProcessedImage(imageData);
