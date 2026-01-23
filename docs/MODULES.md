@@ -321,12 +321,15 @@ await ImageHandler.uploadToCloud(source, {
 ### 🖼️ imageUtils.js（画像ヘルパー）
 
 **ファイル**: `js/utils/imageUtils.js`  
-**バージョン**: 1.1.0  
-**更新日**: 2026-01-14
+**バージョン**: 1.3.0（v1.1.0 + v1.2.0統合）  
+**更新日**: 2026-01-23
 
-Base64文字列とSupabase Storage URLの両形式に対応した画像ヘルパー関数（署名付きURL期限管理含む）。
+Base64文字列とSupabase Storage URLの両形式に対応した画像ヘルパー関数。
+署名付きURL期限管理 + 画像説明欄（title/description）機能を統合。
 
 #### グローバル関数
+
+**基本関数**:
 
 | 関数 | 引数 | 戻り値 | 説明 |
 |------|------|--------|------|
@@ -334,11 +337,27 @@ Base64文字列とSupabase Storage URLの両形式に対応した画像ヘルパ
 | `hasValidImage(img)` | any | boolean | 有効な画像データか確認 |
 | `isUrlImage(img)` | any | boolean | URL形式か確認 |
 | `isBase64Image(img)` | any | boolean | Base64形式か確認 |
-| `getUrlExpiration(url)` | string | Date\|null | 署名付きURLの有効期限を取得 🆕 |
-| `isUrlExpired(img)` | any | boolean | URLが期限切れか（1時間前から切れと判定） 🆕 |
-| `getValidImageSrc(img)` | any | Promise<string\|null> | 期限切れなら自動更新してURLを返す（async） 🆕 |
-| `refreshNoteImageUrls(note)` | Object | Promise<Object> | ノートの全画像URLを検証・更新 🆕 |
-| `refreshTradeImageUrls(trade)` | Object | Promise<Object> | トレードの全画像URLを検証・更新 🆕 |
+
+**説明欄機能（v1.2.0）**:
+
+| 関数 | 引数 | 戻り値 | 説明 |
+|------|------|--------|------|
+| `normalizeImageData(img)` | any | Object | 画像データを正規化（src/title/description構造に） |
+| `getImageTitle(img)` | any | string\|null | 題名を取得（最大30文字） |
+| `getImageDescription(img)` | any | string\|null | 説明を取得（最大100文字） |
+| `createImageData(src, title, desc)` | string, string?, string? | Object | 画像データオブジェクトを作成 |
+| `updateImageCaption(img, title, desc)` | any, string?, string? | Object | 題名・説明を更新 |
+| `hasImageCaption(img)` | any | boolean | 題名または説明があるか判定 |
+
+**URL期限切れ処理（v1.1.0）**:
+
+| 関数 | 引数 | 戻り値 | 説明 |
+|------|------|--------|------|
+| `getUrlExpiration(url)` | string | Date\|null | 署名付きURLの有効期限を取得 |
+| `isUrlExpired(img)` | any | boolean | URLが期限切れか（1時間前から切れと判定） |
+| `getValidImageSrc(img)` | any | Promise<string\|null> | 期限切れなら自動更新してURLを返す（async） |
+| `refreshNoteImageUrls(note)` | Object | Promise<Object> | ノートの全画像URLを検証・更新 |
+| `refreshTradeImageUrls(trade)` | Object | Promise<Object> | トレードの全画像URLを検証・更新 |
 
 #### 署名付きURL自動更新フロー
 
@@ -355,7 +374,7 @@ isUrlExpired() で期限チェック
 #### 使用例
 
 ```javascript
-// TradeDetail.jsでの使用
+// 基本的な画像表示
 const imgData = chartImages[i];
 const imgSrc = window.getImageSrc ? window.getImageSrc(imgData) : null;
 if (imgSrc) {
@@ -367,6 +386,20 @@ const validSrc = await window.getValidImageSrc(imgData);
 if (validSrc) {
     imgEl.src = validSrc;
 }
+
+// 画像データの作成（説明欄付き）
+const imageData = window.createImageData(
+    'data:image/jpeg;base64,...',
+    'エントリー時の日足',
+    'サポートラインブレイク'
+);
+
+// 題名・説明の取得
+const title = window.getImageTitle(imgData);       // 'エントリー時の日足'
+const desc = window.getImageDescription(imgData); // 'サポートラインブレイク'
+
+// 題名・説明の更新
+const updated = window.updateImageCaption(imgData, '新しい題名', '新しい説明');
 ```
 
 #### 対応形式
@@ -377,7 +410,20 @@ if (validSrc) {
 | URL文字列 | `'https://...'` | そのまま返す |
 | URLオブジェクト | `{ url: 'https://...', path: '...' }` | `url`プロパティを返す |
 | Base64オブジェクト | `{ data: 'data:image/...' }` | `data`プロパティを返す |
+| 説明欄付きオブジェクト | `{ src: '...', title: '...', description: '...' }` | `src`プロパティを返す |
 | null/undefined | - | `null` |
+
+#### 画像データ構造（完全形）
+
+```javascript
+{
+    src: 'data:image/jpeg;base64,...',  // または 'https://...'
+    url: 'https://...',                  // Supabase署名付きURL
+    path: 'userId/trades/xxx/chart1.jpg', // Storage復元用パス
+    title: 'エントリー時の日足',          // 題名（最大30文字）
+    description: 'サポートラインブレイク'  // 説明（最大100文字）
+}
+```
 
 #### index.html への追加
 
