@@ -999,9 +999,8 @@ window.closeImageAddModal = function() {
     const descCount = document.getElementById('descCharCount');
     if (titleCount) titleCount.textContent = '0';
     if (descCount) descCount.textContent = '0';
-    // 状態リセット
-    pendingImageType = null;
-    pendingImageSrc = null;
+    // 注意: pendingImageType, pendingImageSrcは
+    // handleProcessedImage完了後にリセットするため、ここではリセットしない
 };
 
 // ローカル画像処理
@@ -1284,6 +1283,9 @@ window.handleProcessedImage = function(imageData) {
             }
         }
     }
+    
+    // 画像処理完了後に状態をリセット（MODULES.md準拠：責任の分離）
+    // pendingImageType = null;  // 新規エントリーでは維持が必要なため、ここではリセットしない
 };
 
 // [削除済み - TradeEntry.jsに移行]
@@ -1569,6 +1571,8 @@ window.closeImageCaptionEditModal = function() {
     captionEditContext = null;
     captionEditMode = 'edit';
     pendingImageForAdd = null;
+    pendingImageSrc = null;
+    // 注意: pendingImageTypeは新規エントリーで維持が必要なため、ここではリセットしない
 };
 
 /**
