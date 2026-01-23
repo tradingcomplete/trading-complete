@@ -2542,7 +2542,7 @@ body.light-mode .image-caption-outside {
     .settings-subtab-content .input-group input[type="text"] {
         width: 100% !important;
         padding: 10px !important;
-        font-size: 0.9rem !important;
+        font-size: 16px !important;
     }
     
     /* === 設定タブ: テーマセレクタ === */
@@ -3229,7 +3229,7 @@ body.light-mode .image-caption-outside {
     
     .settings-subtab-content .input-group input[type="text"] {
         padding: 8px !important;
-        font-size: 0.85rem !important;
+        font-size: 16px !important;
     }
     
     .theme-btn {
@@ -3251,13 +3251,13 @@ body.light-mode .image-caption-outside {
     
     .goal-input-item input[type="text"] {
         padding: 8px !important;
-        font-size: 0.8rem !important;
+        font-size: 16px !important;
     }
     
     .goal-input-item input[type="date"] {
         width: 90px !important;
         padding: 6px 3px !important;
-        font-size: 0.65rem !important;
+        font-size: 16px !important;
     }
     
     .goal-settings .btn-primary {
@@ -4176,7 +4176,7 @@ body.light-mode .image-caption-outside {
     
     .settings-subtab-content .input-group input[type="text"] {
         padding: 7px !important;
-        font-size: 0.8rem !important;
+        font-size: 16px !important;
     }
     
     .theme-btn {
@@ -4198,13 +4198,13 @@ body.light-mode .image-caption-outside {
     
     .goal-input-item input[type="text"] {
         padding: 7px !important;
-        font-size: 0.75rem !important;
+        font-size: 16px !important;
     }
     
     .goal-input-item input[type="date"] {
         width: 85px !important;
         padding: 5px 2px !important;
-        font-size: 0.6rem !important;
+        font-size: 16px !important;
     }
     
     .goal-settings .btn-primary {
