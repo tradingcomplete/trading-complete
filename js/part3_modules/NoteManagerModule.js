@@ -260,6 +260,18 @@ class NoteManagerModule {
             window.tempNoteEditImages[tempKey] = updatedImg;
         }
         
+        // サムネイル下のキャプション表示を更新
+        const noteImages = document.getElementById('noteImages');
+        if (noteImages) {
+            const items = noteImages.querySelectorAll('.note-image-item');
+            if (items[index]) {
+                let titleEl = items[index].querySelector('.note-image-title');
+                if (titleEl) {
+                    titleEl.textContent = title || '';
+                }
+            }
+        }
+        
         // 保存
         this.#saveNoteToStorageAndCloud(dateStr, note);
         
@@ -328,6 +340,19 @@ class NoteManagerModule {
         const tempKey = 'noteEdit_' + (index + 1);
         if (window.tempNoteEditImages) {
             window.tempNoteEditImages[tempKey] = newImageData;
+        }
+        
+        // サムネイル下のキャプション表示を更新
+        const title = newImageData?.title || '';
+        const noteImages = document.getElementById('noteImages');
+        if (noteImages) {
+            const items = noteImages.querySelectorAll('.note-image-item');
+            if (items[index]) {
+                let titleEl = items[index].querySelector('.note-image-title');
+                if (titleEl) {
+                    titleEl.textContent = title;
+                }
+            }
         }
         
         // 保存（ストレージとクラウド）
