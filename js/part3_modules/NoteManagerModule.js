@@ -247,11 +247,18 @@ class NoteManagerModule {
         const currentImg = images[index];
         
         // 新形式に更新
-        images[index] = window.updateImageCaption 
+        const updatedImg = window.updateImageCaption 
             ? window.updateImageCaption(currentImg, title, description)
             : { src: window.getImageSrc(currentImg), title, description };
         
+        images[index] = updatedImg;
         note.images = images;
+        
+        // tempNoteEditImages も更新（編集画面のサムネイル用）
+        const tempKey = 'noteEdit_' + (index + 1);
+        if (window.tempNoteEditImages && window.tempNoteEditImages[tempKey]) {
+            window.tempNoteEditImages[tempKey] = updatedImg;
+        }
         
         // 保存
         this.#saveNoteToStorageAndCloud(dateStr, note);
@@ -316,6 +323,12 @@ class NoteManagerModule {
         // ノートを更新
         note.images = images;
         note.updatedAt = new Date().toISOString();
+        
+        // tempNoteEditImages も更新（編集画面のサムネイル用）
+        const tempKey = 'noteEdit_' + (index + 1);
+        if (window.tempNoteEditImages) {
+            window.tempNoteEditImages[tempKey] = newImageData;
+        }
         
         // 保存（ストレージとクラウド）
         this.#saveNoteToStorageAndCloud(dateStr, note);
