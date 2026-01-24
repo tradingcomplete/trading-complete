@@ -1701,7 +1701,7 @@ window.saveImageCaptionEdit = function() {
                     
                     // UI更新：トレード一覧を再描画
                     if (window.tradeList && typeof window.tradeList.displayAllTrades === 'function') {
-                        window.tradeList.displayAllTrades('tradeListDisplay');
+                        window.tradeList.displayAllTrades('tradeRecordsList');
                     }
                     
                     // 詳細モーダルが開いていれば更新
