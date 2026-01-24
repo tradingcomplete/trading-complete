@@ -1100,10 +1100,22 @@ class NoteManagerModule {
         if (!container) return [];
         
         const images = [];
-        const imageItems = container.querySelectorAll('.note-image-item.has-image img');
-        imageItems.forEach(img => {
-            if (img.src) {
-                images.push(img.src);
+        const imageItems = container.querySelectorAll('.note-image-item.has-image');
+        
+        imageItems.forEach(item => {
+            const img = item.querySelector('img');
+            if (img && img.src) {
+                // data-index属性からインデックスを取得（1,2,3）
+                const dataIndex = item.getAttribute('data-index');
+                const tempKey = 'noteEdit_' + dataIndex;
+                
+                // tempNoteEditImagesから画像オブジェクトを取得（title/description含む）
+                if (window.tempNoteEditImages && window.tempNoteEditImages[tempKey]) {
+                    images.push(window.tempNoteEditImages[tempKey]);
+                } else {
+                    // なければsrcのみ（後方互換性）
+                    images.push(img.src);
+                }
             }
         });
         
