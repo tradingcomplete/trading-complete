@@ -289,6 +289,50 @@ class NoteManagerModule {
     }
 
     /**
+     * ノートの画像を置換
+     * @param {string} dateStr - 日付文字列
+     * @param {number} index - 画像インデックス
+     * @param {Object|string} newImageData - 新しい画像データ
+     * @returns {boolean} 成功/失敗
+     */
+    replaceNoteImage(dateStr, index, newImageData) {
+        const note = this.getNote(dateStr);
+        if (!note) {
+            console.error('[NoteManagerModule] ノートが見つかりません:', dateStr);
+            return false;
+        }
+        
+        // images配列を初期化（なければ空配列）
+        const images = note.images ? [...note.images] : [];
+        
+        // 配列を必要なサイズまで拡張（nullで埋める）
+        while (images.length <= index) {
+            images.push(null);
+        }
+        
+        // 画像を置換
+        images[index] = newImageData;
+        
+        // ノートを更新
+        note.images = images;
+        note.updatedAt = new Date().toISOString();
+        
+        // 保存（ストレージとクラウド）
+        this.#saveNoteToStorageAndCloud(dateStr, note);
+        
+        // 週間プレビューを更新
+        this.updateWeeklyPreview();
+        
+        // 詳細表示を更新（編集中でない場合）
+        if (!this.#isEditingNote) {
+            this.displayNoteDetail(dateStr);
+        }
+        
+        console.log('[NoteManagerModule] 画像を置換しました:', dateStr, 'index:', index);
+        return true;
+    }
+
+    /**
      * デバッグ用ステータス取得
      * @returns {Object} モジュール状態
      */

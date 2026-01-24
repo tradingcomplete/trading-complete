@@ -1102,10 +1102,23 @@ window.changeImageInEdit = function() {
     window.tempCaptionTitle = titleInput ? titleInput.value : '';
     window.tempCaptionDesc = descInput ? descInput.value : '';
     
+    // 既存画像の置換用にコンテキストを保存
+    if (captionEditContext) {
+        window.pendingReplaceContext = { ...captionEditContext };
+        // pendingImageTypeを設定（tradeChart1, tradeChart2, tradeChart3 等）
+        if (captionEditContext.type === 'trade') {
+            pendingImageType = 'tradeChart' + (captionEditContext.index + 1);
+        } else if (captionEditContext.type === 'note') {
+            pendingImageType = 'noteImage';
+        }
+        // 追加モードに変更（新しい画像を受け取るため）
+        captionEditMode = 'add';
+    }
+    
     // 編集モーダルを閉じる
     document.getElementById('imageCaptionEditModal').style.display = 'none';
     
-    // Step1を表示（pendingImageTypeは維持）
+    // Step1を表示
     const modal = document.getElementById('imageAddModal');
     const step1 = document.getElementById('imageAddStep1');
     
@@ -1639,6 +1652,8 @@ window.closeImageCaptionEditModal = function() {
     captionEditMode = 'edit';
     pendingImageForAdd = null;
     pendingImageSrc = null;
+    // 置換コンテキストをクリア
+    window.pendingReplaceContext = null;
     // 注意: pendingImageTypeは新規エントリーで維持が必要なため、ここではリセットしない
 };
 
@@ -1669,7 +1684,65 @@ window.saveImageCaptionEdit = function() {
             ? window.createImageData(actualSrc, title, description) 
             : { src: actualSrc, title, description };
         
-        // 既存の処理に渡す
+        // 既存画像の置換の場合
+        if (window.pendingReplaceContext) {
+            const ctx = window.pendingReplaceContext;
+            
+            if (ctx.type === 'trade') {
+                // トレードの画像を置換
+                const trade = window.tradeManager ? window.tradeManager.getTradeById(ctx.id) : null;
+                if (trade && trade.chartImages) {
+                    const chartImages = [...trade.chartImages];
+                    chartImages[ctx.index] = imageData;
+                    
+                    // TradeManager経由で更新（MODULES.md準拠）
+                    window.tradeManager.updateTrade(ctx.id, { chartImages });
+                    showToast('画像を変更しました', 'success');
+                    
+                    // UI更新：トレード一覧を再描画
+                    if (window.tradeList && typeof window.tradeList.displayAllTrades === 'function') {
+                        window.tradeList.displayAllTrades('tradeRecordsList');
+                    }
+                    
+                    // 詳細モーダルが開いていれば更新
+                    const updatedTrade = window.tradeManager.getTradeById(ctx.id);
+                    if (ctx.source === 'modal') {
+                        closeImageCaptionEditModal();
+                        setTimeout(() => {
+                            showImageModalWithCaption(imageData, { type: 'trade', id: ctx.id, index: ctx.index });
+                        }, 150);
+                    } else if (window.tradeDetail && typeof window.tradeDetail.showTradeDetail === 'function') {
+                        window.tradeDetail.showTradeDetail(updatedTrade);
+                    }
+                }
+            } else if (ctx.type === 'note') {
+                // 相場ノートの画像を置換（NoteManagerModule経由）
+                if (window.NoteManagerModule && typeof window.NoteManagerModule.replaceNoteImage === 'function') {
+                    const success = window.NoteManagerModule.replaceNoteImage(ctx.id, ctx.index, imageData);
+                    if (success) {
+                        showToast('画像を変更しました', 'success');
+                        
+                        if (ctx.source === 'modal') {
+                            closeImageCaptionEditModal();
+                            setTimeout(() => {
+                                showImageModalWithCaption(imageData, { type: 'note', id: ctx.id, index: ctx.index });
+                            }, 150);
+                            window.pendingReplaceContext = null;
+                            return;
+                        }
+                    } else {
+                        showToast('画像の変更に失敗しました', 'error');
+                    }
+                }
+            }
+            
+            // コンテキストをクリア
+            window.pendingReplaceContext = null;
+            closeImageCaptionEditModal();
+            return;
+        }
+        
+        // 新規追加の場合（従来の処理）
         handleProcessedImage(imageData);
         closeImageCaptionEditModal();
         return;
