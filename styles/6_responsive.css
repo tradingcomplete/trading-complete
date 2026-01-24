@@ -4545,6 +4545,7 @@ body.light-mode .image-caption-title {
     .image-modal-caption {
         padding: 10px 15px;
         max-width: 95%;
+        width: 90%;  /* 幅を明示的に設定してコンテンツ縮小を防止 */
     }
     
     .caption-title {
