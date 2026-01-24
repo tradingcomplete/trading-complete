@@ -1779,6 +1779,11 @@ window.saveImageCaptionEdit = function() {
                 updatedImgData = updatedTrade.chartImages[index];
             }
             
+            // UI更新：トレード一覧を再描画
+            if (window.tradeList && typeof window.tradeList.displayAllTrades === 'function') {
+                window.tradeList.displayAllTrades('tradeRecordsList');
+            }
+            
             // 戻り先に応じて処理を分岐
             if (source === 'modal') {
                 // 拡大モーダルから来た場合 → 拡大モーダルに戻る
