@@ -4494,6 +4494,7 @@ body.light-mode .image-caption-title {
     color: #ccc;
     font-size: 14px;
     line-height: 1.4;
+    white-space: pre-wrap;
 }
 
 .caption-collapsed {
@@ -4543,6 +4544,7 @@ body.light-mode .image-caption-title {
     
     .image-modal-caption {
         padding: 10px 15px;
+        max-width: 95%;
     }
     
     .caption-title {
