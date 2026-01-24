@@ -1700,9 +1700,8 @@ window.saveImageCaptionEdit = function() {
                     showToast('画像を変更しました', 'success');
                     
                     // UI更新：トレード一覧を再描画
-                    if (window.tradeList && typeof window.tradeList.render === 'function') {
-                        const allTrades = window.tradeManager.getAllTrades();
-                        window.tradeList.render(allTrades);
+                    if (window.tradeList && typeof window.tradeList.displayAllTrades === 'function') {
+                        window.tradeList.displayAllTrades('tradeListDisplay');
                     }
                     
                     // 詳細モーダルが開いていれば更新
