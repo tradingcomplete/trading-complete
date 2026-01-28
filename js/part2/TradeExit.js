@@ -94,9 +94,49 @@ class TradeExit {
             
             <button class="btn btn-small btn-secondary" onclick="addExitEntry()">決済追加</button>
             
-            <div class="input-group" style="margin-top: 20px;">
-                <label>振り返り・反省</label>
-                <textarea id="exitReflection" placeholder="トレードの振り返りを記入"></textarea>
+            <div class="reflection-section" style="margin-top: 20px; padding: 15px; background: rgba(59, 130, 246, 0.05); border-radius: 8px;">
+                <h4 style="color: #60a5fa; margin: 0 0 15px 0; font-size: 0.9rem;">📊 振り返り（決済後に記入）</h4>
+                
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-size: 0.85rem;">ルールを守れましたか？</label>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
+                            <input type="radio" name="ruleFollowed" value="yes" style="accent-color: #4ade80;">
+                            <span>はい</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
+                            <input type="radio" name="ruleFollowed" value="partial" style="accent-color: #fbbf24;">
+                            <span>一部守れなかった</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
+                            <input type="radio" name="ruleFollowed" value="no" style="accent-color: #f87171;">
+                            <span>いいえ</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-size: 0.85rem;">決済後、トレンドは続きましたか？</label>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
+                            <input type="radio" name="trendContinued" value="yes" style="accent-color: #fbbf24;">
+                            <span>続いた（利確が早かった）</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
+                            <input type="radio" name="trendContinued" value="no" style="accent-color: #4ade80;">
+                            <span>終わった（良い判断）</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
+                            <input type="radio" name="trendContinued" value="unknown" checked style="accent-color: #9ca3af;">
+                            <span>未確認</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-size: 0.85rem;">メモ・気づき（任意）</label>
+                    <textarea id="exitReflection" placeholder="トレードの振り返りを記入" style="min-height: 80px;"></textarea>
+                </div>
             </div>
             
             <div class="button-group">
@@ -186,7 +226,18 @@ class TradeExit {
         }
         
         const exitEntries = document.querySelectorAll('.exit-entry');
-        const reflection = document.getElementById('exitReflection')?.value || '';
+        
+        // NEW: 振り返りデータの構造化
+        const ruleFollowedRadio = document.querySelector('input[name="ruleFollowed"]:checked');
+        const trendContinuedRadio = document.querySelector('input[name="trendContinued"]:checked');
+        const reflectionText = document.getElementById('exitReflection')?.value || '';
+        
+        const reflection = {
+            ruleFollowed: ruleFollowedRadio?.value || null,
+            trendContinued: trendContinuedRadio?.value || 'unknown',
+            text: reflectionText,
+            updatedAt: new Date().toISOString()
+        };
         
         let totalExitLot = 0;
         const newExits = [];
@@ -231,9 +282,26 @@ class TradeExit {
         const allExits = [...(trade.exits || []), ...newExits];
         
         // トレード更新
+        // NEW: 既存のreflectionが文字列の場合はtextとしてマージ
+        let mergedReflection = reflection;
+        if (trade.reflection && typeof trade.reflection === 'string') {
+            // 既存の文字列reflectionがあり、新しいtextが空の場合は既存を維持
+            if (!reflection.text && trade.reflection) {
+                mergedReflection.text = trade.reflection;
+            }
+        } else if (trade.reflection && typeof trade.reflection === 'object') {
+            // 既存がオブジェクトの場合、新しい値がなければ既存を維持
+            mergedReflection = {
+                ruleFollowed: reflection.ruleFollowed || trade.reflection.ruleFollowed,
+                trendContinued: reflection.trendContinued || trade.reflection.trendContinued,
+                text: reflection.text || trade.reflection.text || '',
+                updatedAt: new Date().toISOString()
+            };
+        }
+        
         const updates = {
             exits: allExits,
-            reflection: reflection || trade.reflection
+            reflection: mergedReflection
         };
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, updates);
