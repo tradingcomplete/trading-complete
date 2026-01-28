@@ -1679,11 +1679,21 @@ class ReportModule {
         // すべての決済済みトレードを対象にする
         sortedTrades.forEach(trade => {
             const pips = this.#calculateTradePips(trade);
-            const hasReflection = trade.reflection && trade.reflection.trim();
+            
+            // reflection互換性対応（文字列/オブジェクト両対応）
+            let reflectionText = '';
+            if (trade.reflection) {
+                if (typeof trade.reflection === 'string') {
+                    reflectionText = trade.reflection.trim();
+                } else if (typeof trade.reflection === 'object' && trade.reflection.text) {
+                    reflectionText = trade.reflection.text.trim();
+                }
+            }
+            const hasReflection = reflectionText.length > 0;
             
             // 最初の3行と全文を両方保持
             const allLines = hasReflection ? 
-                trade.reflection.split('\n').filter(line => line.trim()) : [];
+                reflectionText.split('\n').filter(line => line.trim()) : [];
             const previewLines = allLines.slice(0, 3);
             const hasMore = allLines.length > 3;
             
