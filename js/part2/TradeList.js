@@ -282,10 +282,11 @@ class TradeList {
         
         // 通貨ペアとポジション
         const pairContainer = document.createElement('div');
+        pairContainer.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 6px;';
         const pairSpan = document.createElement('span');
         pairSpan.className = 'trade-pair';
         pairSpan.textContent = trade.pair || trade.symbol || 'N/A';
-        pairSpan.style.cssText = 'font-size: 1.5rem; font-weight: bold; color: white; margin-right: 10px;';
+        pairSpan.style.cssText = 'font-size: 1.5rem; font-weight: bold; color: white;';
         
         const directionBadge = document.createElement('span');
         const isLong = trade.direction === 'long' || trade.direction === 'BUY';
@@ -317,7 +318,6 @@ class TradeList {
                 background: rgba(156, 39, 176, 0.15);
                 color: #ce93d8;
                 border: 1px solid rgba(156, 39, 176, 0.3);
-                margin-left: 8px;
             `;
             pairContainer.appendChild(brokerBadge);
         }
@@ -338,7 +338,6 @@ class TradeList {
                     background: rgba(33, 150, 243, 0.15);
                     color: #64b5f6;
                     border: 1px solid rgba(33, 150, 243, 0.3);
-                    margin-left: 8px;
                 `;
                 pairContainer.appendChild(methodBadge);
             }
@@ -380,7 +379,6 @@ class TradeList {
                     font-size: 0.85rem;
                     background: ${riskBg};
                     border: 1px solid ${riskBorder};
-                    margin-left: 8px;
                 `;
                 pairContainer.appendChild(riskBadge);
             }
@@ -400,7 +398,6 @@ class TradeList {
                 font-size: 0.85rem;
                 background: ${isFollowed ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)'};
                 border: 1px solid ${isFollowed ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'};
-                margin-left: 8px;
             `;
             pairContainer.appendChild(ruleBadge);
         }

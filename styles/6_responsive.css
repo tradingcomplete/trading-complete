@@ -4744,4 +4744,24 @@ body.light-mode .note-image-edit-btn:hover {
     padding-top: 15px;
     border-top: 1px solid #444;
 }
+
+/* バッジレスポンシブ対応 */
+@media (max-width: 480px) {
+    .trade-card .broker-badge,
+    .trade-card .method-badge,
+    .trade-card .risk-badge,
+    .trade-card .rule-badge {
+        padding: 2px 6px !important;
+        font-size: 0.65rem !important;
+    }
+    
+    .trade-card .direction-badge {
+        padding: 3px 8px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .trade-card .trade-pair {
+        font-size: 1.2rem !important;
+    }
+}
 /* ========== 6_responsive.css 終了 ========== */
