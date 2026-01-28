@@ -322,6 +322,89 @@ class TradeList {
             pairContainer.appendChild(brokerBadge);
         }
         
+        // 手法バッジを追加（タスク22）
+        if (trade.methodId && window.settingsModule) {
+            const method = window.settingsModule.getMethodById(trade.methodId);
+            if (method && !method.deletedAt) {
+                const methodBadge = document.createElement('span');
+                methodBadge.className = 'method-badge';
+                methodBadge.textContent = method.shortName || method.name;
+                methodBadge.title = method.name;
+                methodBadge.style.cssText = `
+                    padding: 4px 10px;
+                    border-radius: 4px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    background: rgba(33, 150, 243, 0.15);
+                    color: #64b5f6;
+                    border: 1px solid rgba(33, 150, 243, 0.3);
+                    margin-left: 8px;
+                `;
+                pairContainer.appendChild(methodBadge);
+            }
+        }
+        
+        // 許容損失バッジを追加（タスク23）
+        if (trade.riskStatus) {
+            const riskBadge = document.createElement('span');
+            riskBadge.className = 'risk-badge';
+            let riskText, riskBg, riskBorder;
+            
+            switch (trade.riskStatus) {
+                case 'normal':
+                    riskText = '✅';
+                    riskBg = 'rgba(76, 175, 80, 0.15)';
+                    riskBorder = 'rgba(76, 175, 80, 0.3)';
+                    break;
+                case 'warning':
+                    riskText = '⚠️';
+                    riskBg = 'rgba(255, 152, 0, 0.15)';
+                    riskBorder = 'rgba(255, 152, 0, 0.3)';
+                    break;
+                case 'danger':
+                    riskText = '🚨';
+                    riskBg = 'rgba(244, 67, 54, 0.15)';
+                    riskBorder = 'rgba(244, 67, 54, 0.3)';
+                    break;
+                default:
+                    riskText = '';
+            }
+            
+            if (riskText) {
+                riskBadge.textContent = riskText;
+                riskBadge.title = trade.riskStatus === 'normal' ? '許容損失内' : 
+                                  trade.riskStatus === 'warning' ? '許容損失の1.5倍以内' : '許容損失超過';
+                riskBadge.style.cssText = `
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.85rem;
+                    background: ${riskBg};
+                    border: 1px solid ${riskBorder};
+                    margin-left: 8px;
+                `;
+                pairContainer.appendChild(riskBadge);
+            }
+        }
+        
+        // ルール遵守バッジを追加（タスク24）
+        const reflectionObj = typeof trade.reflection === 'object' ? trade.reflection : null;
+        if (reflectionObj && reflectionObj.ruleFollowed) {
+            const ruleBadge = document.createElement('span');
+            ruleBadge.className = 'rule-badge';
+            const isFollowed = reflectionObj.ruleFollowed === 'yes';
+            ruleBadge.textContent = isFollowed ? '✅' : '❌';
+            ruleBadge.title = isFollowed ? 'ルール遵守' : 'ルール違反';
+            ruleBadge.style.cssText = `
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.85rem;
+                background: ${isFollowed ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)'};
+                border: 1px solid ${isFollowed ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'};
+                margin-left: 8px;
+            `;
+            pairContainer.appendChild(ruleBadge);
+        }
+        
         headerLeft.appendChild(pairContainer);
         
         // 右上（結果バッジと編集・削除ボタン）
@@ -796,6 +879,12 @@ class TradeList {
         // ペアフィルター
         if (pairFilter) {
             filteredTrades = filteredTrades.filter(t => t.pair === pairFilter);
+        }
+        
+        // 手法フィルター（タスク26）
+        const methodFilter = document.getElementById('methodFilter')?.value || '';
+        if (methodFilter) {
+            filteredTrades = filteredTrades.filter(t => t.methodId === methodFilter);
         }
         
         // ステータスフィルター

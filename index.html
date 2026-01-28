@@ -470,6 +470,13 @@
                                 <option value="closed">決済済み</option>
                             </select>
                         </div>
+                        <div class="filter-group">
+                            <label>手法</label>
+                            <select id="methodFilter" onchange="filterTrades()">
+                                <option value="">全て</option>
+                                <!-- 動的に追加 -->
+                            </select>
+                        </div>
                         <button class="btn btn-secondary" onclick="filterTrades()">適用</button>
                     </div>
                 </div>
@@ -3262,6 +3269,42 @@
             </div>
         </div>
     </div>
+
+<script>
+// 手法フィルターの初期化
+function initializeMethodFilter() {
+    const methodFilter = document.getElementById('methodFilter');
+    if (!methodFilter || !window.settingsModule) return;
+    
+    // 既存のオプションをクリア（「全て」以外）
+    while (methodFilter.options.length > 1) {
+        methodFilter.remove(1);
+    }
+    
+    // 手法を取得して追加
+    const methods = window.settingsModule.getAllMethods();
+    methods.forEach(method => {
+        if (!method.deletedAt) {
+            const option = document.createElement('option');
+            option.value = method.id;
+            option.textContent = method.name;
+            methodFilter.appendChild(option);
+        }
+    });
+}
+
+// トレード記録タブに切り替えた時に初期化
+document.addEventListener('DOMContentLoaded', () => {
+    // EventBusで手法追加/削除を監視
+    if (window.eventBus) {
+        window.eventBus.on('settings:methodAdded', initializeMethodFilter);
+        window.eventBus.on('settings:methodDeleted', initializeMethodFilter);
+    }
+    
+    // 初回実行（遅延）
+    setTimeout(initializeMethodFilter, 1000);
+});
+</script>
 
 </body>
 </html>

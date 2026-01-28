@@ -12,6 +12,8 @@ class StatisticsModule {
     #yenProfitLossManager = null;
     #initialized = false;
     #yenStats = null;
+    #ruleComplianceStats = null;  // ルール遵守統計
+    #riskManagementStats = null;  // リスク管理統計
     
     constructor() {
         // 依存の注入
@@ -77,6 +79,30 @@ class StatisticsModule {
      */
     refresh() {
         this.updateStatistics();
+    }
+    
+    /**
+     * ルール遵守統計を取得
+     * @public
+     * @returns {Object} { yes, no, total, rate }
+     */
+    getRuleComplianceStats() {
+        if (!this.#ruleComplianceStats) {
+            this.updateStatistics();
+        }
+        return this.#ruleComplianceStats || { yes: 0, no: 0, total: 0, rate: 0 };
+    }
+    
+    /**
+     * リスク管理統計を取得
+     * @public
+     * @returns {Object} { normal, warning, danger, total, rate }
+     */
+    getRiskManagementStats() {
+        if (!this.#riskManagementStats) {
+            this.updateStatistics();
+        }
+        return this.#riskManagementStats || { normal: 0, warning: 0, danger: 0, total: 0, rate: 0 };
     }
     
     /**
@@ -515,6 +541,50 @@ class StatisticsModule {
         const yenAvgProfit = yenWins > 0 ? Math.round(yenTotalProfit / yenWins) : 0;
         const yenAvgLoss = yenLosses > 0 ? Math.round(yenTotalLoss / yenLosses) : 0;
         // ================================================
+        
+        // ルール遵守統計の計算（タスク27）
+        let ruleYes = 0;
+        let ruleNo = 0;
+        let riskNormal = 0;
+        let riskWarning = 0;
+        let riskDanger = 0;
+        
+        trades.forEach(trade => {
+            // ルール遵守カウント
+            const reflection = typeof trade.reflection === 'object' ? trade.reflection : null;
+            if (reflection && reflection.ruleFollowed) {
+                if (reflection.ruleFollowed === 'yes') ruleYes++;
+                else if (reflection.ruleFollowed === 'no') ruleNo++;
+            }
+            
+            // リスク管理カウント
+            if (trade.riskStatus) {
+                if (trade.riskStatus === 'normal') riskNormal++;
+                else if (trade.riskStatus === 'warning') riskWarning++;
+                else if (trade.riskStatus === 'danger') riskDanger++;
+            }
+        });
+        
+        const ruleTotal = ruleYes + ruleNo;
+        const ruleComplianceRate = ruleTotal > 0 ? (ruleYes / ruleTotal * 100).toFixed(1) : 0;
+        
+        const riskTotal = riskNormal + riskWarning + riskDanger;
+        const riskComplianceRate = riskTotal > 0 ? (riskNormal / riskTotal * 100).toFixed(1) : 0;
+        
+        this.#ruleComplianceStats = {
+            yes: ruleYes,
+            no: ruleNo,
+            total: ruleTotal,
+            rate: ruleComplianceRate
+        };
+        
+        this.#riskManagementStats = {
+            normal: riskNormal,
+            warning: riskWarning,
+            danger: riskDanger,
+            total: riskTotal,
+            rate: riskComplianceRate
+        };
         
         return {
             // Pips統計
