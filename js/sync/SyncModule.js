@@ -1538,6 +1538,16 @@
                 status: local.status || local.holdingStatus || 'open',
                 reasons: local.reasons || [],
                 entry_emotion: local.entryEmotion || null,
+                
+                // NEW: リスク管理フィールド
+                method_id: local.methodId || null,
+                risk_tolerance: local.riskTolerance || null,
+                stop_loss_pips: local.stopLossPips || null,
+                quote_currency_rate: local.quoteCurrencyRate || null,
+                calculated_lot: local.calculatedLot || null,
+                risk_status: local.riskStatus || null,
+                is_over_risk: local.isOverRisk || false,
+                
                 created_at: local.createdAt || local.timestamp || new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
@@ -1580,6 +1590,16 @@
                 holdingStatus: supa.status || 'open',
                 reasons: supa.reasons || [],
                 entryEmotion: supa.entry_emotion,
+                
+                // NEW: リスク管理フィールド
+                methodId: supa.method_id || null,
+                riskTolerance: supa.risk_tolerance ? parseFloat(supa.risk_tolerance) : null,
+                stopLossPips: supa.stop_loss_pips ? parseFloat(supa.stop_loss_pips) : null,
+                quoteCurrencyRate: supa.quote_currency_rate ? parseFloat(supa.quote_currency_rate) : null,
+                calculatedLot: supa.calculated_lot ? parseFloat(supa.calculated_lot) : null,
+                riskStatus: supa.risk_status || null,
+                isOverRisk: supa.is_over_risk || false,
+                
                 timestamp: supa.created_at,
                 createdAt: supa.created_at,
                 updatedAt: supa.updated_at
