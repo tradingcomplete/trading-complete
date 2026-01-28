@@ -52,7 +52,8 @@ class TradeExit {
         
         if (this.#calculator && typeof this.#calculator.calculateRemainingLot === 'function') {
             const result = this.#calculator.calculateRemainingLot(trade);
-            remainingLot = result.remaining || 0;
+            // resultが数値の場合とオブジェクトの場合の両方に対応
+            remainingLot = typeof result === 'number' ? result : (result?.remaining || 0);
             console.log('Calculator result:', result, '→ remaining:', remainingLot);
         } else {
             // フォールバック：手動計算
@@ -94,7 +95,7 @@ class TradeExit {
             
             <button class="btn btn-small btn-secondary" onclick="addExitEntry()">決済追加</button>
             
-            <div class="reflection-section" style="margin-top: 20px; padding: 15px; background: rgba(59, 130, 246, 0.05); border-radius: 8px;">
+            <div id="reflectionSection" class="reflection-section" style="margin-top: 20px; padding: 15px; background: rgba(59, 130, 246, 0.05); border-radius: 8px;">
                 <h4 style="color: #60a5fa; margin: 0 0 15px 0; font-size: 0.9rem;">📊 振り返り（決済後に記入）</h4>
                 
                 <div class="input-group" style="margin-bottom: 15px;">
@@ -134,6 +135,27 @@ class TradeExit {
         modal.style.display = 'flex';
         modal.style.zIndex = '10000';  // 確実に前面に表示
         
+        // 全決済判定：振り返りセクションの表示/非表示を動的に切り替え
+        const updateReflectionVisibility = () => {
+            const reflectionSection = document.getElementById('reflectionSection');
+            if (!reflectionSection) return;
+            
+            const lotInputs = document.querySelectorAll('.exit-lot');
+            let totalExitLot = 0;
+            lotInputs.forEach(input => {
+                totalExitLot += parseFloat(input.value) || 0;
+            });
+            
+            const isFullExit = Math.abs(totalExitLot - remainingLot) < 0.01;
+            reflectionSection.style.display = isFullExit ? 'block' : 'none';
+        };
+        
+        // 初期表示時に実行
+        updateReflectionVisibility();
+        
+        // Lot入力欄の変更を監視
+        content.querySelector('.exit-lot')?.addEventListener('input', updateReflectionVisibility);
+        
         // モーダル外クリックで閉じる（無効化）
         // modal.onclick = (event) => {
         //     if (event.target === modal) {
@@ -160,6 +182,30 @@ class TradeExit {
             <button class="remove-exit" onclick="removeExitEntry(this)">削除</button>
         `;
         container.appendChild(entry);
+        
+        // Lot変更で振り返りセクションの表示を更新
+        entry.querySelector('.exit-lot')?.addEventListener('input', () => {
+            const reflectionSection = document.getElementById('reflectionSection');
+            const modal = document.getElementById('exitModal');
+            const tradeId = modal?.dataset.tradeId;
+            if (!reflectionSection || !tradeId) return;
+            
+            const trade = this.#tradeManager.getTradeById(tradeId);
+            if (!trade) return;
+            
+            // 残りLotを計算
+            const exitedLot = (trade.exits || []).reduce((sum, exit) => sum + parseFloat(exit.lot || 0), 0);
+            const remainingLot = Math.max(0, parseFloat(trade.lotSize || 0) - exitedLot);
+            
+            // 入力Lotの合計
+            let totalExitLot = 0;
+            document.querySelectorAll('.exit-lot').forEach(input => {
+                totalExitLot += parseFloat(input.value) || 0;
+            });
+            
+            const isFullExit = Math.abs(totalExitLot - remainingLot) < 0.01;
+            reflectionSection.style.display = isFullExit ? 'block' : 'none';
+        });
         
         // リアルタイムバリデーション追加
         const modal = document.getElementById('exitModal');
@@ -257,22 +303,30 @@ class TradeExit {
         // 既存の決済に追加
         const allExits = [...(trade.exits || []), ...newExits];
         
+        // 全決済かどうか判定
+        const isFullExit = Math.abs((existingExitLot + totalExitLot) - trade.lotSize) < 0.01;
+        
         // トレード更新
-        // NEW: 既存のreflectionが文字列の場合はtextとしてマージ
-        let mergedReflection = reflection;
-        if (trade.reflection && typeof trade.reflection === 'string') {
-            // 既存の文字列reflectionがあり、新しいtextが空の場合は既存を維持
-            if (!reflection.text && trade.reflection) {
-                mergedReflection.text = trade.reflection;
+        // 全決済時のみreflectionを更新、分割決済時は既存を維持
+        let mergedReflection = trade.reflection;
+        
+        if (isFullExit) {
+            // 既存のreflectionが文字列の場合はtextとしてマージ
+            mergedReflection = reflection;
+            if (trade.reflection && typeof trade.reflection === 'string') {
+                // 既存の文字列reflectionがあり、新しいtextが空の場合は既存を維持
+                if (!reflection.text && trade.reflection) {
+                    mergedReflection.text = trade.reflection;
+                }
+            } else if (trade.reflection && typeof trade.reflection === 'object') {
+                // 既存がオブジェクトの場合、新しい値がなければ既存を維持
+                mergedReflection = {
+                    ruleFollowed: reflection.ruleFollowed || trade.reflection.ruleFollowed,
+                    text: reflection.text || trade.reflection.text || '',
+                    updatedAt: new Date().toISOString()
+                };
             }
-        } else if (trade.reflection && typeof trade.reflection === 'object') {
-            // 既存がオブジェクトの場合、新しい値がなければ既存を維持
-            mergedReflection = {
-                ruleFollowed: reflection.ruleFollowed || trade.reflection.ruleFollowed,
-                text: reflection.text || trade.reflection.text || '',
-                updatedAt: new Date().toISOString()
-            };
-        }
+        } // isFullExit の閉じ括弧
         
         const updates = {
             exits: allExits,
