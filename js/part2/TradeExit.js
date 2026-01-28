@@ -99,36 +99,14 @@ class TradeExit {
                 
                 <div class="input-group" style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-size: 0.85rem;">ルールを守れましたか？</label>
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 20px;">
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
                             <input type="radio" name="ruleFollowed" value="yes" style="accent-color: #4ade80;">
                             <span>はい</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
-                            <input type="radio" name="ruleFollowed" value="partial" style="accent-color: #fbbf24;">
-                            <span>一部守れなかった</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
                             <input type="radio" name="ruleFollowed" value="no" style="accent-color: #f87171;">
                             <span>いいえ</span>
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="input-group" style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-size: 0.85rem;">決済後、トレンドは続きましたか？</label>
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
-                            <input type="radio" name="trendContinued" value="yes" style="accent-color: #fbbf24;">
-                            <span>続いた（利確が早かった）</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
-                            <input type="radio" name="trendContinued" value="no" style="accent-color: #4ade80;">
-                            <span>終わった（良い判断）</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af;">
-                            <input type="radio" name="trendContinued" value="unknown" checked style="accent-color: #9ca3af;">
-                            <span>未確認</span>
                         </label>
                     </div>
                 </div>
@@ -229,12 +207,10 @@ class TradeExit {
         
         // NEW: 振り返りデータの構造化
         const ruleFollowedRadio = document.querySelector('input[name="ruleFollowed"]:checked');
-        const trendContinuedRadio = document.querySelector('input[name="trendContinued"]:checked');
         const reflectionText = document.getElementById('exitReflection')?.value || '';
         
         const reflection = {
             ruleFollowed: ruleFollowedRadio?.value || null,
-            trendContinued: trendContinuedRadio?.value || 'unknown',
             text: reflectionText,
             updatedAt: new Date().toISOString()
         };
@@ -293,7 +269,6 @@ class TradeExit {
             // 既存がオブジェクトの場合、新しい値がなければ既存を維持
             mergedReflection = {
                 ruleFollowed: reflection.ruleFollowed || trade.reflection.ruleFollowed,
-                trendContinued: reflection.trendContinued || trade.reflection.trendContinued,
                 text: reflection.text || trade.reflection.text || '',
                 updatedAt: new Date().toISOString()
             };
