@@ -23,6 +23,7 @@ class ReportModule {
         pairAnalysis: false,
         dayAnalysis: false,
         tradeHistory: false,  // 初期状態は閉じている
+        ruleRiskAnalysis: false,  // ルール遵守・リスク分析（Phase 5追加）
         reflectionList: false
     };
     
@@ -1584,6 +1585,10 @@ class ReportModule {
             </div>
         `;
         
+        // ルール遵守・リスク分析セクションを追加（Phase 5）
+        const ruleRiskAnalysisHTML = this.#generateRuleRiskAnalysis(sortedTrades);
+        content.innerHTML += ruleRiskAnalysisHTML;
+        
         // 振り返り一覧を追加（アコーディオン化）
         const reflectionHTML = this.#generateReflectionList(data);
         const accordionReflection = `
@@ -2649,6 +2654,201 @@ class ReportModule {
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(d.setDate(diff));
+    }
+
+    /**
+     * ルール遵守・リスク分析セクションを生成（Phase 5）
+     * @private
+     */
+    #generateRuleRiskAnalysis(trades) {
+        // 1. ルール遵守別成績を計算
+        const ruleStats = { yes: { count: 0, wins: 0, losses: 0, pips: 0 }, no: { count: 0, wins: 0, losses: 0, pips: 0 } };
+        
+        // 2. 許容損失別成績を計算
+        const riskStats = { 
+            normal: { count: 0, wins: 0, losses: 0, pips: 0 }, 
+            warning: { count: 0, wins: 0, losses: 0, pips: 0 }, 
+            danger: { count: 0, wins: 0, losses: 0, pips: 0 } 
+        };
+        
+        // 3. 手法別成績を計算
+        const methodStats = {};
+        
+        trades.forEach(trade => {
+            const pips = this.#calculateTradePips(trade);
+            const isWin = pips > 0;
+            
+            // ルール遵守別
+            const reflection = typeof trade.reflection === 'object' ? trade.reflection : null;
+            if (reflection && reflection.ruleFollowed) {
+                const key = reflection.ruleFollowed;
+                if (ruleStats[key]) {
+                    ruleStats[key].count++;
+                    ruleStats[key].pips += pips;
+                    if (isWin) ruleStats[key].wins++;
+                    else if (pips < 0) ruleStats[key].losses++;
+                }
+            }
+            
+            // 許容損失別
+            if (trade.riskStatus && riskStats[trade.riskStatus]) {
+                riskStats[trade.riskStatus].count++;
+                riskStats[trade.riskStatus].pips += pips;
+                if (isWin) riskStats[trade.riskStatus].wins++;
+                else if (pips < 0) riskStats[trade.riskStatus].losses++;
+            }
+            
+            // 手法別
+            const methodId = trade.methodId || 'none';
+            if (!methodStats[methodId]) {
+                methodStats[methodId] = { count: 0, wins: 0, losses: 0, pips: 0 };
+            }
+            methodStats[methodId].count++;
+            methodStats[methodId].pips += pips;
+            if (isWin) methodStats[methodId].wins++;
+            else if (pips < 0) methodStats[methodId].losses++;
+        });
+        
+        // 勝率計算ヘルパー
+        const calcWinRate = (wins, losses) => {
+            const total = wins + losses;
+            return total > 0 ? ((wins / total) * 100).toFixed(1) : '-';
+        };
+        
+        // 勝敗表示ヘルパー
+        const formatWinLoss = (wins, losses) => {
+            if (wins === 0 && losses === 0) return '-';
+            return `${wins}勝${losses}敗`;
+        };
+        
+        // 手法名取得ヘルパー
+        const getMethodName = (methodId) => {
+            if (methodId === 'none') return '未設定';
+            const method = window.SettingsModule?.getMethodById(methodId);
+            return method ? (method.shortName || method.name) : '不明';
+        };
+        
+        // テーブル行生成ヘルパー
+        const generateRow = (badge, stats) => {
+            if (stats.count === 0) {
+                return `<tr><td style="text-align: center;">${badge}</td><td style="text-align: center;">0件</td><td style="text-align: center;">-</td><td style="text-align: center;">-</td><td style="text-align: center;">-</td></tr>`;
+            }
+            const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+            return `<tr>
+                <td style="text-align: center;">${badge}</td>
+                <td style="text-align: center;">${stats.count}件</td>
+                <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
+                <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
+                <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+            </tr>`;
+        };
+        
+        // 手法別テーブル行生成
+        const methodRows = Object.entries(methodStats)
+            .sort((a, b) => b[1].pips - a[1].pips)  // Pips降順
+            .map(([methodId, stats]) => {
+                const name = getMethodName(methodId);
+                const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+                return `<tr>
+                    <td style="text-align: left; padding-left: 10px;">${name}</td>
+                    <td style="text-align: center;">${stats.count}件</td>
+                    <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
+                    <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
+                    <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                </tr>`;
+            }).join('');
+        
+        // テーブル共通スタイル
+        const tableStyle = `
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        `;
+        const thStyle = `
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            padding: 10px 5px;
+            text-align: center;
+            border-bottom: 1px solid rgba(74, 222, 128, 0.3);
+        `;
+        
+        return `
+            <div class="report-accordion" style="margin-top: 30px;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(74, 222, 128, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                    <h4 style="color: #4ade80; margin: 0;">
+                        <span id="ruleRiskAnalysis-icon" 
+                              onclick="window.ReportModule.toggleAccordion('ruleRiskAnalysis')" 
+                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;"
+                              onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
+                              onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                        ✅ ルール遵守・リスク分析
+                    </h4>
+                    <span id="ruleRiskAnalysis-icon-right"
+                          onclick="window.ReportModule.toggleAccordion('ruleRiskAnalysis')" 
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease; color: #4ade80; font-size: 16px;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                </div>
+                <div id="ruleRiskAnalysis-content" style="display: none;">
+                    
+                    <!-- ルール遵守別成績 -->
+                    <h5 style="color: #9ca3af; margin: 15px 0 10px 0; font-size: 0.85rem;">📋 ルール遵守別成績</h5>
+                    <table style="${tableStyle}">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}"></th>
+                                <th style="${thStyle}">件数</th>
+                                <th style="${thStyle}">勝敗</th>
+                                <th style="${thStyle}">勝率</th>
+                                <th style="${thStyle}">Pips</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${generateRow('✅', ruleStats.yes)}
+                            ${generateRow('❌', ruleStats.no)}
+                        </tbody>
+                    </table>
+                    
+                    <!-- 許容損失別成績 -->
+                    <h5 style="color: #9ca3af; margin: 20px 0 10px 0; font-size: 0.85rem;">📋 許容損失別成績</h5>
+                    <table style="${tableStyle}">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}"></th>
+                                <th style="${thStyle}">件数</th>
+                                <th style="${thStyle}">勝敗</th>
+                                <th style="${thStyle}">勝率</th>
+                                <th style="${thStyle}">Pips</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${generateRow('✅', riskStats.normal)}
+                            ${generateRow('⚠️', riskStats.warning)}
+                            ${generateRow('🚨', riskStats.danger)}
+                        </tbody>
+                    </table>
+                    
+                    <!-- 手法別成績 -->
+                    <h5 style="color: #9ca3af; margin: 20px 0 10px 0; font-size: 0.85rem;">📋 手法別成績</h5>
+                    <table style="${tableStyle}">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">手法</th>
+                                <th style="${thStyle}">件数</th>
+                                <th style="${thStyle}">勝敗</th>
+                                <th style="${thStyle}">勝率</th>
+                                <th style="${thStyle}">Pips</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${methodRows || '<tr><td colspan="5" style="text-align: center; color: #9ca3af; padding: 20px;">データがありません</td></tr>'}
+                        </tbody>
+                    </table>
+                    
+                </div>
+            </div>
+        `;
     }
 }
 
