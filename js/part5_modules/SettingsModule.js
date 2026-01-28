@@ -30,6 +30,12 @@ class SettingsModule {
     #presetBrokers = [];  // プリセットブローカーデータ
     #presetPairs = [];    // プリセット通貨ペア
     
+    // NEW: 許容損失管理
+    #riskTolerance = null;
+    
+    // NEW: 手法管理
+    #methods = [];
+    
     // システム
     #eventBus = null;
     #initialized = false;
@@ -51,7 +57,11 @@ class SettingsModule {
         // 新規キー
         BROKERS: 'brokers',
         FAVORITE_PAIRS: 'favoritePairs',
-        LAST_SUBTAB: 'lastSettingsSubtab'
+        LAST_SUBTAB: 'lastSettingsSubtab',
+        // NEW: トレード分析強化
+        RISK_TOLERANCE: 'tc_risk_tolerance',
+        METHODS: 'tc_methods',
+        SHOW_BROKER_BADGE: 'tc_show_broker_badge'
     };
     
     // 定数
@@ -149,6 +159,10 @@ class SettingsModule {
         this.#loadBrokers();
         this.#loadFavoritePairs();
         this.#loadCurrentSubtab();
+        
+        // NEW: 許容損失・手法の読み込み
+        this.#loadRiskTolerance();
+        this.#loadMethods();
     }
     
     #loadBrokers() {
@@ -192,6 +206,20 @@ class SettingsModule {
         if (stored) {
             this.#currentSubtab = stored;
         }
+    }
+    
+    // NEW: 許容損失の読み込み
+    #loadRiskTolerance() {
+        const saved = localStorage.getItem(SettingsModule.STORAGE_KEYS.RISK_TOLERANCE);
+        this.#riskTolerance = saved ? parseInt(saved, 10) : null;
+        console.log('SettingsModule: Risk tolerance loaded', this.#riskTolerance);
+    }
+    
+    // NEW: 手法の読み込み
+    #loadMethods() {
+        const saved = localStorage.getItem(SettingsModule.STORAGE_KEYS.METHODS);
+        this.#methods = saved ? JSON.parse(saved) : [];
+        console.log(`SettingsModule: ${this.#methods.length}件の手法を読み込み`);
     }
     
     #loadPresetBrokers() {
@@ -1019,6 +1047,174 @@ class SettingsModule {
     }
     
     // ================
+    // Public API - 許容損失管理（NEW）
+    // ================
+    
+    /**
+     * 許容損失を取得
+     * @returns {number|null} 許容損失額（円）、未設定ならnull
+     */
+    getRiskTolerance() {
+        return this.#riskTolerance;
+    }
+    
+    /**
+     * 許容損失を設定
+     * @param {number} amount - 許容損失額（円）
+     * @returns {boolean} 成功/失敗
+     */
+    setRiskTolerance(amount) {
+        if (typeof amount !== 'number' || amount < 0) {
+            console.error('SettingsModule: 無効な許容損失額');
+            return false;
+        }
+        
+        this.#riskTolerance = amount;
+        localStorage.setItem(SettingsModule.STORAGE_KEYS.RISK_TOLERANCE, amount.toString());
+        
+        // EventBus通知
+        this.#eventBus?.emit('settings:riskToleranceUpdated', { amount });
+        
+        console.log('SettingsModule: 許容損失を更新', amount);
+        return true;
+    }
+    
+    // ================
+    // Public API - 手法管理（NEW）
+    // ================
+    
+    /**
+     * 全手法を取得（削除済み除く）
+     * @returns {Array} 手法配列
+     */
+    getAllMethods() {
+        return this.#methods.filter(m => m.deletedAt === null);
+    }
+    
+    /**
+     * 全手法を取得（削除済み含む）
+     * @returns {Array} 手法配列
+     */
+    getAllMethodsIncludingDeleted() {
+        return [...this.#methods];
+    }
+    
+    /**
+     * IDで手法を取得
+     * @param {string} id - 手法ID
+     * @returns {Object|null} 手法オブジェクト
+     */
+    getMethodById(id) {
+        return this.#methods.find(m => m.id === id) || null;
+    }
+    
+    /**
+     * 手法を追加
+     * @param {string} name - 正式名（最大30文字）
+     * @param {string} shortName - 略称（最大10文字）
+     * @param {string} memo - メモ（最大200文字、任意）
+     * @returns {Object|null} 追加された手法、失敗時null
+     */
+    addMethod(name, shortName, memo = '') {
+        // バリデーション
+        if (!name || name.trim().length === 0 || name.length > 30) {
+            console.error('SettingsModule: 手法名が無効（1-30文字）');
+            return null;
+        }
+        if (!shortName || shortName.trim().length === 0 || shortName.length > 10) {
+            console.error('SettingsModule: 略称が無効（1-10文字）');
+            return null;
+        }
+        if (memo && memo.length > 200) {
+            console.error('SettingsModule: メモが長すぎます（最大200文字）');
+            return null;
+        }
+        
+        // 上限チェック（有効な手法のみカウント）
+        const activeMethods = this.getAllMethods();
+        if (activeMethods.length >= 10) {
+            console.error('SettingsModule: 手法は最大10個まで');
+            return null;
+        }
+        
+        const method = {
+            id: 'mtd_' + Date.now(),
+            name: name.trim(),
+            shortName: shortName.trim(),
+            memo: (memo || '').trim(),
+            order: this.#methods.length + 1,
+            createdAt: new Date().toISOString(),
+            deletedAt: null
+        };
+        
+        this.#methods.push(method);
+        this.#saveMethods();
+        
+        // EventBus通知
+        this.#eventBus?.emit('settings:methodAdded', { method });
+        
+        console.log('SettingsModule: 手法を追加', method.name);
+        return method;
+    }
+    
+    /**
+     * 手法を削除（論理削除）
+     * @param {string} id - 手法ID
+     * @returns {boolean} 成功/失敗
+     */
+    deleteMethod(id) {
+        const method = this.#methods.find(m => m.id === id);
+        if (!method) {
+            console.error('SettingsModule: 手法が見つかりません', id);
+            return false;
+        }
+        
+        if (method.deletedAt !== null) {
+            console.error('SettingsModule: 既に削除されています', id);
+            return false;
+        }
+        
+        method.deletedAt = new Date().toISOString();
+        this.#saveMethods();
+        
+        // EventBus通知
+        this.#eventBus?.emit('settings:methodDeleted', { methodId: id, methodName: method.name });
+        
+        console.log('SettingsModule: 手法を削除', method.name);
+        return true;
+    }
+    
+    #saveMethods() {
+        localStorage.setItem(
+            SettingsModule.STORAGE_KEYS.METHODS,
+            JSON.stringify(this.#methods)
+        );
+    }
+    
+    // ================
+    // Public API - ブローカーバッジ表示設定（NEW）
+    // ================
+    
+    /**
+     * ブローカーバッジ表示設定を取得
+     * @returns {boolean} 表示するならtrue
+     */
+    getShowBrokerBadge() {
+        const saved = localStorage.getItem(SettingsModule.STORAGE_KEYS.SHOW_BROKER_BADGE);
+        return saved === null ? true : saved === 'true';  // デフォルトはtrue
+    }
+    
+    /**
+     * ブローカーバッジ表示設定を変更
+     * @param {boolean} show - 表示するならtrue
+     */
+    setShowBrokerBadge(show) {
+        localStorage.setItem(SettingsModule.STORAGE_KEYS.SHOW_BROKER_BADGE, show.toString());
+        this.#eventBus?.emit('settings:brokerBadgeChanged', { show });
+        console.log('SettingsModule: ブローカーバッジ表示設定', show);
+    }
+    
+    // ================
     // Public API - データ管理（既存機能）
     // ================
     
@@ -1034,7 +1230,11 @@ class SettingsModule {
             theme: this.#theme,
             goals: this.#goals,
             brokers: this.#brokers,
-            favoritePairs: this.#favoritePairs
+            favoritePairs: this.#favoritePairs,
+            // NEW: トレード分析強化
+            riskTolerance: this.#riskTolerance,
+            methods: this.#methods,
+            showBrokerBadge: this.getShowBrokerBadge()
         };
     }
     
@@ -1059,6 +1259,18 @@ class SettingsModule {
             if (data.favoritePairs) {
                 this.#favoritePairs = data.favoritePairs;
                 this.#saveFavoritePairs();
+            }
+            
+            // NEW: トレード分析強化
+            if (data.riskTolerance !== undefined) {
+                this.setRiskTolerance(data.riskTolerance);
+            }
+            if (data.methods) {
+                this.#methods = data.methods;
+                this.#saveMethods();
+            }
+            if (data.showBrokerBadge !== undefined) {
+                this.setShowBrokerBadge(data.showBrokerBadge);
             }
             
             console.log('SettingsModule: Data imported successfully');
@@ -1147,7 +1359,12 @@ class SettingsModule {
             favoritePairsCount: this.#favoritePairs.length,
             siteTitle: this.#siteTitle,
             theme: this.#theme,
-            goalsSet: this.#goals.goals.filter(g => g.text).length
+            goalsSet: this.#goals.goals.filter(g => g.text).length,
+            // NEW: トレード分析強化
+            riskTolerance: this.#riskTolerance,
+            methodCount: this.getAllMethods().length,
+            totalMethods: this.#methods.length,
+            showBrokerBadge: this.getShowBrokerBadge()
         };
     }
 }

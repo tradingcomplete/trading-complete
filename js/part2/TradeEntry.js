@@ -111,12 +111,13 @@ class TradeEntry {
     clearForm() {
         // メインフォームのクリア
         const mainFields = [
-            'entryDatetime', 'exitDatetime', 'symbol', 'pair', 'broker',  // ← 'pair'追加
+            'entryDatetime', 'exitDatetime', 'symbol', 'pair', 'broker',
             'entryPrice', 'exitPrice', 'quantity', 'profitLoss', 
             'swap', 'commission', 'netProfit', 'pips', 'rr', 
             'stopLoss', 'takeProfit', 'reasons', 'insights', 
             'improvements', 'exitReason',
-            'reason1', 'reason2', 'reason3', 'scenario', 'entryEmotion'  // ← 右側フィールド追加
+            'reason1', 'reason2', 'reason3', 'scenario', 'entryEmotion',
+            'tradeMethod', 'quote-currency-rate'  // NEW: リスク管理フィールド
         ];
         
         mainFields.forEach(id => {
@@ -188,6 +189,33 @@ class TradeEntry {
             entryTimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
         }
         
+        // NEW: リスク管理セクションをリセット
+        const stopLossPipsDisplay = document.getElementById('stop-loss-pips-display');
+        if (stopLossPipsDisplay) stopLossPipsDisplay.textContent = '- pips';
+        
+        const optimalLotDisplay = document.getElementById('optimal-lot-display');
+        if (optimalLotDisplay) {
+            optimalLotDisplay.textContent = '- ロット';
+            optimalLotDisplay.style.color = '#4ecdc4';
+        }
+        
+        const riskStatusMessage = document.getElementById('risk-status-message');
+        if (riskStatusMessage) riskStatusMessage.style.display = 'none';
+        
+        const lotRiskHint = document.getElementById('lot-risk-hint');
+        if (lotRiskHint) lotRiskHint.style.display = 'none';
+        
+        const lotInput = document.getElementById('lotSize');
+        if (lotInput) {
+            lotInput.style.borderColor = '';
+            lotInput.style.backgroundColor = '';
+        }
+        
+        // 許容損失表示を更新
+        if (typeof window.updateRiskToleranceDisplay === 'function') {
+            window.updateRiskToleranceDisplay();
+        }
+        
         console.log('デフォルト値を設定しました');
     }
     
@@ -235,9 +263,8 @@ class TradeEntry {
         formData.symbol = document.getElementById('pair')?.value || '';
         formData.broker = document.getElementById('broker')?.value?.trim() || '';  // ← 追加
         
-        // 方向（BUY/SELL）
-        const directionRadio = document.querySelector('input[name="direction"]:checked');
-        formData.direction = directionRadio?.value || '';
+        // 方向（selectボックスから取得）
+        formData.direction = document.getElementById('direction')?.value || 'long';
         
         // 価格情報
         formData.entryPrice = parseFloat(document.getElementById('entryPrice')?.value) || 0;
@@ -268,6 +295,44 @@ class TradeEntry {
         formData.reason3 = document.getElementById('reason3')?.value || '';
         formData.scenario = document.getElementById('scenario')?.value || '';
         formData.entryEmotion = document.getElementById('entryEmotion')?.value || '';
+        
+        // NEW: リスク管理フィールド
+        formData.methodId = document.getElementById('tradeMethod')?.value || null;
+        formData.quoteCurrencyRate = parseFloat(document.getElementById('quote-currency-rate')?.value) || null;
+        
+        // 許容損失（エントリー時点の設定値を記録）
+        formData.riskTolerance = window.SettingsModule?.getRiskTolerance() || null;
+        
+        // 損切り幅（pips）を計算
+        const stopLossPipsDisplay = document.getElementById('stop-loss-pips-display')?.textContent || '';
+        const pipsMatch = stopLossPipsDisplay.match(/([\d.]+)\s*pips/);
+        formData.stopLossPips = pipsMatch ? parseFloat(pipsMatch[1]) : null;
+        
+        // 適正ロットを計算
+        const optimalLotDisplay = document.getElementById('optimal-lot-display')?.textContent || '';
+        const lotMatch = optimalLotDisplay.match(/([\d.]+)\s*ロット/);
+        formData.calculatedLot = lotMatch ? parseFloat(lotMatch[1]) : null;
+        
+        // ロット数（実際の入力値）
+        formData.lotSize = parseFloat(document.getElementById('lotSize')?.value) || 1.0;
+        
+        // リスク状態を判定
+        if (formData.calculatedLot && formData.lotSize) {
+            const ratio = formData.lotSize / formData.calculatedLot;
+            if (ratio <= 1.0) {
+                formData.riskStatus = 'normal';
+                formData.isOverRisk = false;
+            } else if (ratio <= 2.0) {
+                formData.riskStatus = 'warning';
+                formData.isOverRisk = true;
+            } else {
+                formData.riskStatus = 'danger';
+                formData.isOverRisk = true;
+            }
+        } else {
+            formData.riskStatus = null;
+            formData.isOverRisk = null;
+        }
         
         // 結果（WIN/LOSS）
         const resultRadio = document.querySelector('input[name="result"]:checked');
@@ -390,7 +455,17 @@ class TradeEntry {
             
             // エントリー方法の記録
             entryMethod: 'manual',
-            isBulkEntry: false
+            isBulkEntry: false,
+            
+            // NEW: リスク管理フィールド
+            methodId: formData.methodId || null,
+            riskTolerance: formData.riskTolerance || null,
+            stopLossPips: formData.stopLossPips || null,
+            quoteCurrencyRate: formData.quoteCurrencyRate || null,
+            calculatedLot: formData.calculatedLot || null,
+            lotSize: formData.lotSize || null,
+            isOverRisk: formData.isOverRisk || false,
+            riskStatus: formData.riskStatus || null
         };
         
         console.log('[TradeEntry] サニタイズ適用完了');
@@ -434,6 +509,24 @@ class TradeEntry {
             const clearBtn = document.getElementById(`clearTradeChart${i}Btn`);
             if (preview) preview.innerHTML = '';
             if (clearBtn) clearBtn.style.display = 'none';
+            
+            // NEW: 一時保存データをクリア
+            window[`tempChartImage${i}`] = null;
+            
+            // 枠外の題名をクリア
+            const captionEl = document.getElementById(`tradeChartCaption${i}`);
+            if (captionEl) {
+                captionEl.textContent = '';
+                captionEl.style.display = 'none';
+            }
+            
+            // has-imageクラスを削除
+            const uploadArea = document.getElementById(`tradeChartImageUpload${i}`);
+            if (uploadArea) {
+                uploadArea.classList.remove('has-image');
+                const pElement = uploadArea.querySelector('p');
+                if (pElement) pElement.style.display = 'block';
+            }
         }
         
         // ファイル入力のクリア

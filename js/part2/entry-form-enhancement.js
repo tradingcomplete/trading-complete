@@ -2,7 +2,7 @@
  * @file entry-form-enhancement.js
  * @description 新規エントリーフォーム強化機能
  * @author AI Assistant / コンパナ
- * @version 1.0.5
+ * @version 1.0.6
  * @date 2025-12-14
  * 
  * 【責務】
@@ -23,6 +23,7 @@
  * - v1.0.3: selectAutocompleteItem関数でID形式・表示名形式の両方に対応
  * - v1.0.4: EventBus統合強化（brokerUpdated, favoritePairDeletedリスナー追加）
  * - v1.0.5: モバイル対応（PC用・モバイル用両方の要素を対象）
+ * - v1.0.6: 通貨ペア選択時にリスク管理セクションを更新（onPairChanged呼び出し追加）
  */
 
 // ================
@@ -312,6 +313,11 @@ function selectAutocompleteItem(pairIdOrName) {
     hideAutocompleteDropdown();
     
     console.log(`entry-form-enhancement: Selected pair ${pair.name} (pipValue: ${pair.pipValue})`);
+    
+    // リスク管理セクションを更新
+    if (typeof window.onPairChanged === 'function') {
+        window.onPairChanged();
+    }
 }
 
 /**
@@ -690,4 +696,4 @@ window.getEntryFormEnhancementStatus = function() {
     };
 };
 
-console.log('entry-form-enhancement.js: Script loaded (v1.0.5 - Mobile support)');
+console.log('entry-form-enhancement.js: Script loaded (v1.0.6 - Risk management update)');

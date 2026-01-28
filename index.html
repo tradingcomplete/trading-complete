@@ -237,7 +237,14 @@
                             </div>
                             <div class="input-group lot-input-container">
                                 <label>ロットサイズ <span class="default-lot-hint" id="defaultLotHint" style="display: none;"></span></label>
-                                <input type="number" id="lotSize" step="0.1" min="0.1" placeholder="例: 1.0" value="1.0">
+                                <input type="number" 
+                                       id="lotSize" 
+                                       step="0.1" 
+                                       min="0.1" 
+                                       placeholder="例: 1.0" 
+                                       value="1.0"
+                                       oninput="updateLotRiskStatus()">
+                                <p id="lot-risk-hint" style="font-size: 12px; margin-top: 5px; display: none;"></p>
                             </div>
                             
                             <!-- 行4: 損切り価格、利確目標価格 -->
@@ -249,6 +256,79 @@
                                 <label>利確目標価格</label>
                                 <input type="number" id="takeProfit" step="0.00001" placeholder="例: 151.50" oninput="updateRiskReward()">
                             </div>
+                            
+                            <!-- 手法選択 -->
+                            <div class="input-group">
+                                <label>手法</label>
+                                <select id="tradeMethod" onchange="onMethodSelected()">
+                                    <option value="">未選択</option>
+                                    <!-- method-ui.jsが動的に生成 -->
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <!-- 空のグリッドセル（レイアウト調整用） -->
+                            </div>
+                        </div>
+                        
+                        <!-- リスク管理セクション -->
+                        <div id="risk-management-section" class="risk-management-section" style="
+                            background: rgba(78, 205, 196, 0.1);
+                            border: 1px solid rgba(78, 205, 196, 0.3);
+                            border-radius: 8px;
+                            padding: 15px;
+                            margin: 15px 0;
+                        ">
+                            <h4 style="margin: 0 0 15px 0; color: #4ecdc4;">
+                                💰 リスク管理
+                                <span id="risk-tolerance-display" style="font-weight: normal; font-size: 14px; margin-left: 10px;">
+                                    （許容損失: 未設定）
+                                </span>
+                            </h4>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                                <!-- 損切り幅（自動計算） -->
+                                <div class="input-group" style="margin: 0;">
+                                    <label style="font-size: 12px;">損切り幅</label>
+                                    <div id="stop-loss-pips-display" style="
+                                        font-size: 18px;
+                                        font-weight: bold;
+                                        color: #ff6b6b;
+                                    ">- pips</div>
+                                </div>
+                                
+                                <!-- 決済通貨レート -->
+                                <div class="input-group" style="margin: 0;">
+                                    <label for="quote-currency-rate" style="font-size: 12px;">
+                                        決済通貨レート
+                                        <span id="quote-currency-label" style="color: #888;"></span>
+                                    </label>
+                                    <input type="number" 
+                                           id="quote-currency-rate" 
+                                           step="0.01" 
+                                           placeholder="例: 150.00"
+                                           oninput="calculateOptimalLot()"
+                                           style="max-width: 120px;">
+                                </div>
+                                
+                                <!-- 適正ロット -->
+                                <div class="input-group" style="margin: 0;">
+                                    <label style="font-size: 12px;">適正ロット</label>
+                                    <div id="optimal-lot-display" style="
+                                        font-size: 18px;
+                                        font-weight: bold;
+                                        color: #4ecdc4;
+                                    ">- ロット</div>
+                                </div>
+                            </div>
+                            
+                            <!-- リスク状態メッセージ -->
+                            <div id="risk-status-message" style="
+                                margin-top: 10px;
+                                padding: 8px 12px;
+                                border-radius: 4px;
+                                font-size: 13px;
+                                display: none;
+                            "></div>
                         </div>
 
                         <div class="risk-reward-display" id="riskRewardDisplay">
@@ -1868,6 +1948,79 @@
                     <div id="favorite-pairs-list" style="margin-top: 15px;">
                         <!-- SettingsModule.jsが動的に生成 -->
                     </div>
+                    
+                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
+                    
+                    <!-- 許容損失管理 -->
+                    <h3>💰 許容損失管理</h3>
+                    <p style="color: #aaa; margin-bottom: 15px;">
+                        1トレードあたりの許容損失額を設定します。<br>
+                        新規エントリー時に適正ロット数を自動計算し、リスク管理を支援します。
+                    </p>
+                    
+                    <div class="input-group">
+                        <label for="risk-tolerance-input">許容損失額（円）</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="number" 
+                                   id="risk-tolerance-input" 
+                                   min="0" 
+                                   step="1000" 
+                                   placeholder="例: 5000"
+                                   style="max-width: 200px;">
+                            <span>円</span>
+                            <button class="btn btn-primary" onclick="saveRiskTolerance()">
+                                保存
+                            </button>
+                        </div>
+                        <p id="risk-tolerance-status" style="color: #4ecdc4; margin-top: 10px; display: none;">
+                            ✅ 保存しました
+                        </p>
+                    </div>
+                    
+                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
+                    
+                    <!-- 手法管理 -->
+                    <h3>📋 手法管理</h3>
+                    <p style="color: #aaa; margin-bottom: 15px;">
+                        トレード時に使用した手法を記録できます。<br>
+                        手法別の成績を分析し、得意な手法を発見しましょう。
+                    </p>
+                    
+                    <!-- 手法一覧 -->
+                    <div id="method-list" style="margin-bottom: 20px;">
+                        <!-- method-ui.jsが動的に生成 -->
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="openAddMethodModal()">
+                        ➕ 手法を追加
+                    </button>
+                    
+                    <p style="color: #888; font-size: 12px; margin-top: 15px;">
+                        ⚠️ 手法は追加後に編集できません（過去の記録との整合性を保つため）<br>
+                        変更したい場合は削除して新規追加してください。
+                    </p>
+                    
+                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
+                    
+                    <!-- ブローカーバッジ表示設定 -->
+                    <h3>🏷️ 表示設定</h3>
+                    <p style="color: #aaa; margin-bottom: 15px;">
+                        トレード一覧の表示をカスタマイズできます。
+                    </p>
+                    
+                    <div class="input-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" 
+                                   id="show-broker-badge" 
+                                   onchange="toggleBrokerBadge()"
+                                   style="width: 20px; height: 20px;">
+                            <span>トレード一覧にブローカーバッジを表示する</span>
+                        </label>
+                        <p style="color: #888; font-size: 12px; margin-top: 5px;">
+                            複数のブローカーを使い分ける場合はONがおすすめ
+                        </p>
+                    </div>
+                    
                 </div>
                 
                 <!-- ========================================
@@ -2435,6 +2588,8 @@
     <script src="js/part5_modules/SettingsModule.js"></script>
     <script src="js/part5/broker-ui.js"></script>
     <script src="js/part5/favorite-pair-ui.js"></script>
+    <script src="js/part5/risk-ui.js"></script>
+    <script src="js/part5/method-ui.js"></script>
 
     <!-- 画像追加モーダルモジュール -->
     <script src="js/modules/ImageAddModalModule.js"></script>
@@ -2885,6 +3040,56 @@
         
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeAddFavoritePairModal()">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<!-- 手法追加モーダル -->
+<div id="add-method-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>📋 手法を追加</h3>
+            <button class="modal-close" onclick="closeAddMethodModal()">×</button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="input-group">
+                <label for="method-name">手法名（正式名）<span style="color: #ff6b6b;">*</span></label>
+                <input type="text" 
+                       id="method-name" 
+                       maxlength="30" 
+                       placeholder="例: ダウ理論×フィボ押し目買い"
+                       required>
+                <p style="color: #888; font-size: 12px;">最大30文字</p>
+            </div>
+            
+            <div class="input-group">
+                <label for="method-shortname">略称（バッジ表示用）<span style="color: #ff6b6b;">*</span></label>
+                <input type="text" 
+                       id="method-shortname" 
+                       maxlength="10" 
+                       placeholder="例: ダウフィボ"
+                       required>
+                <p style="color: #888; font-size: 12px;">最大10文字（トレード一覧のバッジに表示）</p>
+            </div>
+            
+            <div class="input-group">
+                <label for="method-memo">メモ（任意）</label>
+                <textarea id="method-memo" 
+                          maxlength="200" 
+                          rows="3"
+                          placeholder="例: 日足トレンド確認→4H押し目で入る"></textarea>
+                <p style="color: #888; font-size: 12px;">最大200文字（自分用のメモ）</p>
+            </div>
+            
+            <p style="color: #ff9f43; font-size: 12px; margin-top: 15px;">
+                ⚠️ 追加後は編集できません。よく確認してください。
+            </p>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAddMethodModal()">キャンセル</button>
+            <button class="btn btn-primary" onclick="saveNewMethod()">追加</button>
         </div>
     </div>
 </div>

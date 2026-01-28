@@ -232,9 +232,56 @@ window.calculateHoldingTime = function(entryDatetime, exitDatetime) {
 // ==================== TradeEntry Bridge ====================
 // 第3段階で新規追加 - ID差異を吸収する修正版
 window.saveTradeRecord = function(formData = null) {
-    // MODULES.md準拠: TradeEntryに処理を委譲
-    // formDataがnullの場合、TradeEntry.#collectFormDataが収集する
+    // フォームデータの準備（IDの差異を吸収）
+    if (!formData) {
+        formData = {
+            symbol: document.getElementById('pair')?.value || '',
+            direction: document.getElementById('direction')?.value || 'long',
+            broker: document.getElementById('broker')?.value?.trim() || '',
+            entryDatetime: document.getElementById('entryTime')?.value || '',  // entryTimeからentryDatetimeに変更
+            entryPrice: document.getElementById('entryPrice')?.value || '',
+            lot: document.getElementById('lotSize')?.value || '1.0',
+            stopLoss: document.getElementById('stopLoss')?.value || '',
+            takeProfit: document.getElementById('takeProfit')?.value || '',
+            reason1: document.getElementById('reason1')?.value || '',
+            reason2: document.getElementById('reason2')?.value || '',
+            reason3: document.getElementById('reason3')?.value || '',
+            scenario: document.getElementById('scenario')?.value || '',
+            entryEmotion: document.getElementById('entryEmotion')?.value || ''
+        };
+        
+        // チャート画像を収集（3枚対応）- 題名・説明も含む
+        const chartImages = [];
+        for (let i = 1; i <= 3; i++) {
+            // tempChartImageを優先（題名・説明を含むオブジェクト）
+            const tempData = window[`tempChartImage${i}`];
+            
+            if (tempData && tempData.src && tempData.src.startsWith('data:')) {
+                // 新形式: オブジェクト {src, title, description}
+                chartImages.push({
+                    src: tempData.src,
+                    title: tempData.title || '',
+                    description: tempData.description || ''
+                });
+            } else {
+                // フォールバック: プレビューから取得（題名なし）
+                const preview = document.getElementById('tradeChartImagePreview' + i);
+                const img = preview?.querySelector('img');
+                if (img && img.src && img.src.startsWith('data:image')) {
+                    chartImages.push({
+                        src: img.src,
+                        title: '',
+                        description: ''
+                    });
+                } else {
+                    chartImages.push(null);
+                }
+            }
+        }
+        formData.chartImages = chartImages;
+    }
     
+    // TradeEntryが存在する場合は使用、そうでなければ直接保存
     if (window.tradeEntry && window.tradeEntry.saveTradeRecord) {
         const result = window.tradeEntry.saveTradeRecord(formData);
         // 保存成功時に一覧を更新
