@@ -571,7 +571,11 @@ class TradeList {
         
         // チャート画像と振り返りの横並び表示
         const hasImages = (trade.chartImages && trade.chartImages.length > 0) || trade.tradeChartImage;
-        const hasReflection = trade.reflection && trade.reflection.trim();
+        // reflection互換性: 文字列またはオブジェクト両方に対応
+        const reflectionText = typeof trade.reflection === 'string' 
+            ? trade.reflection 
+            : (trade.reflection?.text || '');
+        const hasReflection = reflectionText && reflectionText.trim();
         
         if (hasImages || hasReflection) {
             const contentRow = document.createElement('div');
@@ -693,7 +697,7 @@ class TradeList {
                 text.className = 'reflection-text';
                 text.style.cssText = 'color: rgba(255,255,255,0.9); font-size: 0.95rem; line-height: 1.5;';
                 
-                const lines = trade.reflection.split('\n');
+                const lines = reflectionText.split('\n');
                 const displayLines = lines.slice(0, 3);
                 
                 // 3行目が長い場合は省略

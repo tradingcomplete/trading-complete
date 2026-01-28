@@ -415,8 +415,12 @@ class TradeDetail {
         // 振り返りセクション（改行対応）
         // 決済済みトレードの場合に表示
         if (isSettled || trade.reflection) {
-            const reflectionHtml = trade.reflection 
-                ? trade.reflection.replace(/\n/g, '<br>') 
+            // reflection互換性: 文字列またはオブジェクト両方に対応
+            const reflectionText = typeof trade.reflection === 'string' 
+                ? trade.reflection 
+                : (trade.reflection?.text || '');
+            const reflectionHtml = reflectionText 
+                ? reflectionText.replace(/\n/g, '<br>') 
                 : '';
             
             detailHTML += `
@@ -588,7 +592,7 @@ class TradeDetail {
                     <div class="modal-body">
                         <div class="form-group">
                             <label>振り返り・反省</label>
-                            <textarea id="reflectionEditText" class="form-control" rows="10" placeholder="このトレードから学んだこと、改善点などを記録">${trade.reflection || ''}</textarea>
+                            <textarea id="reflectionEditText" class="form-control" rows="10" placeholder="このトレードから学んだこと、改善点などを記録">${typeof trade.reflection === 'string' ? trade.reflection : (trade.reflection?.text || '')}</textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
