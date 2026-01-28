@@ -2517,6 +2517,9 @@
     <!-- Supabase Client -->
     <script src="js/core/supabaseClient.js"></script>
     
+    <!-- EventBus - 基盤なので最初に（AuthModule/SyncModuleより前に必須） -->
+    <script src="js/core/EventBus.js"></script>
+    
     <!-- Auth Module -->
     <script src="js/auth/AuthModule.js"></script>
     
@@ -2529,9 +2532,6 @@
     <!-- ========== Phase 1: 基盤整備ファイル ========== -->
     <!-- 1. 定数管理（最初に読み込む） -->
     <script src="js/constants.js"></script>
-
-    <!-- EventBus - 基盤なので早い段階で -->
-    <script src="js/core/EventBus.js"></script>
     
     <!-- Security - セキュリティユーティリティ -->
     <script src="js/core/security.js"></script>
