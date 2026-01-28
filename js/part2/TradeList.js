@@ -323,8 +323,8 @@ class TradeList {
         }
         
         // 手法バッジを追加（タスク22）
-        if (trade.methodId && window.settingsModule) {
-            const method = window.settingsModule.getMethodById(trade.methodId);
+        if (trade.methodId && window.SettingsModule) {
+            const method = window.SettingsModule.getMethodById(trade.methodId);
             if (method && !method.deletedAt) {
                 const methodBadge = document.createElement('span');
                 methodBadge.className = 'method-badge';

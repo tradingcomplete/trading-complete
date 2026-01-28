@@ -3274,7 +3274,7 @@
 // 手法フィルターの初期化
 function initializeMethodFilter() {
     const methodFilter = document.getElementById('methodFilter');
-    if (!methodFilter || !window.settingsModule) return;
+    if (!methodFilter || !window.SettingsModule) return;
     
     // 既存のオプションをクリア（「全て」以外）
     while (methodFilter.options.length > 1) {
@@ -3282,7 +3282,7 @@ function initializeMethodFilter() {
     }
     
     // 手法を取得して追加
-    const methods = window.settingsModule.getAllMethods();
+    const methods = window.SettingsModule.getAllMethods();
     methods.forEach(method => {
         if (!method.deletedAt) {
             const option = document.createElement('option');
