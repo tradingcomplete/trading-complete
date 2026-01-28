@@ -1024,6 +1024,11 @@
                 const siteTitle = localStorage.getItem('siteTitle') || null;
                 const subtitle = localStorage.getItem('siteSubtitle') || null;
                 
+                // NEW: トレード分析強化設定
+                const methods = StorageValidator.safeLoad('tc_methods', [], StorageValidator.isArray);
+                const riskTolerance = localStorage.getItem('tc_risk_tolerance');
+                const showBrokerBadge = localStorage.getItem('tc_show_broker_badge');
+                
                 const supabaseData = {
                     user_id: userId,
                     brokers: brokers,
@@ -1034,6 +1039,12 @@
                     user_icon: userIcon,
                     site_title: siteTitle,
                     subtitle: subtitle,
+                    
+                    // NEW: トレード分析強化設定
+                    methods: methods,
+                    risk_tolerance: riskTolerance ? parseInt(riskTolerance, 10) : null,
+                    show_broker_badge: showBrokerBadge === 'true',
+                    
                     updated_at: new Date().toISOString()
                 };
                 
@@ -1169,6 +1180,17 @@
                 }
                 if (settings.subtitle) {
                     localStorage.setItem('siteSubtitle', settings.subtitle);
+                }
+                
+                // NEW: トレード分析強化設定を展開
+                if (settings.methods) {
+                    localStorage.setItem('tc_methods', JSON.stringify(settings.methods));
+                }
+                if (settings.risk_tolerance !== null && settings.risk_tolerance !== undefined) {
+                    localStorage.setItem('tc_risk_tolerance', String(settings.risk_tolerance));
+                }
+                if (settings.show_broker_badge !== null && settings.show_broker_badge !== undefined) {
+                    localStorage.setItem('tc_show_broker_badge', String(settings.show_broker_badge));
                 }
                 
                 console.log('[SyncModule] ユーザー設定をlocalStorageに同期完了');

@@ -1,7 +1,7 @@
-# Supabase テーブル構造（Phase 6 画像説明欄対応版）
+# Supabase テーブル構造（Phase 7 リスク管理対応版）
 
 **作成日**: 2025-12-30  
-**更新日**: 2026-01-22  
+**更新日**: 2026-01-29  
 **用途**: SyncModule.js データ変換・引き継ぎ資料
 
 ---
@@ -143,7 +143,7 @@ WITH CHECK (
 
 ---
 
-## 1. trades テーブル（最終構成：22カラム）✅ 同期完了
+## 1. trades テーブル（最終構成：29カラム）✅ 同期完了
 
 ### 1.1 テーブル定義
 
@@ -189,6 +189,15 @@ CREATE TABLE trades (
   reasons JSONB DEFAULT '[]',
   entry_emotion TEXT,
   
+  -- リスク管理（Phase 7で追加）
+  method_id TEXT,
+  risk_tolerance DECIMAL,
+  stop_loss_pips DECIMAL,
+  quote_currency_rate DECIMAL,
+  calculated_lot DECIMAL,
+  risk_status TEXT,
+  is_over_risk BOOLEAN,
+  
   -- メタデータ
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -208,7 +217,7 @@ CREATE POLICY "Users can CRUD own trades"
   WITH CHECK (auth.uid() = user_id);
 ```
 
-### 1.2 全カラム一覧（22カラム）
+### 1.2 全カラム一覧（29カラム）
 
 | # | カラム名 | データ型 | 説明 |
 |---|---------|---------|------|
@@ -234,6 +243,13 @@ CREATE POLICY "Users can CRUD own trades"
 | 20 | entry_emotion | text | エントリー時感情 |
 | 21 | created_at | timestamp | 作成日時 |
 | 22 | updated_at | timestamp | 更新日時 |
+| 23 | method_id | text | 手法ID |
+| 24 | risk_tolerance | numeric | 許容損失額（円）※エントリー時点 |
+| 25 | stop_loss_pips | numeric | 損切り幅（pips） |
+| 26 | quote_currency_rate | numeric | 決済通貨レート |
+| 27 | calculated_lot | numeric | 計算された適正ロット |
+| 28 | risk_status | text | リスク状態（normal/warning/danger） |
+| 29 | is_over_risk | boolean | 許容損失超過フラグ |
 
 ---
 
@@ -265,6 +281,13 @@ CREATE POLICY "Users can CRUD own trades"
 | entryEmotion | entry_emotion | text | |
 | createdAt / timestamp | created_at | timestamp | |
 | updatedAt | updated_at | timestamp | |
+| methodId | method_id | text | 手法ID |
+| riskTolerance | risk_tolerance | numeric | 許容損失額（エントリー時点） |
+| stopLossPips | stop_loss_pips | numeric | 損切り幅(pips) |
+| quoteCurrencyRate | quote_currency_rate | numeric | 決済通貨レート |
+| calculatedLot | calculated_lot | numeric | 適正ロット |
+| riskStatus | risk_status | text | リスク状態 |
+| isOverRisk | is_over_risk | boolean | 超過フラグ |
 
 ---
 
@@ -354,6 +377,12 @@ CREATE TABLE user_settings (
   site_title TEXT DEFAULT NULL,        -- v1.7.0で追加
   subtitle TEXT DEFAULT NULL,          -- v1.7.0で追加
   self_image TEXT DEFAULT NULL,        -- v1.7.0で追加（未使用）
+  
+  -- トレード分析強化（Phase 7で追加）
+  methods JSONB DEFAULT '[]',          -- 手法管理
+  risk_tolerance DECIMAL,              -- 許容損失設定（円）
+  show_broker_badge BOOLEAN DEFAULT true,  -- ブローカーバッジ表示
+  
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -372,6 +401,9 @@ CREATE TABLE user_settings (
 | site_title | `siteTitle` | SettingsModule |
 | subtitle | `siteSubtitle` | SettingsModule |
 | self_image | （未使用） | - |
+| methods | `tc_methods` | SettingsModule |
+| risk_tolerance | `tc_risk_tolerance` | SettingsModule |
+| show_broker_badge | `tc_show_broker_badge` | SettingsModule |
 
 **同期方式**: 一括保存（8つのlocalStorageを1レコードにまとめて保存）
 
@@ -514,7 +546,8 @@ CREATE TABLE user_settings (
 | Phase 4最終版+ | 2026-01-15 | site_title/subtitle/self_imageカラム追加、SyncModule v1.7.0 |
 | Phase 5テスト完了版 | 2026-01-15 | Phase 5テスト完了、RLSテスト結果・パフォーマンス・既知の制限追記 |
 | **Phase 6画像説明欄対応版** | **2026-01-22** | **画像データ構造詳細追加（title/description/path）、URL期限切れ対応、imageUtils.js v1.3.0** |
+| **Phase 7リスク管理対応版** | **2026-01-29** | **tradesテーブル: リスク管理7カラム追加（22→29カラム）、user_settingsテーブル: methods/risk_tolerance/show_broker_badge追加、SyncModule.js対応** |
 
 ---
 
-*このドキュメントをPhase 6以降の開発で参照してください。*
+*このドキュメントをPhase 7以降の開発で参照してください。*
