@@ -1228,6 +1228,37 @@
                     console.error('[SyncModule] 設定自動同期エラー:', err);
                 });
             });
+            
+            // NEW: 手法管理イベントを購読
+            this.#eventBus.on('settings:methodAdded', () => {
+                console.log('[SyncModule] settings:methodAdded イベント受信、設定を同期');
+                this.saveUserSettings().catch(err => {
+                    console.error('[SyncModule] 手法追加同期エラー:', err);
+                });
+            });
+            
+            this.#eventBus.on('settings:methodDeleted', () => {
+                console.log('[SyncModule] settings:methodDeleted イベント受信、設定を同期');
+                this.saveUserSettings().catch(err => {
+                    console.error('[SyncModule] 手法削除同期エラー:', err);
+                });
+            });
+            
+            // NEW: リスク設定イベントを購読
+            this.#eventBus.on('settings:riskToleranceUpdated', () => {
+                console.log('[SyncModule] settings:riskToleranceUpdated イベント受信、設定を同期');
+                this.saveUserSettings().catch(err => {
+                    console.error('[SyncModule] リスク設定同期エラー:', err);
+                });
+            });
+            
+            // NEW: ブローカーバッジ設定イベントを購読
+            this.#eventBus.on('settings:showBrokerBadgeUpdated', () => {
+                console.log('[SyncModule] settings:showBrokerBadgeUpdated イベント受信、設定を同期');
+                this.saveUserSettings().catch(err => {
+                    console.error('[SyncModule] ブローカーバッジ設定同期エラー:', err);
+                });
+            });
         }
         
         // ========== Private Methods: 画像アップロード ==========
