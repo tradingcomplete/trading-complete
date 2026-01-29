@@ -2696,13 +2696,16 @@ class ReportModule {
      */
     #generateRuleRiskAnalysis(trades) {
         // 1. ルール遵守別成績を計算
-        const ruleStats = { yes: { count: 0, wins: 0, losses: 0, pips: 0 }, no: { count: 0, wins: 0, losses: 0, pips: 0 } };
+        const ruleStats = { 
+            yes: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 }, 
+            no: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 } 
+        };
         
         // 2. 許容損失別成績を計算
         const riskStats = { 
-            normal: { count: 0, wins: 0, losses: 0, pips: 0 }, 
-            warning: { count: 0, wins: 0, losses: 0, pips: 0 }, 
-            danger: { count: 0, wins: 0, losses: 0, pips: 0 } 
+            normal: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 }, 
+            warning: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 }, 
+            danger: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 } 
         };
         
         // 3. 手法別成績を計算
@@ -2712,6 +2715,10 @@ class ReportModule {
             const pips = this.#calculateTradePips(trade);
             const isWin = pips > 0;
             
+            // 円建て損益を取得
+            const yenProfit = trade.yenProfitLoss?.netProfit || 0;
+            const hasYen = trade.yenProfitLoss?.netProfit !== undefined;
+            
             // ルール遵守別
             const reflection = typeof trade.reflection === 'object' ? trade.reflection : null;
             if (reflection && reflection.ruleFollowed) {
@@ -2719,6 +2726,10 @@ class ReportModule {
                 if (ruleStats[key]) {
                     ruleStats[key].count++;
                     ruleStats[key].pips += pips;
+                    if (hasYen) {
+                        ruleStats[key].yen += yenProfit;
+                        ruleStats[key].yenCount++;
+                    }
                     if (isWin) ruleStats[key].wins++;
                     else if (pips < 0) ruleStats[key].losses++;
                 }
@@ -2728,6 +2739,10 @@ class ReportModule {
             if (trade.riskStatus && riskStats[trade.riskStatus]) {
                 riskStats[trade.riskStatus].count++;
                 riskStats[trade.riskStatus].pips += pips;
+                if (hasYen) {
+                    riskStats[trade.riskStatus].yen += yenProfit;
+                    riskStats[trade.riskStatus].yenCount++;
+                }
                 if (isWin) riskStats[trade.riskStatus].wins++;
                 else if (pips < 0) riskStats[trade.riskStatus].losses++;
             }
@@ -2735,27 +2750,41 @@ class ReportModule {
             // 手法別
             const methodId = trade.methodId || 'none';
             if (!methodStats[methodId]) {
-                methodStats[methodId] = { count: 0, wins: 0, losses: 0, pips: 0 };
+                methodStats[methodId] = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
             }
             methodStats[methodId].count++;
             methodStats[methodId].pips += pips;
+            if (hasYen) {
+                methodStats[methodId].yen += yenProfit;
+                methodStats[methodId].yenCount++;
+            }
             if (isWin) methodStats[methodId].wins++;
             else if (pips < 0) methodStats[methodId].losses++;
         });
         
-        // 勝率計算ヘルパー
+        // ヘルパー関数
         const calcWinRate = (wins, losses) => {
             const total = wins + losses;
             return total > 0 ? ((wins / total) * 100).toFixed(1) : '-';
         };
         
-        // 勝敗表示ヘルパー
         const formatWinLoss = (wins, losses) => {
             if (wins === 0 && losses === 0) return '-';
             return `${wins}勝${losses}敗`;
         };
         
-        // 手法名取得ヘルパー
+        const calcExpectedPips = (pips, count) => {
+            if (count === 0) return '-';
+            const ev = pips / count;
+            return `${ev >= 0 ? '+' : ''}${ev.toFixed(1)}p`;
+        };
+        
+        const calcExpectedYen = (yen, yenCount) => {
+            if (yenCount === 0) return '-';
+            const ev = yen / yenCount;
+            return `${ev >= 0 ? '+' : ''}¥${Math.round(ev).toLocaleString()}`;
+        };
+        
         const getMethodName = (methodId) => {
             if (methodId === 'none') return '未設定';
             const method = window.SettingsModule?.getMethodById(methodId);
@@ -2765,15 +2794,29 @@ class ReportModule {
         // テーブル行生成ヘルパー
         const generateRow = (badge, stats) => {
             if (stats.count === 0) {
-                return `<tr><td style="text-align: center;">${badge}</td><td style="text-align: center;">0件</td><td style="text-align: center;">-</td><td style="text-align: center;">-</td><td style="text-align: center;">-</td></tr>`;
+                return `<tr>
+                    <td style="text-align: center;">${badge}</td>
+                    <td style="text-align: center;">0件</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                </tr>`;
             }
             const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+            const evPips = stats.pips / stats.count;
+            const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+            const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+            const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
             return `<tr>
                 <td style="text-align: center;">${badge}</td>
                 <td style="text-align: center;">${stats.count}件</td>
                 <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
                 <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
                 <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
             </tr>`;
         };
         
@@ -2783,12 +2826,18 @@ class ReportModule {
             .map(([methodId, stats]) => {
                 const name = getMethodName(methodId);
                 const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+                const evPips = stats.count > 0 ? stats.pips / stats.count : 0;
+                const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+                const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+                const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
                 return `<tr>
                     <td style="text-align: left; padding-left: 10px;">${name}</td>
                     <td style="text-align: center;">${stats.count}件</td>
                     <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
                     <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
                     <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                    <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                    <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
                 </tr>`;
             }).join('');
         
@@ -2836,6 +2885,8 @@ class ReportModule {
                                 <th style="${thStyle}">勝敗</th>
                                 <th style="${thStyle}">勝率</th>
                                 <th style="${thStyle}">Pips</th>
+                                <th style="${thStyle}">期待値(p)</th>
+                                <th style="${thStyle}">期待値(¥)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2854,6 +2905,8 @@ class ReportModule {
                                 <th style="${thStyle}">勝敗</th>
                                 <th style="${thStyle}">勝率</th>
                                 <th style="${thStyle}">Pips</th>
+                                <th style="${thStyle}">期待値(p)</th>
+                                <th style="${thStyle}">期待値(¥)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2873,10 +2926,12 @@ class ReportModule {
                                 <th style="${thStyle}">勝敗</th>
                                 <th style="${thStyle}">勝率</th>
                                 <th style="${thStyle}">Pips</th>
+                                <th style="${thStyle}">期待値(p)</th>
+                                <th style="${thStyle}">期待値(¥)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${methodRows || '<tr><td colspan="5" style="text-align: center; color: #9ca3af; padding: 20px;">データがありません</td></tr>'}
+                            ${methodRows || '<tr><td colspan="7" style="text-align: center; color: #9ca3af; padding: 20px;">データがありません</td></tr>'}
                         </tbody>
                     </table>
                     
