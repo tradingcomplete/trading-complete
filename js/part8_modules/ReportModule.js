@@ -2261,9 +2261,18 @@ class ReportModule {
      * @returns {string} HTML文字列
      */
     #extractBestPractices(monthlyTrades) {
+        // reflection互換性対応（文字列/オブジェクト両対応）
         const reflections = monthlyTrades
             .filter(t => t.reflection)
-            .map(t => t.reflection);
+            .map(t => {
+                if (typeof t.reflection === 'string') {
+                    return t.reflection;
+                } else if (typeof t.reflection === 'object' && t.reflection.text) {
+                    return t.reflection.text;
+                }
+                return '';
+            })
+            .filter(text => text.trim().length > 0);
         
         if (reflections.length === 0) {
             return '<p style="color: #999;">振り返りデータがありません</p>';
