@@ -2891,13 +2891,16 @@ class ReportModule {
      */
     #generatePrintRuleRiskAnalysis(trades) {
         // 1. ルール遵守別成績を計算
-        const ruleStats = { yes: { count: 0, wins: 0, losses: 0, pips: 0 }, no: { count: 0, wins: 0, losses: 0, pips: 0 } };
+        const ruleStats = { 
+            yes: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 }, 
+            no: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 } 
+        };
         
         // 2. 許容損失別成績を計算
         const riskStats = { 
-            normal: { count: 0, wins: 0, losses: 0, pips: 0 }, 
-            warning: { count: 0, wins: 0, losses: 0, pips: 0 }, 
-            danger: { count: 0, wins: 0, losses: 0, pips: 0 } 
+            normal: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 }, 
+            warning: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 }, 
+            danger: { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 } 
         };
         
         // 3. 手法別成績を計算
@@ -2907,6 +2910,10 @@ class ReportModule {
             const pips = this.#calculateTradePips(trade);
             const isWin = pips > 0;
             
+            // 円建て損益を取得
+            const yenProfit = trade.yenProfitLoss?.netProfit || 0;
+            const hasYen = trade.yenProfitLoss?.netProfit !== undefined;
+            
             // ルール遵守別
             const reflection = typeof trade.reflection === 'object' ? trade.reflection : null;
             if (reflection && reflection.ruleFollowed) {
@@ -2914,6 +2921,10 @@ class ReportModule {
                 if (ruleStats[key]) {
                     ruleStats[key].count++;
                     ruleStats[key].pips += pips;
+                    if (hasYen) {
+                        ruleStats[key].yen += yenProfit;
+                        ruleStats[key].yenCount++;
+                    }
                     if (isWin) ruleStats[key].wins++;
                     else if (pips < 0) ruleStats[key].losses++;
                 }
@@ -2923,6 +2934,10 @@ class ReportModule {
             if (trade.riskStatus && riskStats[trade.riskStatus]) {
                 riskStats[trade.riskStatus].count++;
                 riskStats[trade.riskStatus].pips += pips;
+                if (hasYen) {
+                    riskStats[trade.riskStatus].yen += yenProfit;
+                    riskStats[trade.riskStatus].yenCount++;
+                }
                 if (isWin) riskStats[trade.riskStatus].wins++;
                 else if (pips < 0) riskStats[trade.riskStatus].losses++;
             }
@@ -2930,10 +2945,14 @@ class ReportModule {
             // 手法別
             const methodId = trade.methodId || 'none';
             if (!methodStats[methodId]) {
-                methodStats[methodId] = { count: 0, wins: 0, losses: 0, pips: 0 };
+                methodStats[methodId] = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
             }
             methodStats[methodId].count++;
             methodStats[methodId].pips += pips;
+            if (hasYen) {
+                methodStats[methodId].yen += yenProfit;
+                methodStats[methodId].yenCount++;
+            }
             if (isWin) methodStats[methodId].wins++;
             else if (pips < 0) methodStats[methodId].losses++;
         });
@@ -2949,6 +2968,18 @@ class ReportModule {
             return `${wins}勝${losses}敗`;
         };
         
+        const calcExpectedPips = (pips, count) => {
+            if (count === 0) return '-';
+            const ev = pips / count;
+            return `${ev >= 0 ? '+' : ''}${ev.toFixed(1)}p`;
+        };
+        
+        const calcExpectedYen = (yen, yenCount) => {
+            if (yenCount === 0) return '-';
+            const ev = yen / yenCount;
+            return `${ev >= 0 ? '+' : ''}¥${Math.round(ev).toLocaleString()}`;
+        };
+        
         const getMethodName = (methodId) => {
             if (methodId === 'none') return '未設定';
             const method = window.SettingsModule?.getMethodById(methodId);
@@ -2957,15 +2988,29 @@ class ReportModule {
         
         const generateRow = (badge, stats) => {
             if (stats.count === 0) {
-                return `<tr><td style="text-align: center;">${badge}</td><td style="text-align: center;">0件</td><td style="text-align: center;">-</td><td style="text-align: center;">-</td><td style="text-align: center;">-</td></tr>`;
+                return `<tr>
+                    <td style="text-align: center;">${badge}</td>
+                    <td style="text-align: center;">0件</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                </tr>`;
             }
             const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+            const evPips = stats.pips / stats.count;
+            const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+            const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+            const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
             return `<tr>
                 <td style="text-align: center;">${badge}</td>
                 <td style="text-align: center;">${stats.count}件</td>
                 <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
                 <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
                 <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
             </tr>`;
         };
         
@@ -2975,57 +3020,65 @@ class ReportModule {
             .map(([methodId, stats]) => {
                 const name = getMethodName(methodId);
                 const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+                const evPips = stats.count > 0 ? stats.pips / stats.count : 0;
+                const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+                const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+                const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
                 return `<tr>
                     <td style="text-align: left;">${name}</td>
                     <td style="text-align: center;">${stats.count}件</td>
                     <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
                     <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
                     <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                    <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                    <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
                 </tr>`;
             }).join('');
         
         return `
-            <div style="display: flex; gap: 30px; margin-bottom: 30px;">
-                <!-- ルール遵守別成績 -->
-                <div style="flex: 1;">
-                    <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 ルール遵守別成績</h4>
-                    <table class="trades-table" style="font-size: 12px;">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;"></th>
-                                <th>件数</th>
-                                <th>勝敗</th>
-                                <th>勝率</th>
-                                <th>Pips</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${generateRow('✅', ruleStats.yes)}
-                            ${generateRow('❌', ruleStats.no)}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- 許容損失別成績 -->
-                <div style="flex: 1;">
-                    <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 許容損失別成績</h4>
-                    <table class="trades-table" style="font-size: 12px;">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;"></th>
-                                <th>件数</th>
-                                <th>勝敗</th>
-                                <th>勝率</th>
-                                <th>Pips</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${generateRow('✅', riskStats.normal)}
-                            ${generateRow('⚠️', riskStats.warning)}
-                            ${generateRow('🚨', riskStats.danger)}
-                        </tbody>
-                    </table>
-                </div>
+            <!-- ルール遵守別成績 -->
+            <div style="margin-bottom: 25px;">
+                <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 ルール遵守別成績</h4>
+                <table class="trades-table" style="font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>件数</th>
+                            <th>勝敗</th>
+                            <th>勝率</th>
+                            <th>Pips</th>
+                            <th>期待値(p)</th>
+                            <th>期待値(¥)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${generateRow('✅', ruleStats.yes)}
+                        ${generateRow('❌', ruleStats.no)}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 許容損失別成績 -->
+            <div style="margin-bottom: 25px;">
+                <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 許容損失別成績</h4>
+                <table class="trades-table" style="font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>件数</th>
+                            <th>勝敗</th>
+                            <th>勝率</th>
+                            <th>Pips</th>
+                            <th>期待値(p)</th>
+                            <th>期待値(¥)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${generateRow('✅', riskStats.normal)}
+                        ${generateRow('⚠️', riskStats.warning)}
+                        ${generateRow('🚨', riskStats.danger)}
+                    </tbody>
+                </table>
             </div>
             
             <!-- 手法別成績 -->
@@ -3039,10 +3092,12 @@ class ReportModule {
                             <th>勝敗</th>
                             <th>勝率</th>
                             <th>Pips</th>
+                            <th>期待値(p)</th>
+                            <th>期待値(¥)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${methodRows || '<tr><td colspan="5" style="text-align: center; color: #999;">データがありません</td></tr>'}
+                        ${methodRows || '<tr><td colspan="7" style="text-align: center; color: #999;">データがありません</td></tr>'}
                     </tbody>
                 </table>
             </div>
