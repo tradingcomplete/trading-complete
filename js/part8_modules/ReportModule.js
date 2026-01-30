@@ -52,8 +52,9 @@ class ReportModule {
         try {
             window.currentReportType = type;
             
-            // 引数で year, month が渡されていない場合は reportMonth から取得
-            if (!year || !month) {
+            // 引数で year が渡されていない場合は reportMonth から取得
+            // ※ yearly の場合は month が null でも正常
+            if (!year) {
                 const reportDate = document.getElementById('reportMonth')?.value;
                 
                 if (reportDate) {

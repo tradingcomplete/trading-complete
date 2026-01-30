@@ -219,6 +219,17 @@
         font-size: 16px !important; /* 16px未満だとiOSが自動ズームする */
     }
     
+    
+    /* ルール遵守・リスク分析テーブルのスクロール対応 */
+    #ruleRiskAnalysis-content {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #ruleRiskAnalysis-content table {
+        min-width: 500px;
+        white-space: nowrap;
+    }
     /* === お気に入り通貨ペアドロップダウン修正 === */
     /* 詳細度を上げて#new-entry .input-groupのoverflow:hiddenを上書き */
     #new-entry .input-group.pair-input-container {
