@@ -67,9 +67,15 @@ class ReportModule {
                 }
             }
             
-            // currentReportDateを設定（month は 0-11 に変換）
-            // yearlyの場合はmonthがnullなので、1月（0）をデフォルトにする
-            window.currentReportDate = new Date(year, (month || 1) - 1);
+            // currentReportDateを設定
+            // weekly: 週番号が渡されるので年の1月1日を設定
+            // yearly: monthがnullなので1月1日を設定
+            // monthly/quarterly: monthを使用
+            if (type === 'weekly' || type === 'yearly') {
+                window.currentReportDate = new Date(year, 0); // 1月1日
+            } else {
+                window.currentReportDate = new Date(year, (month || 1) - 1);
+            }
             
             let reportData;
             switch (type) {
