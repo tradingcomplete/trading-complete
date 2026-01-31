@@ -68,7 +68,8 @@ class ReportModule {
             }
             
             // currentReportDateを設定（month は 0-11 に変換）
-            window.currentReportDate = new Date(year, month - 1);
+            // yearlyの場合はmonthがnullなので、1月（0）をデフォルトにする
+            window.currentReportDate = new Date(year, (month || 1) - 1);
             
             let reportData;
             switch (type) {
