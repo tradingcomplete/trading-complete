@@ -2159,12 +2159,20 @@
             }, 100);
             
             // 全期間利益率を初期表示
-            updateTotalProfitRate();
+            setTimeout(function() {
+                if (typeof updateTotalProfitRate === 'function') {
+                    updateTotalProfitRate();
+                }
+            }, 150);
             
             // EventBusで入出金変更を監視
             if (window.eventBus) {
-                window.eventBus.on('capital:recordAdded', updateTotalProfitRate);
-                window.eventBus.on('capital:recordDeleted', updateTotalProfitRate);
+                window.eventBus.on('capital:recordAdded', function() {
+                    updateTotalProfitRate();
+                });
+                window.eventBus.on('capital:recordDeleted', function() {
+                    updateTotalProfitRate();
+                });
             }
             
             updatePeriodOptions();
@@ -2187,12 +2195,20 @@
             }, 100);
             
             // 全期間利益率を初期表示
-            updateTotalProfitRate();
+            setTimeout(function() {
+                if (typeof updateTotalProfitRate === 'function') {
+                    updateTotalProfitRate();
+                }
+            }, 150);
             
             // EventBusで入出金変更を監視
             if (window.eventBus) {
-                window.eventBus.on('capital:recordAdded', updateTotalProfitRate);
-                window.eventBus.on('capital:recordDeleted', updateTotalProfitRate);
+                window.eventBus.on('capital:recordAdded', function() {
+                    updateTotalProfitRate();
+                });
+                window.eventBus.on('capital:recordDeleted', function() {
+                    updateTotalProfitRate();
+                });
             }
             
             updatePeriodOptions();
