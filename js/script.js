@@ -5171,8 +5171,8 @@ function toggleBrokerBadge() {
     localStorage.setItem('showBrokerBadge', JSON.stringify(isChecked));
     
     // トレード一覧を再描画
-    if (window.TradeList) {
-        window.TradeList.render();
+    if (window.TradeList && typeof window.TradeList.displayAllTrades === 'function') {
+        window.TradeList.displayAllTrades();
     } else if (typeof displayAllTrades === 'function') {
         displayAllTrades();
     }
