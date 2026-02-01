@@ -1625,7 +1625,7 @@
             // 利益額（円）
             const profitElem = document.getElementById('oyProfit');
             if (profitElem) {
-                const profit = yenStats.netProfit || 0;
+                const profit = yenStats.totalProfitLoss || 0;
                 profitElem.textContent = '¥' + Math.round(profit).toLocaleString();
                 profitElem.className = 'stat-value ' + (profit >= 0 ? 'positive' : 'negative');
             }
