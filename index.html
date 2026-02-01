@@ -762,7 +762,7 @@
                         <span style="color: #c0c0c0; font-size: 1.1em; font-weight: bold;">総合統計</span>
                     </div>
                     
-                    <!-- 全期間統計18項目グリッド（6列×3段） -->
+                    <!-- 総合統計18項目グリッド（6列×3段）- 年度選択用ID -->
                     <div class="overall-stats-grid" style="
                         display: grid;
                         grid-template-columns: repeat(6, 1fr);
@@ -774,79 +774,79 @@
                         <!-- 1段目 -->
                         <div class="overall-stat-item">
                             <span class="stat-label">総トレード数</span>
-                            <span class="stat-value" id="totalTradesCount">0</span>
+                            <span class="stat-value" id="oyTotalTrades">0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">勝敗</span>
-                            <span class="stat-value" id="overallWinLoss">0勝0敗</span>
+                            <span class="stat-value" id="oyWinLoss">0勝0敗</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">勝率（純損益）</span>
-                            <span class="stat-value" id="overallWinRate">0.0%</span>
+                            <span class="stat-value" id="oyWinRate">0.0%</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">最大連勝</span>
-                            <span class="stat-value" id="maxWinStreak">0回</span>
+                            <span class="stat-value" id="oyMaxWinStreak">0回</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">最大連敗</span>
-                            <span class="stat-value" id="maxLoseStreak">0回</span>
+                            <span class="stat-value" id="oyMaxLoseStreak">0回</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">利益額（円）</span>
-                            <span class="stat-value" id="overallProfit">¥0</span>
+                            <span class="stat-value" id="oyProfit">¥0</span>
                         </div>
                         
                         <!-- 2段目 -->
                         <div class="overall-stat-item">
                             <span class="stat-label">利益率（%）</span>
-                            <span class="stat-value" id="profitRate">--%</span>
+                            <span class="stat-value" id="oyProfitRate">--%</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">平均利益（円）</span>
-                            <span class="stat-value" id="avgProfitYen">¥0</span>
+                            <span class="stat-value" id="oyAvgProfitYen">¥0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">平均損失（円）</span>
-                            <span class="stat-value" id="avgLossYen">¥0</span>
+                            <span class="stat-value" id="oyAvgLossYen">¥0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">最大DD（円）</span>
-                            <span class="stat-value" id="maxDrawdown">¥0</span>
+                            <span class="stat-value" id="oyMaxDrawdown">¥0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">最大獲得（pips）</span>
-                            <span class="stat-value" id="maxWinPips">0.0</span>
+                            <span class="stat-value" id="oyMaxWinPips">0.0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">最大損失（pips）</span>
-                            <span class="stat-value" id="maxLosePips">0.0</span>
+                            <span class="stat-value" id="oyMaxLosePips">0.0</span>
                         </div>
                         
                         <!-- 3段目 -->
                         <div class="overall-stat-item">
                             <span class="stat-label">総獲得（pips）</span>
-                            <span class="stat-value" id="totalPipsEarned">0.0</span>
+                            <span class="stat-value" id="oyTotalPips">0.0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">平均利益（pips）</span>
-                            <span class="stat-value" id="avgProfitPips">0.0</span>
+                            <span class="stat-value" id="oyAvgProfitPips">0.0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">平均損失（pips）</span>
-                            <span class="stat-value" id="avgLossPips">0.0</span>
+                            <span class="stat-value" id="oyAvgLossPips">0.0</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">R:R（Pips）</span>
-                            <span class="stat-value" id="riskRewardPips">0.00</span>
+                            <span class="stat-value" id="oyRRPips">0.00</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">PF（円）</span>
-                            <span class="stat-value" id="profitFactorYen">0.00</span>
+                            <span class="stat-value" id="oyPFYen">0.00</span>
                         </div>
                         <div class="overall-stat-item">
                             <span class="stat-label">期待値（円）</span>
-                            <span class="stat-value" id="expectedValueYen">¥0</span>
+                            <span class="stat-value" id="oyExpectedValue">¥0</span>
                         </div>
                     </div>
                 </div>
@@ -1583,123 +1583,119 @@
         }
 
         /**
-         * 総合統計UIを更新
+         * 総合統計UIを更新（新ID: oy = Overall Year）
          * @param {Object} pipsStats - Pips統計
          * @param {Object} yenStats - 円建て統計
-         * 
-         * 注意: getPeriodStats()の戻り値は以下の型
-         * - totalTrades: number
-         * - winLossRecord: string (例: "34勝19敗")
-         * - winRate: string (例: "61.5%")
-         * - maxWinStreak, maxLoseStreak: number
-         * - totalPips, avgProfitPips, avgLossPips, maxWinPips, maxLossPips: string (すでにtoFixed済み)
-         * - rrRatio: string (すでにtoFixed済み)
          */
         function updateOverallStatsUI(pipsStats, yenStats) {
-            // pipsStatsがnull/undefinedの場合のデフォルト値
+            // null/undefinedチェック
             pipsStats = pipsStats || {};
             yenStats = yenStats || {};
             
             // 総トレード数
-            const totalTradesElem = document.getElementById('totalTradesCount');
+            const totalTradesElem = document.getElementById('oyTotalTrades');
             if (totalTradesElem) {
                 totalTradesElem.textContent = pipsStats.totalTrades || 0;
             }
             
             // 勝敗
-            const winLossElem = document.getElementById('overallWinLoss');
+            const winLossElem = document.getElementById('oyWinLoss');
             if (winLossElem) {
                 winLossElem.textContent = pipsStats.winLossRecord || '0勝0敗';
             }
             
             // 勝率
-            const winRateElem = document.getElementById('overallWinRate');
+            const winRateElem = document.getElementById('oyWinRate');
             if (winRateElem) {
                 winRateElem.textContent = pipsStats.winRate || '0.0%';
             }
             
             // 最大連勝
-            const maxWinStreakElem = document.getElementById('maxWinStreak');
+            const maxWinStreakElem = document.getElementById('oyMaxWinStreak');
             if (maxWinStreakElem) {
                 maxWinStreakElem.textContent = (pipsStats.maxWinStreak || 0) + '回';
             }
             
             // 最大連敗
-            const maxLoseStreakElem = document.getElementById('maxLoseStreak');
+            const maxLoseStreakElem = document.getElementById('oyMaxLoseStreak');
             if (maxLoseStreakElem) {
                 maxLoseStreakElem.textContent = (pipsStats.maxLoseStreak || 0) + '回';
             }
             
             // 利益額（円）
-            const overallProfitElem = document.getElementById('overallProfit');
-            if (overallProfitElem) {
+            const profitElem = document.getElementById('oyProfit');
+            if (profitElem) {
                 const profit = yenStats.netProfit || 0;
-                overallProfitElem.textContent = '¥' + Math.round(profit).toLocaleString();
-                overallProfitElem.className = 'stat-value ' + (profit >= 0 ? 'positive' : 'negative');
+                profitElem.textContent = '¥' + Math.round(profit).toLocaleString();
+                profitElem.className = 'stat-value ' + (profit >= 0 ? 'positive' : 'negative');
+            }
+            
+            // 利益率（%）- Phase 2で実装予定
+            const profitRateElem = document.getElementById('oyProfitRate');
+            if (profitRateElem) {
+                profitRateElem.textContent = '--%';
             }
             
             // 平均利益（円）
-            const avgProfitYenElem = document.getElementById('avgProfitYen');
+            const avgProfitYenElem = document.getElementById('oyAvgProfitYen');
             if (avgProfitYenElem) {
                 avgProfitYenElem.textContent = '¥' + Math.round(yenStats.avgProfit || 0).toLocaleString();
             }
             
             // 平均損失（円）
-            const avgLossYenElem = document.getElementById('avgLossYen');
+            const avgLossYenElem = document.getElementById('oyAvgLossYen');
             if (avgLossYenElem) {
                 avgLossYenElem.textContent = '¥' + Math.round(yenStats.avgLoss || 0).toLocaleString();
             }
             
             // 最大DD（円）
-            const maxDrawdownElem = document.getElementById('maxDrawdown');
+            const maxDrawdownElem = document.getElementById('oyMaxDrawdown');
             if (maxDrawdownElem) {
                 maxDrawdownElem.textContent = '¥' + Math.round(yenStats.maxDrawdown || 0).toLocaleString();
             }
             
-            // 最大獲得（pips）- すでに文字列なのでそのまま使用
-            const maxWinPipsElem = document.getElementById('maxWinPips');
+            // 最大獲得（pips）- すでに文字列
+            const maxWinPipsElem = document.getElementById('oyMaxWinPips');
             if (maxWinPipsElem) {
                 maxWinPipsElem.textContent = pipsStats.maxWinPips || '0.0';
             }
             
-            // 最大損失（pips）- すでに文字列なのでそのまま使用、絶対値化
-            const maxLosePipsElem = document.getElementById('maxLosePips');
+            // 最大損失（pips）- 絶対値化
+            const maxLosePipsElem = document.getElementById('oyMaxLosePips');
             if (maxLosePipsElem) {
                 const value = pipsStats.maxLossPips || '0.0';
-                // 文字列を数値に変換して絶対値を取り、再度文字列に
                 maxLosePipsElem.textContent = Math.abs(parseFloat(value)).toFixed(1);
             }
             
-            // 総獲得（pips）- すでに文字列なのでそのまま使用
-            const totalPipsElem = document.getElementById('totalPipsEarned');
+            // 総獲得（pips）
+            const totalPipsElem = document.getElementById('oyTotalPips');
             if (totalPipsElem) {
                 const value = parseFloat(pipsStats.totalPips) || 0;
                 totalPipsElem.textContent = value >= 0 ? '+' + pipsStats.totalPips : pipsStats.totalPips;
                 totalPipsElem.className = 'stat-value ' + (value >= 0 ? 'positive' : 'negative');
             }
             
-            // 平均利益（pips）- すでに文字列なのでそのまま使用
-            const avgProfitPipsElem = document.getElementById('avgProfitPips');
+            // 平均利益（pips）
+            const avgProfitPipsElem = document.getElementById('oyAvgProfitPips');
             if (avgProfitPipsElem) {
                 avgProfitPipsElem.textContent = pipsStats.avgProfitPips || '0.0';
             }
             
-            // 平均損失（pips）- すでに文字列なのでそのまま使用
-            const avgLossPipsElem = document.getElementById('avgLossPips');
+            // 平均損失（pips）- 絶対値化
+            const avgLossPipsElem = document.getElementById('oyAvgLossPips');
             if (avgLossPipsElem) {
                 const value = pipsStats.avgLossPips || '0.0';
-                // 絶対値化
                 avgLossPipsElem.textContent = Math.abs(parseFloat(value)).toFixed(1);
             }
             
-            // R:R（Pips）- すでに文字列なのでそのまま使用
-            const rrPipsElem = document.getElementById('riskRewardPips');
+            // R:R（Pips）
+            const rrPipsElem = document.getElementById('oyRRPips');
             if (rrPipsElem) {
                 rrPipsElem.textContent = pipsStats.rrRatio || '0.00';
             }
             
-            // PF（円）- 文字列または数値
-            const pfYenElem = document.getElementById('profitFactorYen');
+            // PF（円）
+            const pfYenElem = document.getElementById('oyPFYen');
             if (pfYenElem) {
                 const pf = yenStats.profitFactor;
                 if (typeof pf === 'string') {
@@ -1710,14 +1706,14 @@
             }
             
             // 期待値（円）
-            const expectedValueElem = document.getElementById('expectedValueYen');
+            const expectedValueElem = document.getElementById('oyExpectedValue');
             if (expectedValueElem) {
                 const value = yenStats.expectedValue || 0;
                 expectedValueElem.textContent = '¥' + Math.round(value).toLocaleString();
                 expectedValueElem.className = 'stat-value ' + (value >= 0 ? 'positive' : 'negative');
             }
             
-            console.log('総合統計UI更新完了');
+            console.log('総合統計UI更新完了（新ID版）');
         }
         
         /**
