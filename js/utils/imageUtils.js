@@ -339,7 +339,7 @@
         // 期限切れの場合：pathから新しいURLを取得
         const path = typeof img === 'object' ? img.path : null;
         if (!path) {
-            console.warn('[imageUtils] pathがないため更新できません');
+            console.debug('[imageUtils] pathがないため更新できません');
             return getImageSrc(img);
         }
         
