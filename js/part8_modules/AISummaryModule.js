@@ -13,14 +13,14 @@ class AISummaryModule {
     // ================
     #tradeManager = null;
     #eventBus = null;
-    #settingsModule = null;
+    // settingsModuleは遅延取得のためフィールド不要
     #initialized = false;
     
     constructor() {
         // 依存の注入
         this.#tradeManager = window.TradeManager?.getInstance();
         this.#eventBus = window.eventBus;
-        this.#settingsModule = window.SettingsModule;
+        // settingsModuleは使用時に取得（遅延取得パターン）
         
         // 初期化
         this.#initialize();
@@ -40,7 +40,7 @@ class AISummaryModule {
         console.log('AISummaryModule 初期化:', {
             hasTradeManager: !!this.#tradeManager,
             hasEventBus: !!this.#eventBus,
-            hasSettingsModule: !!this.#settingsModule
+            hasSettingsModule: !!window.SettingsModule
         });
         
         this.#initialized = true;
@@ -319,10 +319,13 @@ class AISummaryModule {
         methodMap.forEach((methodTrades, methodId) => {
             // 手法名を取得
             let methodName = '未設定';
-            if (methodId !== 'none' && this.#settingsModule) {
-                const method = this.#settingsModule.getMethodById(methodId);
-                if (method) {
-                    methodName = method.shortName || method.name || '未設定';
+            if (methodId !== 'none') {
+                const settingsModule = window.SettingsModule;
+                if (settingsModule) {
+                    const method = settingsModule.getMethodById(methodId);
+                    if (method) {
+                        methodName = method.shortName || method.name || '未設定';
+                    }
                 }
             }
             
@@ -482,7 +485,7 @@ class AISummaryModule {
             initialized: this.#initialized,
             hasTradeManager: !!this.#tradeManager,
             hasEventBus: !!this.#eventBus,
-            hasSettingsModule: !!this.#settingsModule
+            hasSettingsModule: !!window.SettingsModule
         };
     }
 }
