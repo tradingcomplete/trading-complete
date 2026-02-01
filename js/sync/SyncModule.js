@@ -1029,6 +1029,17 @@
                 const riskTolerance = localStorage.getItem('tc_risk_tolerance');
                 const showBrokerBadge = localStorage.getItem('tc_show_broker_badge');
                 
+                // NEW: 年初口座残高
+                let yearStartBalances = null;
+                const yearStartBalancesRaw = localStorage.getItem('yearStartBalances');
+                if (yearStartBalancesRaw) {
+                    try {
+                        yearStartBalances = JSON.parse(yearStartBalancesRaw);
+                    } catch (e) {
+                        console.warn('[SyncModule] yearStartBalances parse error:', e);
+                    }
+                }
+                
                 const supabaseData = {
                     user_id: userId,
                     brokers: brokers,
@@ -1044,6 +1055,9 @@
                     methods: methods,
                     risk_tolerance: riskTolerance ? parseInt(riskTolerance, 10) : null,
                     show_broker_badge: showBrokerBadge === 'true',
+                    
+                    // NEW: 年初口座残高
+                    year_start_balances: yearStartBalances,
                     
                     updated_at: new Date().toISOString()
                 };
@@ -1191,6 +1205,12 @@
                 }
                 if (settings.show_broker_badge !== null && settings.show_broker_badge !== undefined) {
                     localStorage.setItem('tc_show_broker_badge', String(settings.show_broker_badge));
+                }
+                
+                // NEW: 年初口座残高を展開
+                if (settings.year_start_balances) {
+                    localStorage.setItem('yearStartBalances', JSON.stringify(settings.year_start_balances));
+                    console.log('[SyncModule] 年初口座残高を同期:', Object.keys(settings.year_start_balances).length, '年分');
                 }
                 
                 console.log('[SyncModule] ユーザー設定をlocalStorageに同期完了');

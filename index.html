@@ -1625,15 +1625,26 @@
             // 利益額（円）
             const profitElem = document.getElementById('oyProfit');
             if (profitElem) {
-                const profit = yenStats.netProfit || 0;
+                const profit = yenStats.totalProfitLoss || 0;
                 profitElem.textContent = '¥' + Math.round(profit).toLocaleString();
                 profitElem.className = 'stat-value ' + (profit >= 0 ? 'positive' : 'negative');
             }
             
-            // 利益率（%）- Phase 2で実装予定
+            // 利益率（%）- 年初口座残高ベース
             const profitRateElem = document.getElementById('oyProfitRate');
             if (profitRateElem) {
-                profitRateElem.textContent = '--%';
+                const selectedYear = parseInt(document.getElementById('overallYearSelect')?.value) || new Date().getFullYear();
+                const startBalance = window.SettingsModule?.getYearStartBalance(selectedYear);
+                
+                if (startBalance && startBalance > 0) {
+                    const yearlyProfit = yenStats.totalProfitLoss || 0;
+                    const profitRate = (yearlyProfit / startBalance * 100).toFixed(1);
+                    profitRateElem.textContent = profitRate + '%';
+                    profitRateElem.className = 'stat-value ' + (parseFloat(profitRate) >= 0 ? 'positive' : 'negative');
+                } else {
+                    profitRateElem.textContent = '--%';
+                    profitRateElem.className = 'stat-value';
+                }
             }
             
             // 平均利益（円）
@@ -1714,6 +1725,174 @@
             }
             
             console.log('総合統計UI更新完了（新ID版）');
+        }
+        
+        // ==========================================
+        // 年初口座残高設定UI（設定タブ用）
+        // ==========================================
+
+        /**
+         * 年初口座残高設定UIを初期化
+         */
+        function initYearStartBalanceUI() {
+            const container = document.getElementById('yearStartBalanceList');
+            if (!container) return;
+            
+            const balances = window.SettingsModule?.getAllYearStartBalances() || {};
+            container.innerHTML = '';
+            
+            const years = Object.keys(balances).sort();
+            if (years.length > 0) {
+                years.forEach(year => {
+                    addYearStartBalanceRowUI(parseInt(year), balances[year]);
+                });
+            } else {
+                const currentYear = new Date().getFullYear();
+                addYearStartBalanceRowUI(currentYear, 0);
+            }
+            
+            console.log('[YearStartBalance] UI初期化完了');
+        }
+
+        /**
+         * 年初口座残高の行をUIに追加
+         */
+        function addYearStartBalanceRowUI(year, amount) {
+            const container = document.getElementById('yearStartBalanceList');
+            if (!container) return;
+            
+            const row = document.createElement('div');
+            row.className = 'year-balance-row';
+            row.style.cssText = 'display: flex; align-items: center; gap: 10px; flex-wrap: wrap;';
+            row.dataset.year = year;
+            
+            row.innerHTML = `
+                <span style="min-width: 60px; color: #e0e0e0;">${year}年:</span>
+                <input type="number" 
+                       value="${amount}" 
+                       onchange="saveYearStartBalance(${year}, this.value)"
+                       style="flex: 1; max-width: 200px; padding: 8px; background: #374151; color: white; border: 1px solid #4b5563; border-radius: 4px; text-align: right;">
+                <span style="color: #888;">円</span>
+                <button onclick="calculateFromPrevYear(${year}, this.parentElement)"
+                        style="padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                        title="前年末残高から自動計算">
+                    前年末から計算
+                </button>
+                <button onclick="removeYearStartBalanceRow(${year}, this.parentElement)"
+                        style="padding: 6px 10px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                    削除
+                </button>
+            `;
+            
+            container.appendChild(row);
+        }
+
+        /**
+         * 年度を追加
+         */
+        function addYearStartBalanceRow() {
+            const container = document.getElementById('yearStartBalanceList');
+            if (!container) return;
+            
+            const existingYears = Array.from(container.querySelectorAll('.year-balance-row'))
+                .map(row => parseInt(row.dataset.year));
+            
+            const currentYear = new Date().getFullYear();
+            let newYear = currentYear;
+            
+            if (existingYears.length > 0) {
+                const maxYear = Math.max(...existingYears);
+                newYear = maxYear + 1;
+            }
+            
+            if (existingYears.includes(newYear)) {
+                alert(`${newYear}年は既に追加されています`);
+                return;
+            }
+            
+            addYearStartBalanceRowUI(newYear, 0);
+            saveYearStartBalance(newYear, 0);
+        }
+
+        /**
+         * 年初口座残高を保存
+         */
+        function saveYearStartBalance(year, value) {
+            const amount = parseInt(value) || 0;
+            if (window.SettingsModule?.setYearStartBalance) {
+                window.SettingsModule.setYearStartBalance(year, amount);
+            }
+        }
+
+        /**
+         * 前年末残高から自動計算
+         */
+        function calculateFromPrevYear(year, rowElement) {
+            if (!window.SettingsModule?.calculatePreviousYearEndBalance) {
+                alert('計算機能が利用できません');
+                return;
+            }
+            
+            const prevYearEnd = window.SettingsModule.calculatePreviousYearEndBalance(year);
+            
+            if (prevYearEnd === null) {
+                alert(`${year - 1}年の年初口座残高が設定されていません`);
+                return;
+            }
+            
+            const input = rowElement.querySelector('input');
+            if (input) {
+                input.value = prevYearEnd;
+            }
+            
+            saveYearStartBalance(year, prevYearEnd);
+            alert(`${year}年の年初口座残高を¥${prevYearEnd.toLocaleString()}に設定しました`);
+        }
+
+        /**
+         * 年度行を削除
+         */
+        function removeYearStartBalanceRow(year, rowElement) {
+            if (!confirm(`${year}年の年初口座残高を削除しますか？`)) {
+                return;
+            }
+            
+            rowElement.remove();
+            
+            const balances = window.SettingsModule?.getAllYearStartBalances() || {};
+            delete balances[String(year)];
+            localStorage.setItem('yearStartBalances', JSON.stringify(balances));
+        }
+
+        // ==========================================
+        // 全期間利益率（収支管理タブ用）
+        // ==========================================
+
+        /**
+         * 全期間利益率を計算して表示
+         */
+        function updateTotalProfitRate() {
+            const displayElem = document.getElementById('totalProfitRateDisplay');
+            if (!displayElem) return;
+            
+            const totalDeposit = window.CapitalManagerModule?.getCurrentBalance() || 0;
+            
+            if (!totalDeposit || totalDeposit === 0) {
+                displayElem.textContent = '--%';
+                displayElem.style.color = 'white';
+                return;
+            }
+            
+            const allTrades = window.TradeManager?.getInstance()?.getAllTrades() || [];
+            const closedTrades = allTrades.filter(t => t.exits && t.exits.length > 0);
+            
+            const totalProfit = closedTrades.reduce((sum, t) => {
+                return sum + (t.yenProfitLoss?.netProfit || 0);
+            }, 0);
+            
+            const profitRate = (totalProfit / totalDeposit * 100).toFixed(1);
+            displayElem.textContent = profitRate + '%';
+            displayElem.style.color = parseFloat(profitRate) >= 0 ? '#90EE90' : '#ff6b6b';
         }
         
         /**
@@ -1971,6 +2150,17 @@
             initYearSelect();
             // 総合統計の年度選択初期化
             initOverallYearSelect();
+            // 年初口座残高設定UIを初期化
+            initYearStartBalanceUI();
+            // 全期間利益率を初期表示
+            updateTotalProfitRate();
+            
+            // EventBusで入出金変更を監視
+            if (window.eventBus) {
+                window.eventBus.on('capital:recordAdded', updateTotalProfitRate);
+                window.eventBus.on('capital:recordDeleted', updateTotalProfitRate);
+            }
+            
             updatePeriodOptions();
             switchPeriodType('monthly');
             switchPeriodStatsView('pips');
@@ -1982,6 +2172,17 @@
             initYearSelect();
             // 総合統計の年度選択初期化
             initOverallYearSelect();
+            // 年初口座残高設定UIを初期化
+            initYearStartBalanceUI();
+            // 全期間利益率を初期表示
+            updateTotalProfitRate();
+            
+            // EventBusで入出金変更を監視
+            if (window.eventBus) {
+                window.eventBus.on('capital:recordAdded', updateTotalProfitRate);
+                window.eventBus.on('capital:recordDeleted', updateTotalProfitRate);
+            }
+            
             updatePeriodOptions();
             switchPeriodType('monthly');
             switchPeriodStatsView('pips');
@@ -2003,6 +2204,17 @@
                 <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
                     <p style="color: white; margin: 0 0 10px 0; font-size: 1.1em;">現在の投入資金</p>
                     <div id="currentCapitalDisplay" style="color: white; font-size: 2em; font-weight: bold;">¥0</div>
+                    
+                    <!-- 全期間利益率 -->
+                    <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3);">
+                        <p style="color: rgba(255,255,255,0.8); font-size: 0.9em; margin-bottom: 5px;">全期間利益率</p>
+                        <p id="totalProfitRateDisplay" style="font-size: 1.8em; font-weight: bold; color: white; margin: 0;">
+                            --%
+                        </p>
+                        <p style="color: rgba(255,255,255,0.6); font-size: 0.75em; margin-top: 5px;">
+                            （投入資金に対する利益の割合）
+                        </p>
+                    </div>
                 </div>
                 
                 <!-- 新規入出金追加フォーム -->
@@ -2247,6 +2459,24 @@
                             複数のブローカーを使い分ける場合はONがおすすめ
                         </p>
                     </div>
+                    
+                    <hr style="margin: 40px 0; border-color: rgba(255, 255, 255, 0.1);">
+                    
+                    <!-- 年初口座残高設定 -->
+                    <h3>💰 年初口座残高設定</h3>
+                    <p style="color: #aaa; margin-bottom: 15px;">
+                        各年度の1月1日時点の口座残高を入力してください。<br>
+                        年度別利益率の計算に使用します。
+                    </p>
+                    
+                    <div id="yearStartBalanceList" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- JavaScript で動的に生成 -->
+                    </div>
+                    
+                    <button onclick="addYearStartBalanceRow()" 
+                            style="margin-top: 15px; padding: 8px 16px; background: #4a5568; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        + 年度を追加
+                    </button>
                     
                 </div>
                 

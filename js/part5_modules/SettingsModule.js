@@ -25,6 +25,7 @@ class SettingsModule {
     
     // 新機能のデータ
     #brokers = { list: [], nextId: 1 };
+    #yearStartBalances = {};  // 年初口座残高
     #favoritePairs = [];
     #currentSubtab = 'basic';
     #presetBrokers = [];  // プリセットブローカーデータ
@@ -61,7 +62,9 @@ class SettingsModule {
         // NEW: トレード分析強化
         RISK_TOLERANCE: 'tc_risk_tolerance',
         METHODS: 'tc_methods',
-        SHOW_BROKER_BADGE: 'tc_show_broker_badge'
+        SHOW_BROKER_BADGE: 'tc_show_broker_badge',
+        // NEW: 利益率機能
+        YEAR_START_BALANCES: 'yearStartBalances'
     };
     
     // 定数
@@ -163,6 +166,7 @@ class SettingsModule {
         // NEW: 許容損失・手法の読み込み
         this.#loadRiskTolerance();
         this.#loadMethods();
+        this.#loadYearStartBalances();
     }
     
     #loadBrokers() {
@@ -220,6 +224,33 @@ class SettingsModule {
         const saved = localStorage.getItem(SettingsModule.STORAGE_KEYS.METHODS);
         this.#methods = saved ? JSON.parse(saved) : [];
         console.log(`SettingsModule: ${this.#methods.length}件の手法を読み込み`);
+    }
+    
+    // NEW: 年初口座残高の読み込み
+    #loadYearStartBalances() {
+        try {
+            const data = localStorage.getItem(SettingsModule.STORAGE_KEYS.YEAR_START_BALANCES);
+            if (data) {
+                this.#yearStartBalances = JSON.parse(data);
+                console.log(`SettingsModule: ${Object.keys(this.#yearStartBalances).length}年分の年初口座残高を読み込み`);
+            }
+        } catch (e) {
+            console.warn('SettingsModule: 年初口座残高の読み込みエラー:', e);
+            this.#yearStartBalances = {};
+        }
+    }
+    
+    #saveYearStartBalances() {
+        try {
+            localStorage.setItem(
+                SettingsModule.STORAGE_KEYS.YEAR_START_BALANCES,
+                JSON.stringify(this.#yearStartBalances)
+            );
+            // Supabase同期トリガー
+            this.#eventBus?.emit('settings:changed', { source: 'yearStartBalances' });
+        } catch (e) {
+            console.error('SettingsModule: 年初口座残高の保存エラー:', e);
+        }
     }
     
     #loadPresetBrokers() {
@@ -1036,6 +1067,78 @@ class SettingsModule {
         return [...this.#favoritePairs];
     }
     
+    // ==========================================
+    // Public API - 年初口座残高（利益率計算用）
+    // ==========================================
+    
+    /**
+     * 年初口座残高を取得
+     * @param {number} year - 年度（例: 2025）
+     * @returns {number|null} 年初口座残高（未設定の場合はnull）
+     */
+    getYearStartBalance(year) {
+        const balance = this.#yearStartBalances[String(year)];
+        return balance !== undefined ? balance : null;
+    }
+    
+    /**
+     * 年初口座残高を設定
+     * @param {number} year - 年度（例: 2025）
+     * @param {number} amount - 金額
+     * @returns {Object} 結果 { success, data, error }
+     */
+    setYearStartBalance(year, amount) {
+        try {
+            const yearStr = String(year);
+            const roundedAmount = Math.round(amount);
+            
+            this.#yearStartBalances[yearStr] = roundedAmount;
+            this.#saveYearStartBalances();
+            
+            // EventBus通知
+            this.#eventBus?.emit('settings:yearStartBalanceChanged', { 
+                year: parseInt(yearStr), 
+                amount: roundedAmount 
+            });
+            
+            console.log(`SettingsModule: 年初口座残高設定 ${year}年 = ¥${roundedAmount.toLocaleString()}`);
+            return { success: true, data: { year, amount: roundedAmount } };
+            
+        } catch (error) {
+            console.error('SettingsModule.setYearStartBalance error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    /**
+     * 全年度の年初口座残高を取得
+     * @returns {Object} { "2025": 110000, "2026": 4118637 }
+     */
+    getAllYearStartBalances() {
+        return { ...this.#yearStartBalances };
+    }
+    
+    /**
+     * 前年末残高を計算（年初残高 + 年間利益）
+     * @param {number} year - 計算対象年度（この年の年初残高を計算）
+     * @returns {number|null} 前年末残高（前年データがない場合はnull）
+     */
+    calculatePreviousYearEndBalance(year) {
+        const prevYear = year - 1;
+        const prevStartBalance = this.getYearStartBalance(prevYear);
+        
+        if (prevStartBalance === null) return null;
+        
+        // 前年の利益を取得（StatisticsModule使用）
+        if (window.StatisticsModule) {
+            const yenStats = window.StatisticsModule.getPeriodStats('yearly', prevYear, null, 'yen');
+            const prevYearProfit = yenStats?.totalProfitLoss || 0;
+            return prevStartBalance + prevYearProfit;
+        }
+        
+        return prevStartBalance;
+    }
+    
     #saveFavoritePairs() {
         localStorage.setItem(
             SettingsModule.STORAGE_KEYS.FAVORITE_PAIRS,
@@ -1364,7 +1467,9 @@ class SettingsModule {
             riskTolerance: this.#riskTolerance,
             methodCount: this.getAllMethods().length,
             totalMethods: this.#methods.length,
-            showBrokerBadge: this.getShowBrokerBadge()
+            showBrokerBadge: this.getShowBrokerBadge(),
+            // NEW: 利益率機能
+            yearStartBalancesCount: Object.keys(this.#yearStartBalances).length
         };
     }
 }
