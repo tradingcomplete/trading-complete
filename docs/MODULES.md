@@ -153,6 +153,19 @@ getPresetCurrencyPairs(), searchCurrencyPairs(query)
 
 // サイト設定
 getSiteName(), setSiteName(), getSubtitle(), setSubtitle()
+
+// 許容損失設定（トレード分析強化 Phase 1）
+getLossTolerance()                    // 許容損失設定を取得
+saveLossTolerance(settings)           // 許容損失設定を保存
+// settings = { enabled, mode, percentage, fixedAmount }
+
+// 手法管理（トレード分析強化 Phase 1）
+getMethods()                          // 全手法を取得
+getMethodById(id)                     // IDで手法取得
+addMethod(method)                     // 手法追加
+updateMethod(id, updates)             // 手法更新
+deleteMethod(id)                      // 手法削除（論理削除）
+// method = { id, name, shortName, description, createdAt, deletedAt }
 ```
 
 **EventBus**: settings:brokerAdded/Updated/Deleted, settings:favoritePairAdded/Removed
@@ -172,7 +185,7 @@ getSiteName(), setSiteName(), getSubtitle(), setSubtitle()
 
 ---
 
-## Part 8（統計・レポート）- 完成 (2025-10-20)
+## Part 8（統計・レポート）- 完成 (2025-10-20, 拡張 2026-02-01)
 
 **実績**: 3,021行削減（目標137%達成）
 
@@ -181,9 +194,31 @@ getSiteName(), setSiteName(), getSubtitle(), setSubtitle()
 | StatisticsModule | 統計計算 | updateStatistics(), updateYenStatistics(), switchStatisticsView('pips'\|'yen') |
 | ReportModule | レポート | displayReport(), generateReflectionList(), handlePeriodChange(periodType, year, period) |
 | ChartModule | チャート | render() |
+| **AISummaryModule** | **AIサマリー** | **generateSummary(), generateTextSummary(), getStatus()** |
 
 **円建て統計**: PF、期待値、総損益、平均利益/損失、RR比、最大DD
-**EventBus**: statistics:updated/yenUpdated/viewChanged, capital:recordAdded連携
+**ルール遵守・リスク分析**: 遵守率、遵守/非遵守別成績、許容損失別成績、手法別成績
+**EventBus**: statistics:updated/yenUpdated/viewChanged, capital:recordAdded連携, **aiSummary:generated**
+
+### AISummaryModule（トレード分析強化 Phase 6）
+
+**ファイル**: `js/part8_modules/AISummaryModule.js`  
+**目的**: 将来のAIアシスタント機能のためのデータサマリー生成
+
+```javascript
+// 使用例
+const summary = AISummaryModule.generateSummary('monthly', 2026, 1);
+// → { period, basic, ruleCompliance, riskManagement, methodStats }
+
+const text = AISummaryModule.generateTextSummary('monthly', 2026, 1);
+// → AI向けテキスト形式のサマリー
+```
+
+**出力データ**:
+- basic: 総トレード数、勝率、総Pips、円建て損益、PF
+- ruleCompliance: 遵守率、遵守時/非遵守時の成績
+- riskManagement: 許容内率、ステータス別成績
+- methodStats: 手法別の成績
 
 ---
 
@@ -195,6 +230,8 @@ getSiteName(), setSiteName(), getSubtitle(), setSubtitle()
 'expense:added', 'closing:monthly'
 'statistics:updated', 'capital:recordAdded'
 'settings:brokerAdded', 'settings:favoritePairAdded'
+'settings:lossToleranceUpdated', 'settings:methodAdded'  // トレード分析強化
+'aiSummary:generated'                                     // AIサマリー生成時
 ```
 
 ---
