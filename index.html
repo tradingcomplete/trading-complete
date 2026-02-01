@@ -746,9 +746,21 @@
                     border-radius: 8px;
                     margin-bottom: 20px;">
                     
-                    <h3 style="color: #c0c0c0; margin-top: 0; margin-bottom: 15px; font-size: 1.1em;">
-                        📈 2025年 総合統計
-                    </h3>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <span style="color: #c0c0c0; font-size: 1.1em; font-weight: bold;">📈</span>
+                        <select id="overallYearSelect" 
+                                onchange="changeOverallYear()"
+                                style="
+                                    padding: 6px 12px;
+                                    background: rgb(75, 85, 99);
+                                    color: rgb(255, 255, 255);
+                                    border: 1px solid rgba(255, 255, 255, 0.3);
+                                    border-radius: 4px;
+                                    font-size: 1em;
+                                    cursor: pointer;">
+                        </select>
+                        <span style="color: #c0c0c0; font-size: 1.1em; font-weight: bold;">総合統計</span>
+                    </div>
                     
                     <!-- 全期間統計18項目グリッド（6列×3段） -->
                     <div class="overall-stats-grid" style="
@@ -1049,6 +1061,17 @@
                 #yearSelect option {
                     background: rgb(255, 255, 255);
                     color: rgb(0, 0, 0);
+                }
+                
+                /* 総合統計 年度選択 */
+                #overallYearSelect option {
+                    background: rgb(255, 255, 255);
+                    color: rgb(0, 0, 0);
+                }
+
+                #overallYearSelect:focus {
+                    outline: none;
+                    border-color: rgb(0, 255, 136);
                 }
                 
                 /* 期間タイプボタンのホバーエフェクト */
@@ -1500,6 +1523,183 @@
             return `${startMonth}/${startDay}-${endMonth}/${endDay}`;
         }
         
+        // ==========================================
+        // 総合統計 年度選択機能
+        // ==========================================
+
+        /**
+         * 総合統計の年度選択プルダウンを初期化
+         */
+        function initOverallYearSelect() {
+            const select = document.getElementById('overallYearSelect');
+            if (!select) return;
+            
+            const currentYear = new Date().getFullYear();
+            const startYear = 2020;
+            
+            // オプションをクリア
+            select.innerHTML = '';
+            
+            // 年度オプションを生成（現在年から降順）
+            for (let year = currentYear; year >= startYear; year--) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = `${year}年`;
+                select.appendChild(option);
+            }
+            
+            // デフォルトは現在年
+            select.value = currentYear;
+            
+            // 初期表示を更新
+            changeOverallYear();
+            
+            console.log('総合統計 年度選択初期化完了:', currentYear);
+        }
+
+        /**
+         * 総合統計の年度が変更されたとき
+         */
+        function changeOverallYear() {
+            const select = document.getElementById('overallYearSelect');
+            if (!select) return;
+            
+            const selectedYear = parseInt(select.value);
+            
+            console.log('総合統計 年度変更:', selectedYear);
+            
+            // StatisticsModuleから年度別統計を取得
+            if (window.StatisticsModule) {
+                // 年次統計を取得（Pips）
+                const pipsStats = window.StatisticsModule.getPeriodStats('yearly', selectedYear, null, 'pips');
+                // 年次統計を取得（円建て）
+                const yenStats = window.StatisticsModule.getPeriodStats('yearly', selectedYear, null, 'yen');
+                
+                console.log('年度別統計:', { year: selectedYear, pipsStats, yenStats });
+                
+                // UIを更新
+                updateOverallStatsUI(pipsStats, yenStats);
+            }
+        }
+
+        /**
+         * 総合統計UIを更新
+         * @param {Object} pipsStats - Pips統計
+         * @param {Object} yenStats - 円建て統計
+         */
+        function updateOverallStatsUI(pipsStats, yenStats) {
+            // 総トレード数
+            const totalTradesElem = document.getElementById('totalTradesCount');
+            if (totalTradesElem) {
+                totalTradesElem.textContent = pipsStats.totalTrades || 0;
+            }
+            
+            // 勝敗
+            const winLossElem = document.getElementById('overallWinLoss');
+            if (winLossElem) {
+                winLossElem.textContent = pipsStats.winLossRecord || '0勝0敗';
+            }
+            
+            // 勝率
+            const winRateElem = document.getElementById('overallWinRate');
+            if (winRateElem) {
+                winRateElem.textContent = pipsStats.winRate || '0.0%';
+            }
+            
+            // 最大連勝
+            const maxWinStreakElem = document.getElementById('maxWinStreak');
+            if (maxWinStreakElem) {
+                maxWinStreakElem.textContent = (pipsStats.maxWinStreak || 0) + '回';
+            }
+            
+            // 最大連敗
+            const maxLoseStreakElem = document.getElementById('maxLoseStreak');
+            if (maxLoseStreakElem) {
+                maxLoseStreakElem.textContent = (pipsStats.maxLoseStreak || 0) + '回';
+            }
+            
+            // 利益額（円）
+            const overallProfitElem = document.getElementById('overallProfit');
+            if (overallProfitElem && yenStats) {
+                const profit = yenStats.netProfit || 0;
+                overallProfitElem.textContent = '¥' + profit.toLocaleString();
+                overallProfitElem.className = 'stat-value ' + (profit >= 0 ? 'positive' : 'negative');
+            }
+            
+            // 平均利益（円）
+            const avgProfitYenElem = document.getElementById('avgProfitYen');
+            if (avgProfitYenElem && yenStats) {
+                avgProfitYenElem.textContent = '¥' + Math.round(yenStats.avgProfit || 0).toLocaleString();
+            }
+            
+            // 平均損失（円）
+            const avgLossYenElem = document.getElementById('avgLossYen');
+            if (avgLossYenElem && yenStats) {
+                avgLossYenElem.textContent = '¥' + Math.round(yenStats.avgLoss || 0).toLocaleString();
+            }
+            
+            // 最大DD（円）
+            const maxDrawdownElem = document.getElementById('maxDrawdown');
+            if (maxDrawdownElem && yenStats) {
+                maxDrawdownElem.textContent = '¥' + Math.round(yenStats.maxDrawdown || 0).toLocaleString();
+            }
+            
+            // 最大獲得（pips）
+            const maxWinPipsElem = document.getElementById('maxWinPips');
+            if (maxWinPipsElem) {
+                maxWinPipsElem.textContent = (pipsStats.maxWinPips || 0).toFixed(1);
+            }
+            
+            // 最大損失（pips）
+            const maxLosePipsElem = document.getElementById('maxLosePips');
+            if (maxLosePipsElem) {
+                const value = Math.abs(pipsStats.maxLossPips || 0);
+                maxLosePipsElem.textContent = value.toFixed(1);
+            }
+            
+            // 総獲得（pips）
+            const totalPipsElem = document.getElementById('totalPipsEarned');
+            if (totalPipsElem) {
+                const value = pipsStats.totalPips || 0;
+                totalPipsElem.textContent = value >= 0 ? '+' + value.toFixed(1) : value.toFixed(1);
+                totalPipsElem.className = 'stat-value ' + (value >= 0 ? 'positive' : 'negative');
+            }
+            
+            // 平均利益（pips）
+            const avgProfitPipsElem = document.getElementById('avgProfitPips');
+            if (avgProfitPipsElem) {
+                avgProfitPipsElem.textContent = (pipsStats.avgProfitPips || 0).toFixed(1);
+            }
+            
+            // 平均損失（pips）
+            const avgLossPipsElem = document.getElementById('avgLossPips');
+            if (avgLossPipsElem) {
+                avgLossPipsElem.textContent = (pipsStats.avgLossPips || 0).toFixed(1);
+            }
+            
+            // R:R（Pips）
+            const rrPipsElem = document.getElementById('riskRewardPips');
+            if (rrPipsElem) {
+                rrPipsElem.textContent = (pipsStats.rrRatio || 0).toFixed(2);
+            }
+            
+            // PF（円）
+            const pfYenElem = document.getElementById('profitFactorYen');
+            if (pfYenElem && yenStats) {
+                pfYenElem.textContent = (yenStats.profitFactor || 0).toFixed(2);
+            }
+            
+            // 期待値（円）
+            const expectedValueElem = document.getElementById('expectedValueYen');
+            if (expectedValueElem && yenStats) {
+                const value = yenStats.expectedValue || 0;
+                expectedValueElem.textContent = '¥' + Math.round(value).toLocaleString();
+                expectedValueElem.className = 'stat-value ' + (value >= 0 ? 'positive' : 'negative');
+            }
+            
+            console.log('総合統計UI更新完了');
+        }
+        
         /**
          * 年度選択ドロップダウンを初期化
          */
@@ -1753,6 +1953,8 @@
         // 初期化
         document.addEventListener('DOMContentLoaded', function() {
             initYearSelect();
+            // 総合統計の年度選択初期化
+            initOverallYearSelect();
             updatePeriodOptions();
             switchPeriodType('monthly');
             switchPeriodStatsView('pips');
@@ -1762,6 +1964,8 @@
         // 既にDOMが読み込まれている場合は即座に実行
         if (document.readyState !== 'loading') {
             initYearSelect();
+            // 総合統計の年度選択初期化
+            initOverallYearSelect();
             updatePeriodOptions();
             switchPeriodType('monthly');
             switchPeriodStatsView('pips');
