@@ -1586,8 +1586,20 @@
          * 総合統計UIを更新
          * @param {Object} pipsStats - Pips統計
          * @param {Object} yenStats - 円建て統計
+         * 
+         * 注意: getPeriodStats()の戻り値は以下の型
+         * - totalTrades: number
+         * - winLossRecord: string (例: "34勝19敗")
+         * - winRate: string (例: "61.5%")
+         * - maxWinStreak, maxLoseStreak: number
+         * - totalPips, avgProfitPips, avgLossPips, maxWinPips, maxLossPips: string (すでにtoFixed済み)
+         * - rrRatio: string (すでにtoFixed済み)
          */
         function updateOverallStatsUI(pipsStats, yenStats) {
+            // pipsStatsがnull/undefinedの場合のデフォルト値
+            pipsStats = pipsStats || {};
+            yenStats = yenStats || {};
+            
             // 総トレード数
             const totalTradesElem = document.getElementById('totalTradesCount');
             if (totalTradesElem) {
@@ -1620,78 +1632,86 @@
             
             // 利益額（円）
             const overallProfitElem = document.getElementById('overallProfit');
-            if (overallProfitElem && yenStats) {
+            if (overallProfitElem) {
                 const profit = yenStats.netProfit || 0;
-                overallProfitElem.textContent = '¥' + profit.toLocaleString();
+                overallProfitElem.textContent = '¥' + Math.round(profit).toLocaleString();
                 overallProfitElem.className = 'stat-value ' + (profit >= 0 ? 'positive' : 'negative');
             }
             
             // 平均利益（円）
             const avgProfitYenElem = document.getElementById('avgProfitYen');
-            if (avgProfitYenElem && yenStats) {
+            if (avgProfitYenElem) {
                 avgProfitYenElem.textContent = '¥' + Math.round(yenStats.avgProfit || 0).toLocaleString();
             }
             
             // 平均損失（円）
             const avgLossYenElem = document.getElementById('avgLossYen');
-            if (avgLossYenElem && yenStats) {
+            if (avgLossYenElem) {
                 avgLossYenElem.textContent = '¥' + Math.round(yenStats.avgLoss || 0).toLocaleString();
             }
             
             // 最大DD（円）
             const maxDrawdownElem = document.getElementById('maxDrawdown');
-            if (maxDrawdownElem && yenStats) {
+            if (maxDrawdownElem) {
                 maxDrawdownElem.textContent = '¥' + Math.round(yenStats.maxDrawdown || 0).toLocaleString();
             }
             
-            // 最大獲得（pips）
+            // 最大獲得（pips）- すでに文字列なのでそのまま使用
             const maxWinPipsElem = document.getElementById('maxWinPips');
             if (maxWinPipsElem) {
-                maxWinPipsElem.textContent = (pipsStats.maxWinPips || 0).toFixed(1);
+                maxWinPipsElem.textContent = pipsStats.maxWinPips || '0.0';
             }
             
-            // 最大損失（pips）
+            // 最大損失（pips）- すでに文字列なのでそのまま使用、絶対値化
             const maxLosePipsElem = document.getElementById('maxLosePips');
             if (maxLosePipsElem) {
-                const value = Math.abs(pipsStats.maxLossPips || 0);
-                maxLosePipsElem.textContent = value.toFixed(1);
+                const value = pipsStats.maxLossPips || '0.0';
+                // 文字列を数値に変換して絶対値を取り、再度文字列に
+                maxLosePipsElem.textContent = Math.abs(parseFloat(value)).toFixed(1);
             }
             
-            // 総獲得（pips）
+            // 総獲得（pips）- すでに文字列なのでそのまま使用
             const totalPipsElem = document.getElementById('totalPipsEarned');
             if (totalPipsElem) {
-                const value = pipsStats.totalPips || 0;
-                totalPipsElem.textContent = value >= 0 ? '+' + value.toFixed(1) : value.toFixed(1);
+                const value = parseFloat(pipsStats.totalPips) || 0;
+                totalPipsElem.textContent = value >= 0 ? '+' + pipsStats.totalPips : pipsStats.totalPips;
                 totalPipsElem.className = 'stat-value ' + (value >= 0 ? 'positive' : 'negative');
             }
             
-            // 平均利益（pips）
+            // 平均利益（pips）- すでに文字列なのでそのまま使用
             const avgProfitPipsElem = document.getElementById('avgProfitPips');
             if (avgProfitPipsElem) {
-                avgProfitPipsElem.textContent = (pipsStats.avgProfitPips || 0).toFixed(1);
+                avgProfitPipsElem.textContent = pipsStats.avgProfitPips || '0.0';
             }
             
-            // 平均損失（pips）
+            // 平均損失（pips）- すでに文字列なのでそのまま使用
             const avgLossPipsElem = document.getElementById('avgLossPips');
             if (avgLossPipsElem) {
-                avgLossPipsElem.textContent = (pipsStats.avgLossPips || 0).toFixed(1);
+                const value = pipsStats.avgLossPips || '0.0';
+                // 絶対値化
+                avgLossPipsElem.textContent = Math.abs(parseFloat(value)).toFixed(1);
             }
             
-            // R:R（Pips）
+            // R:R（Pips）- すでに文字列なのでそのまま使用
             const rrPipsElem = document.getElementById('riskRewardPips');
             if (rrPipsElem) {
-                rrPipsElem.textContent = (pipsStats.rrRatio || 0).toFixed(2);
+                rrPipsElem.textContent = pipsStats.rrRatio || '0.00';
             }
             
-            // PF（円）
+            // PF（円）- 文字列または数値
             const pfYenElem = document.getElementById('profitFactorYen');
-            if (pfYenElem && yenStats) {
-                pfYenElem.textContent = (yenStats.profitFactor || 0).toFixed(2);
+            if (pfYenElem) {
+                const pf = yenStats.profitFactor;
+                if (typeof pf === 'string') {
+                    pfYenElem.textContent = pf;
+                } else {
+                    pfYenElem.textContent = (pf || 0).toFixed(2);
+                }
             }
             
             // 期待値（円）
             const expectedValueElem = document.getElementById('expectedValueYen');
-            if (expectedValueElem && yenStats) {
+            if (expectedValueElem) {
                 const value = yenStats.expectedValue || 0;
                 expectedValueElem.textContent = '¥' + Math.round(value).toLocaleString();
                 expectedValueElem.className = 'stat-value ' + (value >= 0 ? 'positive' : 'negative');
