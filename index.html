@@ -2150,8 +2150,14 @@
             initYearSelect();
             // 総合統計の年度選択初期化
             initOverallYearSelect();
-            // 年初口座残高設定UIを初期化
-            initYearStartBalanceUI();
+            
+            // 年初口座残高設定UIを初期化（SettingsModule初期化後）
+            setTimeout(function() {
+                if (typeof initYearStartBalanceUI === 'function') {
+                    initYearStartBalanceUI();
+                }
+            }, 100);
+            
             // 全期間利益率を初期表示
             updateTotalProfitRate();
             
@@ -2172,8 +2178,14 @@
             initYearSelect();
             // 総合統計の年度選択初期化
             initOverallYearSelect();
-            // 年初口座残高設定UIを初期化
-            initYearStartBalanceUI();
+            
+            // 年初口座残高設定UIを初期化（SettingsModule初期化後）
+            setTimeout(function() {
+                if (typeof initYearStartBalanceUI === 'function') {
+                    initYearStartBalanceUI();
+                }
+            }, 100);
+            
             // 全期間利益率を初期表示
             updateTotalProfitRate();
             

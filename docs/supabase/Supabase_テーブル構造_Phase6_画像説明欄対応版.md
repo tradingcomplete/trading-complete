@@ -1,7 +1,7 @@
 # Supabase テーブル構造（Phase 7 リスク管理対応版）
 
 **作成日**: 2025-12-30  
-**更新日**: 2026-01-29  
+**更新日**: 2026-02-02  
 **用途**: SyncModule.js データ変換・引き継ぎ資料
 
 ---
@@ -377,6 +377,7 @@ CREATE TABLE user_settings (
   site_title TEXT DEFAULT NULL,        -- v1.7.0で追加
   subtitle TEXT DEFAULT NULL,          -- v1.7.0で追加
   self_image TEXT DEFAULT NULL,        -- v1.7.0で追加（未使用）
+  year_start_balances JSONB DEFAULT '{}',  -- v1.8.0で追加（年初口座残高）
   
   -- トレード分析強化（Phase 7で追加）
   methods JSONB DEFAULT '[]',          -- 手法管理
@@ -401,17 +402,18 @@ CREATE TABLE user_settings (
 | site_title | `siteTitle` | SettingsModule |
 | subtitle | `siteSubtitle` | SettingsModule |
 | self_image | （未使用） | - |
+| year_start_balances | `yearStartBalances` | SettingsModule |
 | methods | `tc_methods` | SettingsModule |
 | risk_tolerance | `tc_risk_tolerance` | SettingsModule |
 | show_broker_badge | `tc_show_broker_badge` | SettingsModule |
 
-**同期方式**: 一括保存（8つのlocalStorageを1レコードにまとめて保存）
+**同期方式**: 一括保存（12のlocalStorageを1レコードにまとめて保存）
 
 ---
 
 ## 4. SyncModule.js 実装状況
 
-### 4.1 SyncModule.js v1.7.0 ✅ 完成
+### 4.1 SyncModule.js v1.8.0 ✅ 完成
 
 **ファイルパス**: `js/sync/SyncModule.js`
 
@@ -486,6 +488,7 @@ CREATE TABLE user_settings (
 | 2026-01-15 | siteTitle/subtitle 同期テスト | ✅ 成功 |
 | **2026-01-22** | **画像 title/description/path 同期テスト** | **✅ 成功** |
 | **2026-01-22** | **URL期限切れ自動更新テスト** | **✅ 成功** |
+| **2026-02-02** | **year_start_balances 同期テスト** | **✅ 成功** |
 
 ---
 
@@ -547,6 +550,7 @@ CREATE TABLE user_settings (
 | Phase 5テスト完了版 | 2026-01-15 | Phase 5テスト完了、RLSテスト結果・パフォーマンス・既知の制限追記 |
 | **Phase 6画像説明欄対応版** | **2026-01-22** | **画像データ構造詳細追加（title/description/path）、URL期限切れ対応、imageUtils.js v1.3.0** |
 | **Phase 7リスク管理対応版** | **2026-01-29** | **tradesテーブル: リスク管理7カラム追加（22→29カラム）、user_settingsテーブル: methods/risk_tolerance/show_broker_badge追加、SyncModule.js対応** |
+| **Phase 7.1利益率機能対応版** | **2026-02-02** | **year_start_balancesカラム追加、SyncModule v1.8.0** |
 
 ---
 
