@@ -642,6 +642,9 @@ function initializeApp() {
         if (textElement) textElement.value = goal.text || storage.getItem(`goalText${i}`) || '';
         if (deadlineElement) deadlineElement.value = goal.deadline || storage.getItem(`goalDeadline${i}`) || '';
     }
+    
+    // ブローカーバッジ設定の初期化
+    initShowBrokerBadge();
 }
 
 // ============================
@@ -5152,6 +5155,47 @@ function toggleExpenseGuide() {
     const guide = document.getElementById('expenseGuide');
     if (guide) {
         guide.style.display = guide.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// ========== ブローカーバッジ表示設定 ==========
+
+/**
+ * ブローカーバッジ表示切り替え
+ */
+function toggleBrokerBadge() {
+    const checkbox = document.getElementById('show-broker-badge');
+    const isChecked = checkbox ? checkbox.checked : true;
+    
+    // 設定を保存
+    localStorage.setItem('showBrokerBadge', JSON.stringify(isChecked));
+    
+    // トレード一覧を再描画
+    if (window.TradeList) {
+        window.TradeList.render();
+    } else if (typeof displayAllTrades === 'function') {
+        displayAllTrades();
+    }
+    
+    console.log('[Settings] ブローカーバッジ表示:', isChecked);
+}
+
+/**
+ * ブローカーバッジ表示設定を取得
+ * @returns {boolean}
+ */
+function getShowBrokerBadge() {
+    const saved = localStorage.getItem('showBrokerBadge');
+    return saved !== null ? JSON.parse(saved) : true; // デフォルトはON
+}
+
+/**
+ * ブローカーバッジ設定の初期化（チェックボックスの状態を復元）
+ */
+function initShowBrokerBadge() {
+    const checkbox = document.getElementById('show-broker-badge');
+    if (checkbox) {
+        checkbox.checked = getShowBrokerBadge();
     }
 }
 

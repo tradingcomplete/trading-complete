@@ -305,8 +305,9 @@ class TradeList {
         pairContainer.appendChild(pairSpan);
         pairContainer.appendChild(directionBadge);
         
-        // ブローカーバッジを追加
-        if (trade.broker) {
+        // ブローカーバッジを追加（設定がONの場合のみ）
+        const showBrokerBadge = typeof getShowBrokerBadge === 'function' ? getShowBrokerBadge() : true;
+        if (trade.broker && showBrokerBadge) {
             const brokerBadge = document.createElement('span');
             brokerBadge.className = 'broker-badge';
             brokerBadge.textContent = trade.broker;
