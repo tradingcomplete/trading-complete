@@ -2131,6 +2131,25 @@
             switchPeriodType('monthly');
             switchPeriodStatsView('pips');
             changePeriod();
+            
+            // SettingsModule初期化完了を待って総合統計を更新（MODULES.md準拠）
+            if (window.eventBus) {
+                // 初期化完了時
+                window.eventBus.on('settings:initialized', function() {
+                    console.log('[EventBus] settings:initialized 受信 → 総合統計更新');
+                    if (typeof changeOverallYear === 'function') {
+                        changeOverallYear();
+                    }
+                });
+                
+                // 年初口座残高変更時
+                window.eventBus.on('settings:yearStartBalanceChanged', function() {
+                    console.log('[EventBus] settings:yearStartBalanceChanged 受信 → 総合統計更新');
+                    if (typeof changeOverallYear === 'function') {
+                        changeOverallYear();
+                    }
+                });
+            }
         });
         
         // 既にDOMが読み込まれている場合は即座に実行
@@ -2150,6 +2169,25 @@
             switchPeriodType('monthly');
             switchPeriodStatsView('pips');
             setTimeout(() => changePeriod(), 100);
+            
+            // SettingsModule初期化完了を待って総合統計を更新（MODULES.md準拠）
+            if (window.eventBus) {
+                // 初期化完了時
+                window.eventBus.on('settings:initialized', function() {
+                    console.log('[EventBus] settings:initialized 受信 → 総合統計更新');
+                    if (typeof changeOverallYear === 'function') {
+                        changeOverallYear();
+                    }
+                });
+                
+                // 年初口座残高変更時
+                window.eventBus.on('settings:yearStartBalanceChanged', function() {
+                    console.log('[EventBus] settings:yearStartBalanceChanged 受信 → 総合統計更新');
+                    if (typeof changeOverallYear === 'function') {
+                        changeOverallYear();
+                    }
+                });
+            }
         }
         </script>
 
