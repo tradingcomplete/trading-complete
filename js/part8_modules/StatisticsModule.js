@@ -404,10 +404,14 @@ class StatisticsModule {
                 this.#updateOverallYearStats();
             });
             
-            // 既にSettingsModuleが初期化済みなら即座に実行
-            if (window.SettingsModule && window.SettingsModule.getStatus && window.SettingsModule.getStatus().initialized) {
-                console.log('[StatisticsModule] SettingsModule既に初期化済み → 総合統計更新');
-                setTimeout(() => this.#updateOverallYearStats(), 100);
+            // DOMContentLoaded後に総合統計を更新（changeOverallYearが定義されるのを待つ）
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    setTimeout(() => this.#updateOverallYearStats(), 200);
+                });
+            } else {
+                // 既にDOM読み込み完了している場合
+                setTimeout(() => this.#updateOverallYearStats(), 200);
             }
         }
     }
