@@ -197,6 +197,11 @@ function updateCurrentBalance() {
     
     const balance = window.CapitalManagerModule.getCurrentBalance();
     balanceDisplay.innerHTML = `<strong style="font-size: 1.5em; color: #10b981;">¥${balance.toLocaleString()}</strong>`;
+    
+    // 全期間利益率も更新（index.htmlで定義）
+    if (typeof updateTotalProfitRate === 'function') {
+        updateTotalProfitRate();
+    }
 }
 
 /**
