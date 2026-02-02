@@ -393,6 +393,32 @@ class StatisticsModule {
             // 入出金管理イベント（Phase 2-4）
             this.#eventBus.on('capital:recordAdded', () => this.updateStatistics());
             this.#eventBus.on('capital:recordDeleted', () => this.updateStatistics());
+            
+            // 年初口座残高連携（利益率機能）
+            this.#eventBus.on('settings:initialized', () => {
+                console.log('[StatisticsModule] settings:initialized 受信 → 総合統計更新');
+                this.#updateOverallYearStats();
+            });
+            this.#eventBus.on('settings:yearStartBalanceChanged', () => {
+                console.log('[StatisticsModule] settings:yearStartBalanceChanged 受信 → 総合統計更新');
+                this.#updateOverallYearStats();
+            });
+            
+            // 既にSettingsModuleが初期化済みなら即座に実行
+            if (window.SettingsModule && window.SettingsModule.getStatus && window.SettingsModule.getStatus().initialized) {
+                console.log('[StatisticsModule] SettingsModule既に初期化済み → 総合統計更新');
+                setTimeout(() => this.#updateOverallYearStats(), 100);
+            }
+        }
+    }
+    
+    /**
+     * 総合統計（年度別）UIを更新
+     * @private
+     */
+    #updateOverallYearStats() {
+        if (typeof window.changeOverallYear === 'function') {
+            window.changeOverallYear();
         }
     }
     
