@@ -198,10 +198,70 @@ function updateCurrentBalance() {
     const balance = window.CapitalManagerModule.getCurrentBalance();
     balanceDisplay.innerHTML = `<strong style="font-size: 1.5em; color: #10b981;">¥${balance.toLocaleString()}</strong>`;
     
-    // 全期間利益率も更新（index.htmlで定義）
-    if (typeof updateTotalProfitRate === 'function') {
-        updateTotalProfitRate();
+    // 全期間利益率も更新
+    updateTotalProfitRate();
+}
+
+/**
+ * 全期間利益率を計算して表示
+ */
+function updateTotalProfitRate() {
+    console.log('updateTotalProfitRate() 呼び出し');
+    
+    // 表示要素を取得（なければ作成）
+    let displayElem = document.getElementById('totalProfitRateDisplay');
+    
+    if (!displayElem) {
+        // 要素がなければ動的に作成
+        const capitalDisplay = document.getElementById('currentCapitalDisplay');
+        if (!capitalDisplay) return;
+        
+        const container = capitalDisplay.parentElement;
+        if (!container) return;
+        
+        // 全期間利益率のHTML要素を作成
+        const profitRateDiv = document.createElement('div');
+        profitRateDiv.style.cssText = 'text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3);';
+        profitRateDiv.innerHTML = `
+            <p style="color: rgba(255,255,255,0.8); font-size: 0.9em; margin-bottom: 5px;">全期間利益率</p>
+            <p id="totalProfitRateDisplay" style="font-size: 1.8em; font-weight: bold; color: white; margin: 0;">--%</p>
+            <p style="color: rgba(255,255,255,0.6); font-size: 0.75em; margin-top: 5px;">（投入資金に対する利益の割合）</p>
+        `;
+        
+        container.appendChild(profitRateDiv);
+        displayElem = document.getElementById('totalProfitRateDisplay');
+        console.log('✅ 全期間利益率表示エリアを動的に作成');
     }
+    
+    if (!displayElem) return;
+    
+    // 投入資金を取得
+    const totalDeposit = window.CapitalManagerModule ? window.CapitalManagerModule.getCurrentBalance() : 0;
+    
+    if (!totalDeposit || totalDeposit === 0) {
+        displayElem.textContent = '--%';
+        displayElem.style.color = 'white';
+        return;
+    }
+    
+    // 全期間利益を計算
+    let totalProfit = 0;
+    if (window.TradeManager) {
+        const allTrades = window.TradeManager.getInstance().getAllTrades() || [];
+        const closedTrades = allTrades.filter(t => t.exits && t.exits.length > 0);
+        
+        totalProfit = closedTrades.reduce((sum, t) => {
+            const yenProfit = t.yenProfitLoss ? t.yenProfitLoss.netProfit : 0;
+            return sum + (yenProfit || 0);
+        }, 0);
+    }
+    
+    // 利益率計算
+    const profitRate = (totalProfit / totalDeposit * 100).toFixed(1);
+    displayElem.textContent = profitRate + '%';
+    displayElem.style.color = parseFloat(profitRate) >= 0 ? '#90EE90' : '#ff6b6b';
+    
+    console.log(`✅ 全期間利益率更新: ${profitRate}% (利益: ¥${totalProfit.toLocaleString()} / 投入: ¥${totalDeposit.toLocaleString()})`);
 }
 
 /**

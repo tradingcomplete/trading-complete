@@ -1864,37 +1864,6 @@
             localStorage.setItem('yearStartBalances', JSON.stringify(balances));
         }
 
-        // ==========================================
-        // 全期間利益率（収支管理タブ用）
-        // ==========================================
-
-        /**
-         * 全期間利益率を計算して表示
-         */
-        function updateTotalProfitRate() {
-            const displayElem = document.getElementById('totalProfitRateDisplay');
-            if (!displayElem) return;
-            
-            const totalDeposit = window.CapitalManagerModule?.getCurrentBalance() || 0;
-            
-            if (!totalDeposit || totalDeposit === 0) {
-                displayElem.textContent = '--%';
-                displayElem.style.color = 'white';
-                return;
-            }
-            
-            const allTrades = window.TradeManager?.getInstance()?.getAllTrades() || [];
-            const closedTrades = allTrades.filter(t => t.exits && t.exits.length > 0);
-            
-            const totalProfit = closedTrades.reduce((sum, t) => {
-                return sum + (t.yenProfitLoss?.netProfit || 0);
-            }, 0);
-            
-            const profitRate = (totalProfit / totalDeposit * 100).toFixed(1);
-            displayElem.textContent = profitRate + '%';
-            displayElem.style.color = parseFloat(profitRate) >= 0 ? '#90EE90' : '#ff6b6b';
-        }
-        
         /**
          * 年度選択ドロップダウンを初期化
          */
@@ -2158,23 +2127,6 @@
                 }
             }, 100);
             
-            // 全期間利益率を初期表示
-            setTimeout(function() {
-                if (typeof updateTotalProfitRate === 'function') {
-                    updateTotalProfitRate();
-                }
-            }, 150);
-            
-            // EventBusで入出金変更を監視
-            if (window.eventBus) {
-                window.eventBus.on('capital:recordAdded', function() {
-                    updateTotalProfitRate();
-                });
-                window.eventBus.on('capital:recordDeleted', function() {
-                    updateTotalProfitRate();
-                });
-            }
-            
             updatePeriodOptions();
             switchPeriodType('monthly');
             switchPeriodStatsView('pips');
@@ -2193,23 +2145,6 @@
                     initYearStartBalanceUI();
                 }
             }, 100);
-            
-            // 全期間利益率を初期表示
-            setTimeout(function() {
-                if (typeof updateTotalProfitRate === 'function') {
-                    updateTotalProfitRate();
-                }
-            }, 150);
-            
-            // EventBusで入出金変更を監視
-            if (window.eventBus) {
-                window.eventBus.on('capital:recordAdded', function() {
-                    updateTotalProfitRate();
-                });
-                window.eventBus.on('capital:recordDeleted', function() {
-                    updateTotalProfitRate();
-                });
-            }
             
             updatePeriodOptions();
             switchPeriodType('monthly');
@@ -2232,17 +2167,6 @@
                 <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
                     <p style="color: white; margin: 0 0 10px 0; font-size: 1.1em;">現在の投入資金</p>
                     <div id="currentCapitalDisplay" style="color: white; font-size: 2em; font-weight: bold;">¥0</div>
-                    
-                    <!-- 全期間利益率 -->
-                    <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3);">
-                        <p style="color: rgba(255,255,255,0.8); font-size: 0.9em; margin-bottom: 5px;">全期間利益率</p>
-                        <p id="totalProfitRateDisplay" style="font-size: 1.8em; font-weight: bold; color: white; margin: 0;">
-                            --%
-                        </p>
-                        <p style="color: rgba(255,255,255,0.6); font-size: 0.75em; margin-top: 5px;">
-                            （投入資金に対する利益の割合）
-                        </p>
-                    </div>
                 </div>
                 
                 <!-- 新規入出金追加フォーム -->
