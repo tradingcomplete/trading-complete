@@ -180,6 +180,7 @@ deleteMethod(id)                      // 手法削除（論理削除）
 | ClosingManagerModule | 締め処理 | performMonthlyClosing() |
 | CapitalManagerModule | 入出金 | addRecord(), getCurrentBalance(), calculateProfitRate() |
 | capital-ui.js | 入出金UI | addCapitalRecord(), updateCapitalHistory() |
+| year-start-balance-ui.js | 年初残高UI | initYearStartBalanceUI(), updateYearStartBalance() |
 
 **EventBus**: expense:added/deleted, closing:monthly, capital:recordAdded/Deleted
 
