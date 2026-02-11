@@ -739,7 +739,7 @@ class ReportModule {
     
     <!-- ルール遵守・リスク分析（Phase 5） -->
     <div class="rule-risk-analysis-section">
-        <h2>✅ ルール遵守・リスク分析</h2>
+        <h2>⭕ ルール遵守・リスク分析</h2>
         ${this.#generatePrintRuleRiskAnalysis(monthlyTrades)}
     </div>
     
@@ -2877,7 +2877,7 @@ class ReportModule {
                               style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;"
                               onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
                               onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
-                        ✅ ルール遵守・リスク分析
+                        ⭕ ルール遵守・リスク分析
                     </h4>
                     <span id="ruleRiskAnalysis-icon-right"
                           onclick="window.ReportModule.toggleAccordion('ruleRiskAnalysis')" 
@@ -2902,7 +2902,7 @@ class ReportModule {
                             </tr>
                         </thead>
                         <tbody>
-                            ${generateRow('✅', ruleStats.yes)}
+                            ${generateRow('⭕', ruleStats.yes)}
                             ${generateRow('❌', ruleStats.no)}
                         </tbody>
                     </table>
@@ -3119,7 +3119,7 @@ class ReportModule {
                         </tr>
                     </thead>
                     <tbody>
-                        ${generateRow('✅', ruleStats.yes)}
+                        ${generateRow('⭕', ruleStats.yes)}
                         ${generateRow('❌', ruleStats.no)}
                     </tbody>
                 </table>

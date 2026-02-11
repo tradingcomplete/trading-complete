@@ -391,7 +391,7 @@ class TradeList {
             const ruleBadge = document.createElement('span');
             ruleBadge.className = 'rule-badge';
             const isFollowed = reflectionObj.ruleFollowed === 'yes';
-            ruleBadge.textContent = isFollowed ? '✅' : '❌';
+            ruleBadge.textContent = isFollowed ? '⭕' : '❌';
             ruleBadge.title = isFollowed ? 'ルール遵守' : 'ルール違反';
             ruleBadge.style.cssText = `
                 padding: 4px 8px;
