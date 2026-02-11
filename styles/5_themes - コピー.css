@@ -1,45 +1,45 @@
 /* ========== styles/5_themes.css ========== */
-/* ãƒ†ãƒ¼ãƒžåˆ‡ã‚Šæ›¿ãˆï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å®šç¾©ï¼‰ */
+/* テーマ切り替え（ライトモード定義） */
 
 /* =====================================================
-   ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ ã‚«ãƒ©ãƒ¼ãƒ«ãƒ¼ãƒ«ï¼ˆçµ±ä¸€åŸºæº–ï¼‰
+   ライトモード カラールール（統一基準）
    =====================================================
    
-   ã€èƒŒæ™¯è‰²ã€‘
-   - body:          #f0f0f0  (è–„ã„ã‚°ãƒ¬ãƒ¼)
-   - section:       #fafafa  (ç™½ã«è¿‘ã„ã‚°ãƒ¬ãƒ¼)
-   - card/input:    #f8f8f8  (ç™½)
+   【背景色】
+   - body:          #f0f0f0  (薄いグレー)
+   - section:       #fafafa  (白に近いグレー)
+   - card/input:    #f8f8f8  (白)
    
-   ã€æž ç·šã€‘
-   - border:        #999999  (ã‚°ãƒ¬ãƒ¼)
+   【枠線】
+   - border:        #999999  (グレー)
    
-   ã€ãƒ†ã‚­ã‚¹ãƒˆã€‘
-   - æœ¬æ–‡:          #000000  (é»’)
-   - ã‚µãƒ–ãƒ†ã‚­ã‚¹ãƒˆ:   #666666  (æ¿ƒã„ã‚°ãƒ¬ãƒ¼)
-   - ãƒ©ãƒ™ãƒ«:        #333333  (æ¿ƒã„ã‚°ãƒ¬ãƒ¼)
-   - placeholder:   #999999  (è–„ã„ã‚°ãƒ¬ãƒ¼)
+   【テキスト】
+   - 本文:          #000000  (黒)
+   - サブテキスト:   #666666  (濃いグレー)
+   - ラベル:        #333333  (濃いグレー)
+   - placeholder:   #999999  (薄いグレー)
    
-   ã€ã‚¢ã‚¯ã‚»ãƒ³ãƒˆã‚«ãƒ©ãƒ¼ã€‘
-   - è¦‹å‡ºã—/å¼·èª¿:   #00995a  (ç·‘)
-   - ãƒœã‚¿ãƒ³:        #00bb5f  (æ˜Žã‚‹ã„ç·‘)
+   【アクセントカラー】
+   - 見出し/強調:   #00995a  (緑)
+   - ボタン:        #00bb5f  (明るい緑)
    
-   ã€çŠ¶æ…‹è‰²ã€‘
-   - åˆ©ç›Š/ãƒ—ãƒ©ã‚¹:   #00995a  (ç·‘)
-   - æå¤±/ãƒžã‚¤ãƒŠã‚¹: #dd3333  (èµ¤)
-   - ä¿æœ‰ä¸­/è­¦å‘Š:   #cc8800  (æ¿ƒã„ã‚ªãƒ¬ãƒ³ã‚¸)
+   【状態色】
+   - 利益/プラス:   #00995a  (緑)
+   - 損失/マイナス: #dd3333  (赤)
+   - 保有中/警告:   #cc8800  (濃いオレンジ)
    
-   ã€ç‰¹æ®Šç”¨é€”ï¼ˆã‚¨ãƒ‡ã‚£ã‚¿ãƒœã‚¿ãƒ³ç­‰ï¼‰ã€‘
-   - èµ¤ãƒœã‚¿ãƒ³:      #cc0000
-   - é’ãƒœã‚¿ãƒ³:      #0044cc
-   - é»„ãƒœã‚¿ãƒ³:      #996600
+   【特殊用途（エディタボタン等）】
+   - 赤ボタン:      #cc0000
+   - 青ボタン:      #0044cc
+   - 黄ボタン:      #996600
    
    ===================================================== */
 
 /* =====================================================
-   ã‚¨ãƒ‡ã‚£ã‚¿è‰²å¤‰æ•°ï¼ˆãƒ†ãƒ¼ãƒžå¯¾å¿œï¼‰
+   エディタ色変数（テーマ対応）
    ===================================================== */
 
-/* ãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼ˆãƒ‡ãƒ•ã‚©ãƒ«ãƒˆï¼‰ */
+/* ダークモード（デフォルト） */
 :root {
     --editor-color-red: #EF5350;
     --editor-color-blue: #64B5F6;
@@ -48,7 +48,7 @@
     --editor-highlight-text: #000000;
 }
 
-/* ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ */
+/* ライトモード */
 body.light-mode {
     --editor-color-red: #F44336;
     --editor-color-blue: #1976D2;
@@ -58,10 +58,10 @@ body.light-mode {
 }
 
 /* =====================================================
-   ãƒ†ãƒ¼ãƒžåˆ‡ã‚Šæ›¿ãˆ
+   テーマ切り替え
    ===================================================== */
 
-/* ãƒ†ãƒ¼ãƒžåˆ‡ã‚Šæ›¿ãˆãƒœã‚¿ãƒ³ */
+/* テーマ切り替えボタン */
 .theme-selector {
     display: flex;
     gap: 10px;
@@ -95,42 +95,42 @@ body.light-mode .theme-btn {
 }
 
 /* =====================================================
-   ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å®šç¾©ï¼ˆå®Œå…¨ç‰ˆï¼‰- è¦–èªæ€§å¼·åŒ–ãƒ»æž å¼·åŒ–ãƒ»çœ©ã—ã•è»½æ¸›
+   ライトモード定義（完全版）- 視認性強化・枠強化・眩しさ軽減
    ===================================================== */
 
-/* åŸºæœ¬è¨­å®š - èƒŒæ™¯ã‚’å°‘ã—æš—ã‚ */
+/* 基本設定 - 背景を少し暗め */
 body.light-mode {
-    background: #eef1f5;
-    color: #1a1a2e;
+    background: #f0f0f0;
+    color: #000000;
     -webkit-text-fill-color: unset;
 }
 
 body.light-mode .section {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    background: #fafafa;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* ã‚¿ãƒ–ãƒŠãƒ“ã‚²ãƒ¼ã‚·ãƒ§ãƒ³ */
+/* タブナビゲーション */
 body.light-mode .tab-nav {
-    background: #fff;
-    border: 1px solid #ddd;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    background: #f5f5f5;
+    border: 2px solid #888888;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 body.light-mode .tab-btn {
-    background: #f5f5f5;
-    color: #555;
-    border: 2px solid #ddd;
+    background: #f8f8f8;
+    color: #000000;
+    border: 2px solid #999999;
     font-weight: 600;
 }
 
 body.light-mode .tab-btn.active {
-    background: linear-gradient(135deg, #00cc6a, #00aa5a);
-    color: #fff;
-    border: 2px solid #009050;
+    background: #00cc6a;
+    color: #ffffff;
+    border: 2px solid #00995a;
     font-weight: 700;
-    box-shadow: 0 4px 16px rgba(0, 170, 90, 0.25);
+    box-shadow: 0 2px 8px rgba(0, 204, 106, 0.4);
 }
 
 body.light-mode .tab-btn:hover:not(.active) {
@@ -139,24 +139,21 @@ body.light-mode .tab-btn:hover:not(.active) {
     color: #00995a;
 }
 
-/* ãƒ˜ãƒƒãƒ€ãƒ¼ */
+/* ヘッダー */
 body.light-mode .header-title {
-    background: linear-gradient(135deg, #1a1a2e 30%, #00995a 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #00995a;
     font-weight: 700;
 }
 
 body.light-mode .header-subtitle {
-    color: #555;
+    color: #333333;
 }
 
-/* ç›®æ¨™è¡¨ç¤º */
+/* 目標表示 */
 body.light-mode .goal-item {
-    background: #fff;
+    background: rgba(0, 204, 106, 0.12);
     border: 2px solid #00aa5a;
-    box-shadow: 0 2px 8px rgba(0, 170, 90, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 204, 106, 0.25);
 }
 
 body.light-mode .goal-text {
@@ -165,7 +162,7 @@ body.light-mode .goal-text {
     text-shadow: none;
 }
 
-/* å…¥åŠ›ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰å…¨èˆ¬ */
+/* 入力フィールド全般 */
 body.light-mode input,
 body.light-mode select,
 body.light-mode textarea {
@@ -183,7 +180,7 @@ body.light-mode textarea:focus {
     box-shadow: 0 0 0 3px rgba(0, 204, 106, 0.25) !important;
 }
 
-/* ç”»åƒã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰ã‚¨ãƒªã‚¢ï¼ˆæ–°è¦ã‚¨ãƒ³ãƒˆãƒªãƒ¼ï¼‰ */
+/* 画像アップロードエリア（新規エントリー） */
 body.light-mode .image-upload-area {
     background: #e8f5e9 !important;
     border: 2px dashed #00aa5a !important;
@@ -207,38 +204,37 @@ body.light-mode .uploaded-image {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ›ãƒ«ãƒ€ãƒ¼ï¼ˆå…¥åŠ›ä¾‹ã®è–„ã„æ–‡å­—ï¼‰ */
+/* プレースホルダー（入力例の薄い文字） */
 body.light-mode ::placeholder {
     color: #999999 !important;
     opacity: 0.7 !important;
 }
 
-/* ãƒ©ãƒ™ãƒ« */
+/* ラベル */
 body.light-mode label,
 body.light-mode .input-group label {
     color: #000000;
     font-weight: 600;
 }
 
-/* ãƒœã‚¿ãƒ³ */
+/* ボタン */
 body.light-mode .btn-primary {
-    background: linear-gradient(135deg, #00cc6a, #00aa5a);
-    color: #fff;
-    border: none;
+    background: #00bb5f;
+    color: #ffffff;
+    border: 2px solid #00995a;
     font-weight: 600;
-    box-shadow: 0 4px 16px rgba(0, 170, 90, 0.2);
 }
 
 body.light-mode .btn-primary:hover {
+    background: #00995a;
     transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(0, 170, 90, 0.3);
-    filter: brightness(1.05);
+    box-shadow: 0 4px 12px rgba(0, 153, 90, 0.3);
 }
 
 body.light-mode .btn-secondary {
-    background: #f0f0f0;
-    color: #1a1a2e;
-    border: 2px solid #ccc;
+    background: #f5f5f5;
+    color: #000000;
+    border: 2px solid #999999;
     font-weight: 500;
 }
 
@@ -248,7 +244,7 @@ body.light-mode .btn-secondary:hover {
     color: #00995a;
 }
 
-/* ãƒ¬ãƒãƒ¼ãƒˆãƒœã‚¿ãƒ³ã‚’æ–°è¦ã‚¨ãƒ³ãƒˆãƒªãƒ¼ã®ãƒœã‚¿ãƒ³ã‚¹ã‚¿ã‚¤ãƒ«ã«çµ±ä¸€ */
+/* レポートボタンを新規エントリーのボタンスタイルに統一 */
 body.light-mode .report-btn {
     background: #f8f8f8 !important;
     color: #000000 !important;
@@ -276,7 +272,7 @@ body.light-mode .report-btn.active {
     transform: translateY(-2px);
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚«ãƒ¼ãƒ‰ */
+/* トレードカード */
 body.light-mode .trade-card {
     background: #f8f8f8 !important;
     border: 2px solid #999999 !important;
@@ -298,17 +294,17 @@ body.light-mode .trade-pair {
     font-weight: 700;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚«ãƒ¼ãƒ‰å†…ã®å„è¦ç´  - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰çµ±ä¸€ãƒ«ãƒ¼ãƒ« */
+/* トレードカード内の各要素 - ライトモード統一ルール */
 body.light-mode .trade-subtitle {
     color: #666666 !important;
 }
 
-/* trade-pairã¨badgeä»¥å¤–ã®spanã‚’é»’ã« */
+/* trade-pairとbadge以外のspanを黒に */
 body.light-mode .trade-card span:not(.trade-pair):not(.direction-badge):not(.broker-badge):not(.trade-result):not(.remaining-lot-badge) {
     color: #000000 !important;
 }
 
-/* trade-pairã¯ç·‘ï¼ˆå†åº¦æ˜Žç¤ºï¼‰ */
+/* trade-pairは緑（再度明示） */
 body.light-mode .trade-card .trade-pair {
     color: #00995a !important;
 }
@@ -352,7 +348,7 @@ body.light-mode .trade-card .remaining-lot-badge {
     color: #cc8800 !important;
 }
 
-/* æŒ¯ã‚Šè¿”ã‚Šã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* 振り返りセクション */
 body.light-mode .trade-reflection-section {
     background: rgba(0, 0, 0, 0.03) !important;
     border: 1.5px solid rgba(0, 0, 0, 0.1) !important;
@@ -365,7 +361,7 @@ body.light-mode .trade-reflection-section * {
     color: #000000 !important;
 }
 
-/* ãƒ†ã‚­ã‚¹ãƒˆè¡¨ç¤ºã‚¨ãƒªã‚¢ */
+/* テキスト表示エリア */
 body.light-mode .trade-memo,
 body.light-mode .trade-reflection,
 body.light-mode .trade-details p,
@@ -376,7 +372,7 @@ body.light-mode .report-content * {
     font-weight: 500 !important;
 }
 
-/* é€±é–“ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼ï¼ˆç›¸å ´ãƒŽãƒ¼ãƒˆï¼‰ */
+/* 週間プレビュー（相場ノート） */
 body.light-mode .weekly-preview {
     background: #f5f5f5;
     border: 2px solid #888888;
@@ -411,7 +407,7 @@ body.light-mode .day-preview-content {
     color: #000000 !important;
 }
 
-/* ãƒŽãƒ¼ãƒˆè©³ç´°è¡¨ç¤º */
+/* ノート詳細表示 */
 body.light-mode .note-detail {
     background: #f5f5f5;
     border: 2px solid #888888;
@@ -431,7 +427,7 @@ body.light-mode .selected-note {
     box-shadow: 0 2px 8px rgba(0, 204, 106, 0.25);
 }
 
-/* ã‚¨ãƒ‡ã‚£ã‚¿ãƒ„ãƒ¼ãƒ«ãƒãƒ¼ */
+/* エディタツールバー */
 body.light-mode .editor-toolbar {
     background: #f0f0f0 !important;
     border: 2px solid #999999 !important;
@@ -442,7 +438,7 @@ body.light-mode .editor-toolbar {
     gap: 5px !important;
 }
 
-/* ã‚¨ãƒ‡ã‚£ã‚¿ãƒœã‚¿ãƒ³ï¼ˆèµ¤ãƒ»é’ãƒ»é»„ã®ãƒœã‚¿ãƒ³ï¼‰ */
+/* エディタボタン（赤・青・黄のボタン） */
 body.light-mode .editor-btn {
     background: #f8f8f8 !important;
     color: #000000 !important;
@@ -460,7 +456,7 @@ body.light-mode .editor-btn:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* èµ¤ãƒœã‚¿ãƒ³ */
+/* 赤ボタン */
 body.light-mode .editor-btn[style*="color: red"],
 body.light-mode .editor-btn.red-btn {
     background: #ffe0e0 !important;
@@ -474,7 +470,7 @@ body.light-mode .editor-btn.red-btn:hover {
     border-color: #ff4444 !important;
 }
 
-/* é’ãƒœã‚¿ãƒ³ */
+/* 青ボタン */
 body.light-mode .editor-btn[style*="color: blue"],
 body.light-mode .editor-btn.blue-btn {
     background: #e0e8ff !important;
@@ -488,7 +484,7 @@ body.light-mode .editor-btn.blue-btn:hover {
     border-color: #4466ff !important;
 }
 
-/* é»„ãƒœã‚¿ãƒ³ */
+/* 黄ボタン */
 body.light-mode .editor-btn[style*="color: #FFD700"],
 body.light-mode .editor-btn[style*="background: yellow"],
 body.light-mode .editor-btn.yellow-btn {
@@ -504,7 +500,7 @@ body.light-mode .editor-btn.yellow-btn:hover {
     border-color: #ffaa00 !important;
 }
 
-/* Bï¼ˆå¤ªå­—ï¼‰Uï¼ˆä¸‹ç·šï¼‰ãƒœã‚¿ãƒ³ */
+/* B（太字）U（下線）ボタン */
 body.light-mode .editor-btn[onclick*="bold"],
 body.light-mode .editor-btn[onclick*="underline"] {
     background: #f8f8f8 !important;
@@ -519,7 +515,7 @@ body.light-mode .editor-btn[onclick*="underline"]:hover {
     border-color: #666666 !important;
 }
 
-/* ç·‘ãƒœã‚¿ãƒ³ */
+/* 緑ボタン */
 body.light-mode .editor-btn.green-btn {
     background: #e8f5e9 !important;
     border-color: #66bb6a !important;
@@ -532,7 +528,7 @@ body.light-mode .editor-btn.green-btn:hover {
     border-color: #4caf50 !important;
 }
 
-/* èµ¤ãƒœã‚¿ãƒ³ï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 赤ボタン（ライトモード） */
 body.light-mode .editor-btn.red-btn {
     background: #ffe0e0 !important;
     border-color: #ff6666 !important;
@@ -545,7 +541,7 @@ body.light-mode .editor-btn.red-btn:hover {
     border-color: #ff4444 !important;
 }
 
-/* é’ãƒœã‚¿ãƒ³ï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 青ボタン（ライトモード） */
 body.light-mode .editor-btn.blue-btn {
     background: #e0e8ff !important;
     border-color: #6688ff !important;
@@ -558,7 +554,7 @@ body.light-mode .editor-btn.blue-btn:hover {
     border-color: #4466ff !important;
 }
 
-/* é»„ãƒœã‚¿ãƒ³ï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 黄ボタン（ライトモード） */
 body.light-mode .editor-btn.yellow-btn {
     background: var(--editor-highlight-bg) !important;
     border-color: #ffcc00 !important;
@@ -571,7 +567,7 @@ body.light-mode .editor-btn.yellow-btn:hover {
     border-color: #ffaa00 !important;
 }
 
-/* ã‚µã‚¤ã‚ºãƒ—ãƒ«ãƒ€ã‚¦ãƒ³ */
+/* サイズプルダウン */
 body.light-mode .size-select {
     background: #f8f8f8 !important;
     color: #000000 !important;
@@ -586,7 +582,7 @@ body.light-mode .size-select:hover {
     border-color: #666666 !important;
 }
 
-/* ãƒ†ãƒ¼ãƒ–ãƒ« */
+/* テーブル */
 body.light-mode .trades-table th {
     background: #00bb5f;
     color: #ffffff;
@@ -605,11 +601,11 @@ body.light-mode .trades-table tr:hover {
     background: #e8f5e9;
 }
 
-/* çµ±è¨ˆãƒ»ãƒ¬ãƒãƒ¼ãƒˆ */
+/* 統計・レポート */
 body.light-mode .stat-box {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    background: #f8f8f8;
+    border: 2px solid #999999;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 body.light-mode .stat-label {
@@ -630,10 +626,10 @@ body.light-mode .stat-value.negative {
     color: #dd3333;
 }
 
-/* ãƒªã‚¹ã‚¯ãƒ»ãƒªãƒ¯ãƒ¼ãƒ‰ãƒ»R:Ræ¯”çŽ‡ã®è¡¨ç¤º */
+/* リスク・リワード・R:R比率の表示 */
 body.light-mode .risk-reward-display {
-    background: #f8f9fb !important;
-    border: 1px solid #e0e0e0 !important;
+    background: #f8f8f8 !important;
+    border: 2px solid #999999 !important;
     padding: 15px !important;
     border-radius: 8px !important;
     margin-top: 10px !important;
@@ -656,7 +652,7 @@ body.light-mode .risk-reward-display .value {
     font-weight: 700 !important;
 }
 
-/* çµ±è¨ˆã‚«ãƒ¼ãƒ‰ã®ä¿®æ­£ */
+/* 統計カードの修正 */
 body.light-mode .summary-card {
     background: #f8f8f8 !important;
     border: 2px solid #999999 !important;
@@ -686,7 +682,7 @@ body.light-mode .stat-card .stat-value {
     color: #000000 !important;
 }
 
-/* ãã®ä»–ã®è¦ç´  */
+/* その他の要素 */
 body.light-mode h1,
 body.light-mode h2,
 body.light-mode h3,
@@ -709,7 +705,7 @@ body.light-mode .section h3 {
     font-weight: 600;
 }
 
-/* ãƒ¢ãƒ¼ãƒ€ãƒ« */
+/* モーダル */
 body.light-mode .modal-content {
     background: #f5f5f5;
     color: #000000;
@@ -722,17 +718,17 @@ body.light-mode .modal-header {
 }
 
 /* =====================================================
-   ç·¨é›†ãƒ¢ãƒ¼ãƒ€ãƒ« - ãƒ©ãƒ™ãƒ«è‰²ï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰
-   çœ©ã—ã„ç·‘ â†’ è½ã¡ç€ã„ãŸã‚°ãƒ¬ãƒ¼ã«å¤‰æ›´
+   編集モーダル - ラベル色（ライトモード）
+   眩しい緑 → 落ち着いたグレーに変更
    ===================================================== */
 
-/* ã‚¨ãƒ³ãƒˆãƒªãƒ¼æƒ…å ±ç·¨é›†ãƒ¢ãƒ¼ãƒ€ãƒ« */
+/* エントリー情報編集モーダル */
 body.light-mode .modal-content .form-group label {
     color: #555555 !important;
     font-weight: 600;
 }
 
-/* ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ */
+/* カレンダー */
 body.light-mode .calendar-grid > div {
     background: #f8f8f8;
     border: 1px solid #999999;
@@ -750,7 +746,7 @@ body.light-mode .calendar-grid > div.selected {
     border: 2px solid #00995a;
 }
 
-/* ã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ãƒãƒ¼ï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* スクロールバー（ダークモード） */
 body:not(.light-mode) ::-webkit-scrollbar {
     width: 8px;
     height: 6px;
@@ -770,7 +766,7 @@ body:not(.light-mode) ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.6);
 }
 
-/* ã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ãƒãƒ¼ï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* スクロールバー（ライトモード） */
 body.light-mode ::-webkit-scrollbar-track {
     background: #e0e0e0;
     border: 1px solid #999999;
@@ -785,7 +781,7 @@ body.light-mode ::-webkit-scrollbar-thumb:hover {
     background: #00995a;
 }
 
-/* åŽæ”¯ç®¡ç†ã‚¿ãƒ– ã‚µãƒ–ã‚¿ãƒ– ã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ãƒãƒ¼ï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 収支管理タブ サブタブ スクロールバー（ライトモード） */
 body.light-mode .expense-tabs::-webkit-scrollbar {
     height: 8px;
 }
@@ -804,7 +800,7 @@ body.light-mode .expense-tabs::-webkit-scrollbar-thumb:hover {
     background: #005530;
 }
 
-/* AIãƒ—ãƒ­ãƒ³ãƒ—ãƒˆè¡¨ç¤º */
+/* AIプロンプト表示 */
 body.light-mode .ai-prompt-display,
 body.light-mode #aiPromptDisplay {
     background: #f0f0f0;
@@ -817,7 +813,7 @@ body.light-mode .prompt-item {
     border: 1px solid #999999;
 }
 
-/* ãƒ•ã‚£ãƒ«ã‚¿ãƒ¼ãƒ»ãƒ„ãƒ¼ãƒ«ãƒãƒ¼ */
+/* フィルター・ツールバー */
 body.light-mode .filter-section,
 body.light-mode .toolbar {
     background: #f5f5f5 !important;
@@ -825,12 +821,12 @@ body.light-mode .toolbar {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰: è¨­å®šã‚¿ãƒ–ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°ä¿®æ­£ */
+/* ライトモード: 設定タブパディング修正 */
 body.light-mode #settings-data {
     padding: 0 !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°ãƒ¢ãƒ¼ãƒ€ãƒ« - ãƒã‚§ãƒƒã‚¯ãƒªã‚¹ãƒˆ */
+/* トレード詳細モーダル - チェックリスト */
 body.light-mode .checklist-label {
     color: #333333 !important;
     -webkit-text-fill-color: #333333 !important;
@@ -841,7 +837,7 @@ body.light-mode .checklist-value {
     -webkit-text-fill-color: #000000 !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°ãƒ¢ãƒ¼ãƒ€ãƒ« - å††å»ºã¦æç›Šã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* トレード詳細モーダル - 円建て損益セクション */
 body.light-mode .yen-profit-loss-section {
     color: #333333 !important;
     -webkit-text-fill-color: #333333 !important;
@@ -914,19 +910,19 @@ body.light-mode .filter-section button:hover {
     color: #00995a !important;
 }
 
-/* ãƒ‰ãƒ­ãƒƒãƒ—ãƒ€ã‚¦ãƒ³ */
+/* ドロップダウン */
 body.light-mode select option {
     background: #f8f8f8;
     color: #000000;
 }
 
-/* ã‚¯ã‚¤ãƒƒã‚¯çµ±è¨ˆ */
+/* クイック統計 */
 body.light-mode .quick-stats {
     background: #f5f5f5;
     border: 2px solid #999999;
 }
 
-/* ç”»åƒã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ãƒœã‚¿ãƒ³ */
+/* 画像コントロールボタン */
 body.light-mode .image-control-btn {
     background: rgba(0, 0, 0, 0.8);
     color: #ffffff;
@@ -937,7 +933,7 @@ body.light-mode .image-control-btn:hover {
     background: #000000;
 }
 
-/* ãƒˆãƒ¼ã‚¹ãƒˆé€šçŸ¥ */
+/* トースト通知 */
 body.light-mode .toast {
     background: #ffffff !important;
     color: #000000 !important;
@@ -963,24 +959,24 @@ body.light-mode .toast.info {
     color: #0044cc !important;
 }
 
-/* å…¨ä½“çš„ãªå½±ã®èª¿æ•´ */
+/* 全体的な影の調整 */
 body.light-mode * {
     text-shadow: none;
 }
 
-/* ãƒ›ãƒãƒ¼åŠ¹æžœã®çµ±ä¸€ */
+/* ホバー効果の統一 */
 body.light-mode button:hover,
 body.light-mode .btn:hover,
 body.light-mode a:hover {
     filter: brightness(0.95);
 }
 
-/* ã‚¨ãƒ©ãƒ¼é˜²æ­¢ï¼šã™ã¹ã¦ã®ãƒ†ã‚­ã‚¹ãƒˆè¦ç´ ã‚’é»’æ–‡å­—ã« */
+/* エラー防止：すべてのテキスト要素を黒文字に */
 body.light-mode * {
     color: #000000;
 }
 
-/* ç‰¹å®šè¦ç´ ã®è‰²ã‚’ä¸Šæ›¸ã */
+/* 特定要素の色を上書き */
 body.light-mode .btn-primary,
 body.light-mode .btn-primary *,
 body.light-mode .tab-btn.active,
@@ -1006,7 +1002,7 @@ body.light-mode .stat-value.negative {
     color: #dd3333 !important;
 }
 
-/* ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ›ãƒ«ãƒ€ãƒ¼ã®ã¿è–„ã„ã‚°ãƒ¬ãƒ¼ */
+/* プレースホルダーのみ薄いグレー */
 body.light-mode input::placeholder,
 body.light-mode textarea::placeholder,
 body.light-mode select::placeholder {
@@ -1014,7 +1010,7 @@ body.light-mode select::placeholder {
     opacity: 0.7 !important;
 }
 
-/* ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆãƒ»ã‚¤ãƒ³ãƒãƒ¼ãƒˆãƒœã‚¿ãƒ³ï¼ˆè¨­å®šã‚¿ãƒ–ï¼‰ */
+/* エクスポート・インポートボタン（設定タブ） */
 body.light-mode button[onclick="exportAllData()"],
 body.light-mode button[onclick="importAllData()"],
 body.light-mode .btn-export,
@@ -1039,7 +1035,7 @@ body.light-mode .btn-import:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* è¨­å®šã‚¿ãƒ–å°‚ç”¨ã‚¹ã‚¿ã‚¤ãƒ« */
+/* 設定タブ専用スタイル */
 body.light-mode #settingsTab {
     background: #fafafa !important;
 }
@@ -1077,7 +1073,7 @@ body.light-mode .goal-input-item input[type="date"] {
     border: 2px solid #999999 !important;
 }
 
-/* è¨­å®šã‚¿ãƒ– - ãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼ã‚«ãƒ¼ãƒ‰ */
+/* 設定タブ - ブローカーカード */
 body.light-mode .broker-card {
     background: #f8f8f8 !important;
     border: 2px solid #999999 !important;
@@ -1088,7 +1084,7 @@ body.light-mode .broker-card-footer {
     border-top: 1px solid #cccccc !important;
 }
 
-/* è¨­å®šã‚¿ãƒ– - ã‚¢ã‚¤ã‚³ãƒ³ãƒœã‚¿ãƒ³ */
+/* 設定タブ - アイコンボタン */
 body.light-mode .btn-icon {
     background: #f8f8f8 !important;
     border: 2px solid #999999 !important;
@@ -1100,12 +1096,12 @@ body.light-mode .btn-icon:hover {
     border-color: #00aa5a !important;
 }
 
-/* è¨­å®šã‚¿ãƒ– - ã‚µãƒ–ã‚¿ãƒ–ã‚³ãƒ³ãƒ†ãƒŠï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ãƒ»ã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ç„¡åŠ¹ï¼‰ */
+/* 設定タブ - サブタブコンテナ（ライトモード・スクロール無効） */
 body.light-mode .settings-subtabs {
     overflow-x: visible !important;
 }
 
-/* è¨­å®šã‚¿ãƒ– - ã‚µãƒ–ã‚¿ãƒ–ï¼ˆåŸºæœ¬ã€ãƒˆãƒ¬ãƒ¼ãƒ‡ã‚£ãƒ³ã‚°ã€ãƒ‡ãƒ¼ã‚¿ã€ãƒžã‚¤ãƒšãƒ¼ã‚¸ï¼‰- è‰²ã®ã¿ */
+/* 設定タブ - サブタブ（基本、トレーディング、データ、マイページ）- 色のみ */
 body.light-mode .settings-subtab-btn {
     background: #f8f8f8 !important;
     border: none !important;
@@ -1125,7 +1121,7 @@ body.light-mode .settings-subtab-btn.active {
     color: #00bb5f !important;
 }
 
-/* è¨­å®šã‚¿ãƒ– - ã‚µãƒ–ã‚¿ãƒ–ã‚³ãƒ³ãƒ†ãƒ³ãƒ„ */
+/* 設定タブ - サブタブコンテンツ */
 body.light-mode .settings-subtab-content {
     background: #fafafa !important;
     border: 2px solid #999999 !important;
@@ -1134,7 +1130,7 @@ body.light-mode .settings-subtab-content {
     margin-top: 15px;
 }
 
-/* è¨­å®šã‚¿ãƒ– - ã‚»ã‚¯ã‚·ãƒ§ãƒ³åŒºåˆ‡ã‚Šç·š(hr) */
+/* 設定タブ - セクション区切り線(hr) */
 body.light-mode .settings-subtab-content hr,
 body.light-mode #settings hr {
     border: none !important;
@@ -1142,13 +1138,13 @@ body.light-mode #settings hr {
     margin: 30px 0 !important;
 }
 
-/* åˆ†æžã‚¿ãƒ– - æœˆåˆ¥æŽ¨ç§»ã‚°ãƒ©ãƒ•ã‚³ãƒ³ãƒ†ãƒŠ */
+/* 分析タブ - 月別推移グラフコンテナ */
 body.light-mode #monthlyPerformanceChart {
     background: #f5f5f5 !important;
     border: 2px solid #999999 !important;
 }
 
-/* åˆ†æžã‚¿ãƒ– - ãƒ¬ãƒãƒ¼ãƒˆã‚³ãƒ³ãƒ†ãƒ³ãƒ„ */
+/* 分析タブ - レポートコンテンツ */
 body.light-mode #reportContent {
     background: #f5f5f5 !important;
     border: 2px solid #999999 !important;
@@ -1156,13 +1152,13 @@ body.light-mode #reportContent {
     padding: 20px;
 }
 
-/* ãƒ¢ãƒ¼ãƒ€ãƒ«å†…ã®è¦‹å‡ºã—ï¼ˆãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼è¿½åŠ ãƒ»é€šè²¨ãƒšã‚¢è¿½åŠ ï¼‰ */
+/* モーダル内の見出し（ブローカー追加・通貨ペア追加） */
 body.light-mode .modal h4,
 body.light-mode .modal-content h4 {
     color: #333333 !important;
 }
 
-/* ãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼è¿½åŠ ãƒ¢ãƒ¼ãƒ€ãƒ« - ã‚»ã‚¯ã‚·ãƒ§ãƒ³è¦‹å‡ºã— */
+/* ブローカー追加モーダル - セクション見出し */
 body.light-mode #brokerModal h4,
 body.light-mode #addBrokerModal h4,
 body.light-mode .broker-section-title {
@@ -1173,7 +1169,7 @@ body.light-mode .broker-section-title {
     margin-bottom: 15px;
 }
 
-/* é€šè²¨ãƒšã‚¢è¿½åŠ ãƒ¢ãƒ¼ãƒ€ãƒ« - ãƒªã‚¹ãƒˆé …ç›® */
+/* 通貨ペア追加モーダル - リスト項目 */
 body.light-mode .pair-list-item,
 body.light-mode .currency-pair-item,
 body.light-mode .preset-pair-item {
@@ -1191,7 +1187,7 @@ body.light-mode .preset-pair-item.selected {
     background: #d4edda !important;
 }
 
-/* é€šè²¨ãƒšã‚¢ãƒ¢ãƒ¼ãƒ€ãƒ« - ã‚«ãƒ†ã‚´ãƒªã‚¿ãƒ– */
+/* 通貨ペアモーダル - カテゴリタブ */
 body.light-mode .category-tab {
     border: 2px solid #999999 !important;
     background: #f8f8f8 !important;
@@ -1209,17 +1205,17 @@ body.light-mode .category-tab.active {
     color: #ffffff !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚«ãƒ¼ãƒ‰å†…ã®åŒºåˆ‡ã‚Šç·š */
+/* トレードカード内の区切り線 */
 body.light-mode .trade-card > div {
     border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰ãƒãƒ£ãƒ¼ãƒˆã‚µãƒ ãƒã‚¤ãƒ« */
+/* トレードチャートサムネイル */
 body.light-mode .trade-chart-thumb {
     border: 2px solid #999999 !important;
 }
 
-/* ç´”æç›Šã®åŒºåˆ‡ã‚Šç·š */
+/* 純損益の区切り線 */
 .net-profit-label,
 .net-profit-value {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -1230,7 +1226,7 @@ body.light-mode .net-profit-value {
     border-top: 2px solid #cccccc !important;
 }
 
-/* ç´”æç›Šè¡Œã®åŒºåˆ‡ã‚Šç·š */
+/* 純損益行の区切り線 */
 .net-profit-row {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -1239,18 +1235,18 @@ body.light-mode .net-profit-row {
     border-top: 2px solid #999999 !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰ã‚«ãƒ¼ãƒ‰ãƒ˜ãƒƒãƒ€ãƒ¼ã®åŒºåˆ‡ã‚Šç·šï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* トレードカードヘッダーの区切り線（ダークモード） */
 .trade-header {
     border-bottom: 1.5px solid rgba(255, 255, 255, 0.15);
 }
 
-/* åˆ†æžã‚¿ãƒ– - ã‚¢ã‚³ãƒ¼ãƒ‡ã‚£ã‚ªãƒ³ãƒ˜ãƒƒãƒ€ãƒ¼ */
+/* 分析タブ - アコーディオンヘッダー */
 body.light-mode .accordion-header {
     background: rgba(0, 153, 90, 0.2) !important;
     border: 1px solid rgba(0, 153, 90, 0.3) !important;
 }
 
-/* åˆ†æžã‚¿ãƒ– - æœŸé–“é¸æŠžã‚¨ãƒªã‚¢ */
+/* 分析タブ - 期間選択エリア */
 body.light-mode .period-selection-container {
     background: #f5f5f5 !important;
     border: 2px solid #999999 !important;
@@ -1280,7 +1276,7 @@ body.light-mode #currentPeriodText {
     color: #00995a !important;
 }
 
-/* ãƒ˜ãƒƒãƒ€ãƒ¼ - ç›®æ¨™ã‚’è¦‹ã‚‹ãƒœã‚¿ãƒ³ */
+/* ヘッダー - 目標を見るボタン */
 body.light-mode .goals-toggle-btn {
     background: #e8e8e8 !important;
     border: 2px solid #999999 !important;
@@ -1292,13 +1288,13 @@ body.light-mode .goals-toggle-btn:hover {
     border-color: #00995a !important;
 }
 
-/* æœˆæ¬¡ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ - ä»Šæ—¥ã®ã‚»ãƒ« */
+/* 月次カレンダー - 今日のセル */
 body.light-mode .calendar-day-cell.today {
     background: #cce5ff !important;
     border: 2px solid #0066cc !important;
 }
 
-/* æœˆæ¬¡ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ - ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ï¼ˆãƒ¬ã‚¹ãƒãƒ³ã‚·ãƒ–å¯¾å¿œï¼‰ */
+/* 月次カレンダー - コントロール（レスポンシブ対応） */
 body.light-mode .calendar-controls {
     padding: 5px !important;
     gap: 5px !important;
@@ -1312,7 +1308,7 @@ body.light-mode .calendar-controls select {
     padding: 4px 6px !important;
 }
 
-/* çµŒè²»å…¥åŠ›ã‚¿ãƒ– - çµŒè²»ãƒªã‚¹ãƒˆ */
+/* 経費入力タブ - 経費リスト */
 body.light-mode .expense-item {
     background: #f8f8f8 !important;
     border: 1px solid #cccccc !important;
@@ -1328,7 +1324,7 @@ body.light-mode .expense-item * {
     color: #333333 !important;
 }
 
-/* åŽæ”¯ç®¡ç†ã‚¿ãƒ– - ã‚µãƒ–ã‚¿ãƒ–ï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 収支管理タブ - サブタブ（ダークモード） */
 .expense-tabs {
     background: rgba(40, 40, 40, 0.8);
     border: 2px solid rgba(255, 255, 255, 0.3);
@@ -1354,7 +1350,7 @@ body.light-mode .expense-item * {
     border-color: #007bff !important;
 }
 
-/* ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ç”¨ */
+/* ライトモード用 */
 body.light-mode .expense-tabs {
     background: #f0f0f0;
     border: 2px solid #999999;
@@ -1376,7 +1372,7 @@ body.light-mode .expense-tab-btn[style*="border-bottom: 3px solid"] {
     border-color: #007bff !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è¨˜éŒ² - å††å»ºã¦æç›Šï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ãƒ»å…±é€šï¼‰ */
+/* トレード記録 - 円建て損益（ダークモード・共通） */
 .yen-label {
     color: rgba(255, 255, 255, 0.6);
 }
@@ -1406,7 +1402,7 @@ body.light-mode .expense-tab-btn[style*="border-bottom: 3px solid"] {
     font-size: 1rem;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è¨˜éŒ² - å††å»ºã¦æç›Šï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* トレード記録 - 円建て損益（ライトモード） */
 body.light-mode .yen-label {
     color: #666666;
     -webkit-text-fill-color: #666666;
@@ -1431,7 +1427,7 @@ body.light-mode .net-profit-row {
     border-top: 1px solid #cccccc;
 }
 
-/* åˆ†æžã‚¿ãƒ– - çµ±è¨ˆã‚»ãƒ« */
+/* 分析タブ - 統計セル */
 body.light-mode .overall-stat-item,
 body.light-mode .period-stat-item {
     background: #e8e8e8 !important;
@@ -1439,13 +1435,13 @@ body.light-mode .period-stat-item {
     border-radius: 6px;
 }
 
-/* å††å»ºã¦ç·¨é›†ãƒ¢ãƒ¼ãƒ€ãƒ« */
+/* 円建て編集モーダル */
 body.light-mode .trade-info {
     background: #e8e8e8 !important;
     color: #333333 !important;
 }
 
-/* æ±ºæ¸ˆãƒ¢ãƒ¼ãƒ€ãƒ« - å‚è€ƒæƒ…å ±ã‚»ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 決済モーダル - 参考情報セクション（ライトモード） */
 body.light-mode .reference-info {
     background: rgba(59, 130, 246, 0.15) !important;
     border: 1px solid rgba(59, 130, 246, 0.5) !important;
@@ -1455,14 +1451,14 @@ body.light-mode .reference-info h4 {
     color: #2563eb !important;
 }
 
-/* é€šè²¨ãƒšã‚¢ã€ä¾¡æ ¼ã€æœªæ±ºæ¸ˆãƒ­ãƒƒãƒˆã®ãƒ†ã‚­ã‚¹ãƒˆ */
+/* 通貨ペア、価格、未決済ロットのテキスト */
 body.light-mode .reference-info > div > div:nth-child(1),
 body.light-mode .reference-info > div > div:nth-child(3),
 body.light-mode .reference-info > div > div:nth-child(4) {
     color: #333333 !important;
 }
 
-/* å£²ã‚Š/è²·ã„ã®è‰²ï¼ˆ2ç•ªç›®ã®å­è¦ç´ ï¼‰- ãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ã‚ˆã‚Šæ¿ƒã„è‰² */
+/* 売り/買いの色（2番目の子要素）- ダークモードより濃い色 */
 body.light-mode .reference-info > div > div:nth-child(2) {
     color: inherit;
 }
@@ -1484,7 +1480,7 @@ body.light-mode .modal-content [style*="color: rgb(255, 255, 255)"] {
     color: #333333 !important;
 }
 
-/* ãƒ–ãƒ­ãƒ¼ã‚«ãƒ¼è¿½åŠ ãƒ¢ãƒ¼ãƒ€ãƒ« - ãƒ—ãƒªã‚»ãƒƒãƒˆãƒœã‚¿ãƒ³ */
+/* ブローカー追加モーダル - プリセットボタン */
 body.light-mode .preset-broker-btn {
     border: 2px solid #999999 !important;
     background: #f8f8f8 !important;
@@ -1500,7 +1496,7 @@ body.light-mode .preset-broker-btn.selected {
     background: #d4edda !important;
 }
 
-/* ãƒ†ãƒ¼ãƒžè¨­å®šãƒœã‚¿ãƒ³ */
+/* テーマ設定ボタン */
 body.light-mode .theme-selector .theme-btn {
     background: #f8f8f8 !important;
     border: 2px solid #999999 !important;
@@ -1519,7 +1515,7 @@ body.light-mode .theme-selector .theme-btn:hover:not(.active) {
     color: #00995a !important;
 }
 
-/* SNSæŠ•ç¨¿ã‚¿ãƒ–å°‚ç”¨ */
+/* SNS投稿タブ専用 */
 body.light-mode #sns-post {
     background: #f0f0f0 !important;
 }
@@ -1555,7 +1551,7 @@ body.light-mode #aiPrompt {
     border-radius: 8px !important;
 }
 
-/* åˆ†æžã‚¿ãƒ–ã®æ”¹å–„ */
+/* 分析タブの改善 */
 body.light-mode .chart-period-selector button {
     background: #f8f8f8 !important;
     color: #000000 !important;
@@ -1574,7 +1570,7 @@ body.light-mode .chart-period-selector button:hover:not(.active) {
     color: #00995a !important;
 }
 
-/* åˆ†æžã‚¿ãƒ– - çµ±è¨ˆã‚³ãƒ³ãƒ†ãƒŠ */
+/* 分析タブ - 統計コンテナ */
 body.light-mode .overall-stats-container {
     background: rgba(0, 153, 90, 0.08) !important;
     border: 1.5px solid #00995a !important;
@@ -1593,7 +1589,7 @@ body.light-mode .period-stats-grid {
     background: rgba(0, 0, 0, 0.03) !important;
 }
 
-/* åˆ†æžã‚¿ãƒ– - æœŸé–“ã‚¿ã‚¤ãƒ—ãƒœã‚¿ãƒ³ï¼ˆé€±æ¬¡ã€æœˆæ¬¡ã€å››åŠæœŸã€å¹´æ¬¡ï¼‰ */
+/* 分析タブ - 期間タイプボタン（週次、月次、四半期、年次） */
 body.light-mode .period-type-btn {
     background: #f8f8f8 !important;
     color: #000000 !important;
@@ -1612,7 +1608,7 @@ body.light-mode .period-type-btn.active {
     border: 1.5px solid #00995a !important;
 }
 
-/* åˆ†æžã‚¿ãƒ– - Pips/å††å»ºã¦åˆ‡ã‚Šæ›¿ãˆãƒœã‚¿ãƒ³ */
+/* 分析タブ - Pips/円建て切り替えボタン */
 body.light-mode .period-stats-btn {
     background: #f8f8f8 !important;
     color: #000000 !important;
@@ -1631,15 +1627,15 @@ body.light-mode .period-stats-btn.active {
     border: 1.5px solid #00995a !important;
 }
 
-/* æ£’ã‚°ãƒ©ãƒ•ã®è‰²ã‚’æš—ã„ç·‘ã« */
+/* 棒グラフの色を暗い緑に */
 body.light-mode .chart-container {
-    /* Chart.jsã®ã‚°ãƒ©ãƒ•è‰²ã¯JavaScriptã§åˆ¶å¾¡ã•ã‚Œã‚‹ãŸã‚ã€
-       script.jsã§ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰æ™‚ã®è‰²ã‚’å¤‰æ›´ã™ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ */
-    --chart-bar-color: #00995a; /* ç·‘ */
-    --chart-line-color: #cc8800; /* æ¿ƒã„ã‚ªãƒ¬ãƒ³ã‚¸ */
+    /* Chart.jsのグラフ色はJavaScriptで制御されるため、
+       script.jsでライトモード時の色を変更する必要があります */
+    --chart-bar-color: #00995a; /* 緑 */
+    --chart-line-color: #cc8800; /* 濃いオレンジ */
 }
 
-/* é»„è‰²æ–‡å­—ã‚’ã‚ªãƒ¬ãƒ³ã‚¸ã«å¤‰æ›´ */
+/* 黄色文字をオレンジに変更 */
 body.light-mode .highlight-yellow,
 body.light-mode .text-yellow,
 body.light-mode [style*="color: yellow"],
@@ -1647,7 +1643,7 @@ body.light-mode [style*="color: #FFD700"] {
     color: #cc8800 !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è¨˜éŒ²ã®æœªæ±ºæ¸ˆï¼ˆã‚ªãƒ¼ãƒ—ãƒ³ãƒã‚¸ã‚·ãƒ§ãƒ³ï¼‰ã®è‰² */
+/* トレード記録の未決済（オープンポジション）の色 */
 body.light-mode .trade-result.open-position {
     color: #cc8800 !important;
 }
@@ -1658,7 +1654,7 @@ body.light-mode .status-badge.open {
     border-color: #cc8800;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°ã‚»ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆãƒ¢ãƒ¼ãƒ€ãƒ«å†…ï¼‰ */
+/* トレード詳細セクション（モーダル内） */
 body.light-mode .trade-detail-section {
     background: #f8f8f8 !important;
     border: 2px solid #999999 !important;
@@ -1670,18 +1666,18 @@ body.light-mode .detail-section-header {
     border-bottom: 1px solid #cccccc !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°ç”»é¢ - ã‚¨ãƒ³ãƒˆãƒªãƒ¼æ ¹æ‹ ã®ã‚¹ã‚¿ã‚¤ãƒ« */
-/* ã‚¨ãƒ³ãƒˆãƒªãƒ¼æ ¹æ‹ ã®ãƒ†ã‚­ã‚¹ãƒˆå†…å®¹ã‚’é»’æ–‡å­—ã« */
+/* トレード詳細画面 - エントリー根拠のスタイル */
+/* エントリー根拠のテキスト内容を黒文字に */
 body.light-mode .trade-detail-section p[style*="color: #e0e0e0"] {
     color: #000000 !important;
 }
 
-/* ã¾ãŸã¯ã€padding-leftãŒã‚ã‚‹pè¦ç´ ã‚’é»’æ–‡å­—ã« */
+/* または、padding-leftがあるp要素を黒文字に */
 body.light-mode .trade-detail-section p[style*="padding-left"] {
     color: #000000 !important;
 }
 
-/* ãƒˆãƒ¬ãƒ¼ãƒ‰è©³ç´°ã®å…¥åŠ›ãƒ†ã‚­ã‚¹ãƒˆ */
+/* トレード詳細の入力テキスト */
 body.light-mode .trade-memo,
 body.light-mode .trade-reflection,
 body.light-mode .entry-emotion,
@@ -1690,10 +1686,10 @@ body.light-mode .scenario-text {
 }
 
 /* =====================================================
-   ç¢ºå®šç”³å‘Šã‚¿ãƒ– - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å¯¾å¿œ
+   確定申告タブ - ライトモード対応
    ===================================================== */
 
-/* è­¦å‘Šãƒœãƒƒã‚¯ã‚¹ */
+/* 警告ボックス */
 body.light-mode .warning-box {
     background: linear-gradient(135deg, #fffbf0 0%, #fff4d4 100%);
     border: 2px solid #cc8800;
@@ -1705,7 +1701,7 @@ body.light-mode .warning-box strong {
     color: #cc8800;
 }
 
-/* CSVã‚¤ãƒ³ãƒãƒ¼ãƒˆã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* CSVインポートセクション */
 body.light-mode .csv-import-section {
     background: #fafafa;
     border: 2px solid #999999;
@@ -1716,7 +1712,7 @@ body.light-mode .csv-import-section h3 {
     color: #00995a;
 }
 
-/* ã‚¤ãƒ³ãƒ—ãƒƒãƒˆè¦ç´  */
+/* インプット要素 */
 body.light-mode .input-group select,
 body.light-mode .input-group input[type="file"] {
     background: #f8f8f8 !important;
@@ -1729,7 +1725,7 @@ body.light-mode .input-group input[type="file"]:hover {
     border-color: #00aa5a !important;
 }
 
-/* çµæžœã‚«ãƒ¼ãƒ‰ */
+/* 結果カード */
 body.light-mode .result-card {
     background: #fafafa;
     border: 2px solid #999999;
@@ -1739,7 +1735,7 @@ body.light-mode .result-card h3 {
     color: #00995a;
 }
 
-/* çµ±è¨ˆã‚¢ã‚¤ãƒ†ãƒ  */
+/* 統計アイテム */
 body.light-mode .stat-item {
     background: #f8f8f8;
     border: 2px solid #999999;
@@ -1757,7 +1753,7 @@ body.light-mode .stat-value.loss {
     color: #dd3333;
 }
 
-/* å¹´é–“ãƒ»æœˆæ¬¡ã‚«ãƒ¼ãƒ‰ */
+/* 年間・月次カード */
 body.light-mode .year-card,
 body.light-mode .month-card {
     background: #f8f8f8;
@@ -1778,7 +1774,7 @@ body.light-mode .month-card p {
     color: #000000 !important;
 }
 
-/* ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* エクスポートセクション */
 body.light-mode #exportSection {
     background: #fafafa;
     border: 2px solid #999999;
@@ -1789,10 +1785,10 @@ body.light-mode #exportSection h3 {
 }
 
 /* =====================================================
-   ä»®å®Ÿè£…è¡¨ç¤º - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å¯¾å¿œ
+   仮実装表示 - ライトモード対応
    ===================================================== */
 
-/* ä»®å®Ÿè£…è¡¨ç¤ºã®ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å¯¾å¿œ */
+/* 仮実装表示のライトモード対応 */
 body.light-mode .coming-soon-box {
     background: #fafafa;
     border: 2px dashed #00aa5a;
@@ -1824,10 +1820,10 @@ body.light-mode .progress-bar {
 }
 
 /* =====================================================
-   å®Ÿè£…äºˆå®šãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å¯¾å¿œ
+   実装予定メッセージ - ライトモード対応
    ===================================================== */
 
-/* å®Ÿè£…äºˆå®šãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ */
+/* 実装予定メッセージ - ライトモード */
 body.light-mode .not-implemented-message {
     background: #fff3cd;
     border: 2px solid #ffc107;
@@ -1843,10 +1839,10 @@ body.light-mode .not-implemented-message pre {
 }
 
 /* =====================================================
-   ã‚»ãƒ¬ã‚¯ãƒˆãƒœãƒƒã‚¯ã‚¹ã‚°ãƒ«ãƒ¼ãƒ— - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å¯¾å¿œ
+   セレクトボックスグループ - ライトモード対応
    ===================================================== */
 
-/* ã‚»ãƒ¬ã‚¯ãƒˆãƒœãƒƒã‚¯ã‚¹ã‚°ãƒ«ãƒ¼ãƒ— - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ */
+/* セレクトボックスグループ - ライトモード */
 body.light-mode optgroup {
     background: #f0f0f0;
     color: #00995a;
@@ -1869,12 +1865,12 @@ body.light-mode select optgroup option {
 }
 
 /* =====================================================
-   åŽæ”¯ç®¡ç†ã‚¿ãƒ–è¦–èªæ€§ä¿®æ­£ - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰
+   収支管理タブ視認性修正 - ライトモード
    ===================================================== */
 
-/* åŽæ”¯ç®¡ç†ã‚¿ãƒ–è¦–èªæ€§ä¿®æ­£ - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ */
+/* 収支管理タブ視認性修正 - ライトモード */
 
-/* ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ï¼ˆå¹´æœˆé¸æŠžéƒ¨åˆ†ï¼‰ */
+/* カレンダーコントロール（年月選択部分） */
 body.light-mode .calendar-controls {
     background: #f5f5f5 !important;
     border: 2px solid #999999 !important;
@@ -1892,7 +1888,7 @@ body.light-mode .calendar-controls select {
     border: 2px solid #999999 !important;
 }
 
-/* æœˆæ¬¡ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒŠãƒ“ã‚²ãƒ¼ã‚·ãƒ§ãƒ³ãƒœã‚¿ãƒ³ï¼ˆå‰æœˆãƒ»æ¬¡æœˆï¼‰ */
+/* 月次カレンダーナビゲーションボタン（前月・次月） */
 body.light-mode .month-nav-btn,
 body.light-mode .calendar-nav-btn,
 body.light-mode [class*="nav-btn"] {
@@ -1908,13 +1904,13 @@ body.light-mode .calendar-nav-btn:hover {
     color: #00995a !important;
 }
 
-/* ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒ†ãƒ¼ãƒ–ãƒ« */
+/* カレンダーテーブル */
 body.light-mode .month-calendar table,
 body.light-mode .calendar-table {
     border: 2px solid #999999 !important;
 }
 
-/* ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼æ—¥ä»˜ã‚»ãƒ« */
+/* カレンダー日付セル */
 body.light-mode .month-calendar td,
 body.light-mode .calendar-day {
     background: #f8f8f8 !important;
@@ -1928,23 +1924,23 @@ body.light-mode .calendar-day:hover {
     border-color: #00aa5a !important;
 }
 
-/* ä»Šæ—¥ã®ã‚»ãƒ« */
+/* 今日のセル */
 body.light-mode .month-calendar td.today,
 body.light-mode .calendar-day.today {
     background: rgba(0, 153, 90, 0.15) !important;
     border: 2px solid #00995a !important;
 }
 
-/* ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒ˜ãƒƒãƒ€ãƒ¼ï¼ˆæ›œæ—¥ï¼‰ - æ—¢ã«OK */
+/* カレンダーヘッダー（曜日） - 既にOK */
 
-/* ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚°ãƒªãƒƒãƒ‰ï¼ˆæ—¥ä»˜ã‚»ãƒ«ã®ã‚³ãƒ³ãƒ†ãƒŠï¼‰ */
+/* カレンダーグリッド（日付セルのコンテナ） */
 body.light-mode .calendar-grid,
 body.light-mode #calendarGrid {
     background: #fafafa !important;
     border: 2px solid #999999 !important;
 }
 
-/* ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ã®æ—¥ä»˜ã‚»ãƒ« */
+/* カレンダーの日付セル */
 body.light-mode .calendar-grid > div,
 body.light-mode .calendar-day-cell {
     background: #f8f8f8 !important;
@@ -1957,7 +1953,7 @@ body.light-mode .calendar-grid > div:hover {
     border-color: #00aa5a !important;
 }
 
-/* æœˆé–“ã‚µãƒžãƒªãƒ¼ */
+/* 月間サマリー */
 body.light-mode .month-summary,
 body.light-mode #monthSummary {
     background: #fafafa !important;
@@ -1969,7 +1965,7 @@ body.light-mode .month-summary * {
     color: #000000 !important;
 }
 
-/* æ—¥ä»˜ãƒ„ãƒ¼ãƒ«ãƒãƒƒãƒ— */
+/* 日付ツールチップ */
 body.light-mode .day-tooltip,
 body.light-mode #dayTooltip {
     background: #ffffff !important;
@@ -1982,7 +1978,7 @@ body.light-mode .day-tooltip * {
     color: #000000 !important;
 }
 
-/* ç· ã‚å‡¦ç†ã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* 締め処理セクション */
 body.light-mode .closing-section,
 body.light-mode [class*="closing"] {
     background: #fafafa !important;
@@ -1997,7 +1993,7 @@ body.light-mode .closing-section h4 {
     color: #00995a !important;
 }
 
-/* åŽæ”¯ç®¡ç†ã‚µãƒ–ã‚¿ãƒ–å…±é€šã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* 収支管理サブタブ共通セクション */
 body.light-mode .expense-section {
     background: #fafafa !important;
     border: none !important;
@@ -2014,7 +2010,7 @@ body.light-mode .expense-section h3 {
     margin-bottom: 15px;
 }
 
-/* åŽæ”¯ç®¡ç†ã‚¿ãƒ–å†…ã®ã‚»ã‚¯ã‚·ãƒ§ãƒ³åŒºåˆ‡ã‚Šç·š */
+/* 収支管理タブ内のセクション区切り線 */
 body.light-mode #tax .section-divider,
 body.light-mode #tax hr {
     border: none !important;
@@ -2022,7 +2018,7 @@ body.light-mode #tax hr {
     margin: 20px 0 !important;
 }
 
-/* å…¥å‡ºé‡‘ç®¡ç†ã‚¿ãƒ– */
+/* 入出金管理タブ */
 body.light-mode .add-capital-record {
     background: #fafafa !important;
     border: 2px solid #999999 !important;
@@ -2035,13 +2031,13 @@ body.light-mode .capital-records-list {
     border-radius: 8px;
 }
 
-/* å…¥å‡ºé‡‘ç®¡ç†ã‚¿ãƒ–å†…ã®divè¦ç´ ï¼ˆåŒºåˆ‡ã‚Šç·šï¼‰ */
+/* 入出金管理タブ内のdiv要素（区切り線） */
 body.light-mode #tax div[style*="border"],
 body.light-mode .expense-section > div {
     border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ç¾åœ¨ã®æŠ•å…¥è³‡é‡‘ã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* 現在の投入資金セクション */
 body.light-mode .current-capital,
 body.light-mode .capital-display {
     background: #f5f5f5 !important;
@@ -2049,7 +2045,7 @@ body.light-mode .capital-display {
     border-radius: 8px;
 }
 
-/* æŠ•å…¥è³‡é‡‘è¡¨ç¤ºï¼ˆåŒºåˆ‡ã‚Šç·šï¼‰ */
+/* 投入資金表示（区切り線） */
 body.light-mode .current-balance-display {
     border-bottom: 3px solid #888888 !important;
     padding-bottom: 20px !important;
@@ -2060,12 +2056,12 @@ body.light-mode #expense-section-capital .current-balance-display {
     border-bottom: 3px solid #888888 !important;
 }
 
-/* çµŒè²»ã‚¢ã‚¤ãƒ†ãƒ ã®åŒºåˆ‡ã‚Šç·š */
+/* 経費アイテムの区切り線 */
 body.light-mode .expense-item {
     border-bottom: 2px solid #999999 !important;
 }
 
-/* å…¥å‡ºé‡‘å±¥æ­´ã®ã‚½ãƒ¼ãƒˆãƒœã‚¿ãƒ³ */
+/* 入出金履歴のソートボタン */
 body.light-mode .capital-records-list button,
 body.light-mode .expense-section button:not(.btn-primary):not(.btn-secondary) {
     color: #000000 !important;
@@ -2073,7 +2069,7 @@ body.light-mode .expense-section button:not(.btn-primary):not(.btn-secondary) {
     border: 1px solid #999999 !important;
 }
 
-/* çµŒè²»ã‚«ãƒ†ã‚´ãƒªãƒ˜ãƒƒãƒ€ãƒ¼ */
+/* 経費カテゴリヘッダー */
 body.light-mode .expense-category {
     background: rgba(0, 150, 136, 0.15) !important;
     border: 1px solid #009688 !important;
@@ -2086,7 +2082,7 @@ body.light-mode .expense-category:hover {
     border-color: #00796B !important;
 }
 
-/* çµŒè²»ä¸€è¦§ - ã‚«ãƒ†ã‚´ãƒªã‚°ãƒ«ãƒ¼ãƒ— */
+/* 経費一覧 - カテゴリグループ */
 body.light-mode .expense-category-group {
     background: #fafafa !important;
     border: 2px solid #999999 !important;
@@ -2094,7 +2090,7 @@ body.light-mode .expense-category-group {
     margin-bottom: 15px;
 }
 
-/* çµŒè²»ä¸€è¦§ - ã‚«ãƒ†ã‚´ãƒªãƒ˜ãƒƒãƒ€ãƒ¼ */
+/* 経費一覧 - カテゴリヘッダー */
 body.light-mode .category-header {
     background: #f5f5f5 !important;
     border-bottom: 1px solid #cccccc !important;
@@ -2105,7 +2101,7 @@ body.light-mode .category-header * {
     color: #000000 !important;
 }
 
-/* çµŒè²»ä¸€è¦§ - çµŒè²»ã‚«ãƒ¼ãƒ‰ */
+/* 経費一覧 - 経費カード */
 body.light-mode .expense-card {
     background: #f8f8f8 !important;
     border: 1px solid #cccccc !important;
@@ -2121,14 +2117,14 @@ body.light-mode .expense-card:hover {
     border-color: #00aa5a !important;
 }
 
-/* åŽæ”¯ã‚µãƒžãƒªãƒ¼ã‚«ãƒ¼ãƒ‰ */
+/* 収支サマリーカード */
 body.light-mode .summary-card,
 body.light-mode .tax-summary-card {
     background: #fafafa !important;
     border: 2px solid #999999 !important;
 }
 
-/* ã‚µãƒ–ã‚¿ãƒ–ï¼ˆæœˆæ¬¡ã‚«ãƒ¬ãƒ³ãƒ€ãƒ¼ã€çµŒè²»å…¥åŠ›ãªã©ï¼‰ */
+/* サブタブ（月次カレンダー、経費入力など） */
 body.light-mode .capital-tab-btn,
 body.light-mode .sub-tab-btn {
     background: #f8f8f8 !important;
@@ -2175,10 +2171,10 @@ body.light-mode #tax .simulation-form {
 }
 
 /* =====================================================
-   ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰æ™‚ã®ã‚³ãƒ³ãƒˆãƒ©ã‚¹ãƒˆå¼·åŒ–
+   ライトモード時のコントラスト強化
    ===================================================== */
 
-/* ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰æ™‚ã®ã‚³ãƒ³ãƒˆãƒ©ã‚¹ãƒˆå¼·åŒ– */
+/* ライトモード時のコントラスト強化 */
 body.light-mode #tax {
     background: #ffffff !important;
 }
@@ -2194,7 +2190,7 @@ body.light-mode #tax .expense-container * {
     color: #000000 !important;
 }
 
-/* å…¥åŠ›ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚’æ˜Žç¢ºã« */
+/* 入力フィールドを明確に */
 body.light-mode #tax input,
 body.light-mode #tax select,
 body.light-mode #tax textarea {
@@ -2211,13 +2207,13 @@ body.light-mode #tax textarea:focus {
     box-shadow: 0 0 0 3px rgba(0, 153, 90, 0.2) !important;
 }
 
-/* ãƒ©ãƒ™ãƒ«ã‚’å¤ªã */
+/* ラベルを太く */
 body.light-mode #tax label {
     color: #00995a !important;
     font-weight: 600 !important;
 }
 
-/* ãƒœã‚¿ãƒ³ã®ã‚³ãƒ³ãƒˆãƒ©ã‚¹ãƒˆå¼·åŒ– */
+/* ボタンのコントラスト強化 */
 body.light-mode #tax .btn-primary {
     background: #00995a !important;
     color: #ffffff !important;
@@ -2232,7 +2228,7 @@ body.light-mode #tax .btn-secondary {
     font-weight: 500 !important;
 }
 
-/* ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã®å¢ƒç•Œã‚’æ˜Žç¢ºã« */
+/* セクションの境界を明確に */
 body.light-mode #tax .summary-section {
     background: #f8f8f8 !important;
     border: 2px solid #ccc !important;
@@ -2246,7 +2242,7 @@ body.light-mode #tax .summary-item {
     font-weight: 500 !important;
 }
 
-/* ãƒ†ãƒ¼ãƒ–ãƒ«ã®å¼·èª¿ */
+/* テーブルの強調 */
 body.light-mode #tax table {
     background: #ffffff !important;
     border: 2px solid #999 !important;
@@ -2266,18 +2262,18 @@ body.light-mode #tax td {
     font-weight: 500 !important;
 }
 
-/* ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ›ãƒ«ãƒ€ãƒ¼ã‚‚è¦‹ã‚„ã™ã */
+/* プレースホルダーも見やすく */
 body.light-mode #tax ::placeholder {
     color: #666666 !important;
     opacity: 1 !important;
 }
 
 /* ========================================
-   ç›¸å ´ãƒŽãƒ¼ãƒˆæ©Ÿèƒ½æ”¹å–„ - ãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰å¯¾å¿œ
-   è¿½åŠ æ—¥: 2025-11-27
+   相場ノート機能改善 - ライトモード対応
+   追加日: 2025-11-27
    ======================================== */
 
-/* æœˆãƒ¡ãƒ¢ã‚³ãƒ³ãƒ†ãƒŠ */
+/* 月メモコンテナ */
 body.light-mode .monthly-memo-container {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.1);
@@ -2287,7 +2283,7 @@ body.light-mode .monthly-memo-title {
     color: #007744;
 }
 
-/* æœˆãƒ¡ãƒ¢ã‚»ã‚¯ã‚·ãƒ§ãƒ³ */
+/* 月メモセクション */
 body.light-mode .monthly-memo-section {
     background: rgba(0, 0, 0, 0.03);
 }
@@ -2313,7 +2309,7 @@ body.light-mode .memo-placeholder:hover {
     color: #666666;
 }
 
-/* æ¤œç´¢ãƒ¢ãƒ¼ãƒ€ãƒ« */
+/* 検索モーダル */
 body.light-mode .search-result-date {
     color: #007744;
 }
@@ -2326,7 +2322,7 @@ body.light-mode .search-result-preview mark {
     background: rgba(255, 255, 0, 0.5);
 }
 
-/* æœˆãƒ¡ãƒ¢ç·¨é›†ãƒ¢ãƒ¼ãƒ€ãƒ« */
+/* 月メモ編集モーダル */
 body.light-mode .monthly-memo-textarea {
     background: rgba(255, 255, 255, 0.9);
     border-color: rgba(0, 0, 0, 0.2);
@@ -2338,10 +2334,10 @@ body.light-mode .monthly-memo-textarea:focus {
 }
 
 /* =====================================================
-   ãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ ã‚¨ãƒ‡ã‚£ã‚¿ã‚¹ã‚¿ã‚¤ãƒ«
+   ダークモード エディタスタイル
    ===================================================== */
 
-/* ç·‘ãƒœã‚¿ãƒ³ï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 緑ボタン（ダークモード） */
 .editor-btn.green-btn {
     background: rgba(129, 199, 132, 0.2) !important;
     border-color: #81C784 !important;
@@ -2353,7 +2349,7 @@ body.light-mode .monthly-memo-textarea:focus {
     border-color: #a5d6a7 !important;
 }
 
-/* èµ¤ãƒœã‚¿ãƒ³ï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 赤ボタン（ダークモード） */
 .editor-btn.red-btn {
     color: var(--editor-color-red) !important;
     font-weight: bold;
@@ -2363,7 +2359,7 @@ body.light-mode .monthly-memo-textarea:focus {
     background: rgba(239, 83, 80, 0.2) !important;
 }
 
-/* é’ãƒœã‚¿ãƒ³ï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 青ボタン（ダークモード） */
 .editor-btn.blue-btn {
     color: var(--editor-color-blue) !important;
     font-weight: bold;
@@ -2373,7 +2369,7 @@ body.light-mode .monthly-memo-textarea:focus {
     background: rgba(100, 181, 246, 0.2) !important;
 }
 
-/* é»„ãƒœã‚¿ãƒ³ï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* 黄ボタン（ダークモード） */
 .editor-btn.yellow-btn {
     background: var(--editor-highlight-bg) !important;
     color: var(--editor-highlight-text) !important;
@@ -2384,7 +2380,7 @@ body.light-mode .monthly-memo-textarea:focus {
     filter: brightness(1.1);
 }
 
-/* ã‚µã‚¤ã‚ºãƒ—ãƒ«ãƒ€ã‚¦ãƒ³ï¼ˆãƒ€ãƒ¼ã‚¯ãƒ¢ãƒ¼ãƒ‰ï¼‰ */
+/* サイズプルダウン（ダークモード） */
 .size-select {
     background: rgba(255, 255, 255, 0.1) !important;
     color: #ffffff !important;
@@ -2399,145 +2395,4 @@ body.light-mode .monthly-memo-textarea:focus {
     border-color: rgba(255, 255, 255, 0.5) !important;
 }
 
-
-
-/* =====================================================
-   Premium Redesign v5 - ライトモード追加スタイル
-   ===================================================== */
-
-/* ライトモード背景演出 */
-body.light-mode::before {
-    background:
-        radial-gradient(ellipse 700px 500px at 8% 8%, rgba(0, 170, 90, 0.04) 0%, transparent 60%),
-        radial-gradient(ellipse 500px 400px at 92% 85%, rgba(59, 120, 255, 0.03) 0%, transparent 60%),
-        radial-gradient(ellipse 250px 250px at 80% 10%, rgba(180, 140, 20, 0.025) 0%, transparent 50%),
-        linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-    background-size: 100% 100%, 100% 100%, 100% 100%, 80px 80px, 80px 80px;
-}
-
-body.light-mode::after { opacity: 0.008; }
-
-/* ライトモード ヘッダータイトルホバー */
-body.light-mode .header-title:hover {
-    background: linear-gradient(135deg, #1a1a2e 15%, var(--gold-rich) 55%, var(--gold) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-}
-
-/* ライトモード ユーザーアイコン */
-body.light-mode .user-icon img {
-    border-color: #00aa5a;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-body.light-mode .user-icon img:hover {
-    border-color: var(--gold);
-    box-shadow: 0 4px 24px rgba(180, 140, 20, 0.2);
-}
-
-/* ライトモード 目標バッジホバー */
-body.light-mode .goal-item:hover {
-    border-color: var(--gold);
-    box-shadow: 0 6px 24px rgba(180, 140, 20, 0.15);
-    background: linear-gradient(135deg, rgba(212, 165, 32, 0.06), #fff);
-}
-
-/* ライトモード タブナビサイバーライン */
-body.light-mode .tab-nav::after {
-    background: linear-gradient(90deg, transparent, #00aa5a, var(--gold), transparent);
-    opacity: 0.5;
-}
-
-/* ライトモード アクティブタブ金色キラリ */
-body.light-mode .tab-btn.active::after {
-    background: linear-gradient(90deg, transparent, rgba(212, 165, 32, 0.25), transparent);
-}
-
-/* ライトモード 統計ボックス上辺ライン */
-body.light-mode .stat-box::before {
-    background: linear-gradient(90deg, transparent, #00aa5a, transparent);
-}
-body.light-mode .stat-box::after {
-    background: linear-gradient(90deg, transparent, var(--gold), var(--gold-rich), transparent);
-}
-body.light-mode .stat-box:hover {
-    border-color: #00aa5a;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-}
-
-/* ライトモード カラーユーティリティ */
-body.light-mode .color-win { color: #0066cc !important; }
-body.light-mode .color-loss { color: #cc2244 !important; }
-body.light-mode .color-accent { color: #00995a !important; }
-body.light-mode .color-gold { color: var(--gold-rich) !important; }
-
-/* ライトモード セクション左辺ライン */
-body.light-mode .section::before {
-    background: linear-gradient(180deg, #00aa5a, rgba(0, 170, 90, 0.1), transparent);
-}
-body.light-mode .section::after {
-    background: linear-gradient(180deg, transparent, var(--gold), var(--gold-bright), transparent);
-}
-
-/* ライトモード フォーカスグロー */
-body.light-mode .input-group input:focus,
-body.light-mode .input-group select:focus,
-body.light-mode .input-group textarea:focus {
-    border-color: #00aa5a !important;
-    background: #fff !important;
-    box-shadow: 0 0 0 3px rgba(0, 170, 90, 0.12) !important;
-}
-
-/* ライトモード 保存ボタン金色スイープ */
-body.light-mode .btn-primary::after {
-    background: linear-gradient(90deg, transparent, rgba(212, 165, 32, 0.3), transparent);
-}
-
-/* ライトモード リスクリワード底辺グラデーション */
-body.light-mode .risk-reward-display::after {
-    background: linear-gradient(90deg,
-        transparent 0%, #cc2244 20%, var(--gold) 50%, #0066cc 80%, transparent 100%
-    );
-    opacity: 0.5;
-}
-
-/* ライトモード チャート画像エリア */
-body.light-mode .chart-images-container .image-upload-area {
-    border-color: #ccc !important;
-    background: #f5f5f5 !important;
-}
-body.light-mode .chart-images-container .image-upload-area:hover {
-    border-color: #00aa5a !important;
-    background: #e8f5e9 !important;
-}
-
-/* ライトモード モーダル */
-body.light-mode .modal-content {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-}
-
-/* ライトモード トースト */
-body.light-mode .toast {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    color: #1a1a2e;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-body.light-mode .toast.success { border-color: #00aa5a; }
-body.light-mode .toast.error { border-color: #cc2244; }
-
-/* ライトモード スクロールバー */
-body.light-mode ::-webkit-scrollbar-track { background: #f0f0f0; }
-body.light-mode ::-webkit-scrollbar-thumb { background: rgba(0, 170, 90, 0.25); }
-body.light-mode ::-webkit-scrollbar-thumb:hover { background: rgba(0, 170, 90, 0.4); }
-
-/* ライトモード デモラベル（本番では不要） */
-body.light-mode .demo-label {
-    background: linear-gradient(135deg, rgba(180, 140, 20, 0.1), rgba(0, 170, 90, 0.06));
-    border-color: rgba(180, 140, 20, 0.3);
-    color: var(--gold-rich);
-}
-
-/* ========== 5_themes.css çµ‚äº† ==========*/
+/* ========== 5_themes.css 終了 ==========*/
