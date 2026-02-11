@@ -1805,7 +1805,7 @@ class NoteManagerModule {
     }
 
     /**
-     * フォントサイズ適用
+     * フォントサイズ適用（改善版）
      * @param {string} editorId - エディタID
      * @param {string} size - 'small'|'medium'|'large'
      */
@@ -1846,14 +1846,42 @@ class NoteManagerModule {
         const range = selection.getRangeAt(0);
         if (range.collapsed) return; // 選択範囲がない場合は何もしない
         
-        // 選択範囲をspanで囲む
+        // 選択範囲が指定エディタ内か確認
+        if (!editor.contains(range.commonAncestorContainer)) return;
+        
+        // === 改善ポイント: 選択範囲内の既存font-sizeを解除 ===
+        this.#removeFontSizeInRange(range, editor);
+        
+        // 選択範囲を再取得（DOM操作後に更新される場合があるため）
+        const newSelection = window.getSelection();
+        if (!newSelection.rangeCount) {
+            editor.focus();
+            return;
+        }
+        const newRange = newSelection.getRangeAt(0);
+        if (newRange.collapsed) {
+            editor.focus();
+            return;
+        }
+        
+        // 新しいフォントサイズを適用
         const span = document.createElement('span');
         span.style.fontSize = fontSize;
         
         try {
-            range.surroundContents(span);
+            // 選択範囲のコンテンツを抽出してspanに入れる
+            const contents = newRange.extractContents();
+            span.appendChild(contents);
+            newRange.insertNode(span);
+            
+            // 選択範囲を更新（適用した部分を選択状態に維持）
+            newSelection.removeAllRanges();
+            const updatedRange = document.createRange();
+            updatedRange.selectNodeContents(span);
+            newSelection.addRange(updatedRange);
         } catch (e) {
-            // 複雑な選択範囲の場合はexecCommandを使用
+            console.warn('[NoteManager] フォントサイズ適用でフォールバック使用:', e);
+            // フォールバック: execCommandを使用
             document.execCommand('styleWithCSS', false, true);
             document.execCommand('fontSize', false, '7');
             
@@ -1872,13 +1900,72 @@ class NoteManagerModule {
         // EventBus発火
         this.#eventBus?.emit('note:fontSizeApplied', { editorId, size });
     }
+    
+    /**
+     * 選択範囲内のfont-sizeスタイルを解除（プライベートメソッド）
+     * @private
+     * @param {Range} range - 選択範囲
+     * @param {HTMLElement} editor - エディタ要素
+     */
+    #removeFontSizeInRange(range, editor) {
+        // エディタ内の選択範囲にあるfont-size付き要素を直接処理
+        const selectedNodes = this.#getNodesInRange(range);
+        selectedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE && node.style?.fontSize) {
+                // spanのfont-sizeを削除
+                node.style.fontSize = '';
+                if (!node.getAttribute('style')?.trim()) {
+                    node.removeAttribute('style');
+                }
+                // 空のspanは中身を取り出して置換
+                if (node.tagName === 'SPAN' && !node.hasAttribute('style') && !node.hasAttribute('class')) {
+                    const parent = node.parentNode;
+                    while (node.firstChild) {
+                        parent.insertBefore(node.firstChild, node);
+                    }
+                    parent.removeChild(node);
+                }
+            }
+        });
+    }
+    
+    /**
+     * 選択範囲内のノードを取得（プライベートメソッド）
+     * @private
+     * @param {Range} range - 選択範囲
+     * @returns {Array<Node>} ノード配列
+     */
+    #getNodesInRange(range) {
+        const nodes = [];
+        const treeWalker = document.createTreeWalker(
+            range.commonAncestorContainer,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: (node) => {
+                    if (range.intersectsNode(node)) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_REJECT;
+                }
+            }
+        );
+        
+        let node;
+        while (node = treeWalker.nextNode()) {
+            nodes.push(node);
+        }
+        
+        return nodes;
+    }
 
     // ================
     // Public API - 自動保存
     // ================
 
     /**
-     * 自動保存の設定
+     * 自動保存の設定（スマートペースト対応）
+     * - Ctrl+V: プレーンテキスト（外部サイトから）
+     * - Ctrl+Shift+V: HTML維持（装飾を保持、同じノート間）
      */
     setupNoteAutoSave() {
         const memoElement = document.getElementById('noteMemo');
@@ -1897,6 +1984,58 @@ class NoteManagerModule {
             element.addEventListener('blur', () => {
                 clearTimeout(this.#autoSaveTimer);
                 this.autoSaveNoteQuietly();
+            });
+            
+            // === 追加: スマートペースト機能 ===
+            // Ctrl+V = プレーンテキスト、Ctrl+Shift+V = HTML維持
+            element.addEventListener('paste', (e) => {
+                // Shift+Ctrl+Vの場合はデフォルト動作（HTML維持）
+                if (e.shiftKey) {
+                    // デフォルト動作を許可（何もしない）
+                    // 自動保存だけトリガー
+                    clearTimeout(this.#autoSaveTimer);
+                    this.#autoSaveTimer = setTimeout(() => {
+                        this.autoSaveNoteQuietly();
+                    }, 2000);
+                    return;
+                }
+                
+                // 通常のCtrl+V = プレーンテキストペースト
+                e.preventDefault();
+                
+                // クリップボードからプレーンテキストを取得
+                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+                
+                // 選択範囲にテキストを挿入
+                const selection = window.getSelection();
+                if (!selection.rangeCount) return;
+                
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                
+                // 改行を<br>に変換してHTMLとして挿入
+                const lines = text.split('\n');
+                const fragment = document.createDocumentFragment();
+                
+                lines.forEach((line, index) => {
+                    if (index > 0) {
+                        fragment.appendChild(document.createElement('br'));
+                    }
+                    fragment.appendChild(document.createTextNode(line));
+                });
+                
+                range.insertNode(fragment);
+                
+                // カーソルを挿入位置の後ろに移動
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                // 自動保存をトリガー
+                clearTimeout(this.#autoSaveTimer);
+                this.#autoSaveTimer = setTimeout(() => {
+                    this.autoSaveNoteQuietly();
+                }, 2000);
             });
         });
     }
