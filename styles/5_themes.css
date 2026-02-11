@@ -2533,6 +2533,18 @@ body.light-mode ::-webkit-scrollbar-track { background: #f0f0f0; }
 body.light-mode ::-webkit-scrollbar-thumb { background: rgba(0, 170, 90, 0.25); }
 body.light-mode ::-webkit-scrollbar-thumb:hover { background: rgba(0, 170, 90, 0.4); }
 
+/* ライトモード ユーティリティクラス */
+body.light-mode .text-hint { color: #666; }
+body.light-mode .text-accent { color: #00995a; }
+body.light-mode .subsection-box {
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+}
+body.light-mode .card-bg { background: #f0f0f0; }
+body.light-mode .border-subtle { border-color: #e0e0e0; }
+body.light-mode .border-separator { border-bottom-color: #e0e0e0; }
+body.light-mode .border-separator-top { border-top-color: #e0e0e0; }
+
 /* ライトモード デモラベル（本番では不要） */
 body.light-mode .demo-label {
     background: linear-gradient(135deg, rgba(180, 140, 20, 0.1), rgba(0, 170, 90, 0.06));

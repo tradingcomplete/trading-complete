@@ -202,7 +202,7 @@ body::after {
 .goal-item:has(.goal-text:empty) .goal-text,
 .goal-item:has(.goal-text:contains('ç›®æ¨™ã‚’è¨­å®š')) .goal-text {
     text-shadow: none;
-    color: #888;
+    color: #7a8599;
     font-weight: 400;
 }
 
@@ -215,7 +215,7 @@ body::after {
 
 .goal-check {
     font-size: 1.1rem;
-    color: #888;
+    color: #7a8599;
     transition: all 0.3s ease;
 }
 
@@ -412,6 +412,48 @@ body::after {
 .color-loss { color: var(--loss) !important; }
 .color-accent { color: #00ff88 !important; }
 .color-gold { color: var(--gold-bright) !important; }
+
+/* =====================================================
+   共通ユーティリティクラス（インラインstyle除去用）
+   ===================================================== */
+
+/* ヒントテキスト（旧 color: #888） */
+.text-hint {
+    color: #7a8599;
+}
+
+/* アクセントラベル（旧 color: #00ff88 / #4ade80） */
+.text-accent {
+    color: #00ff88;
+}
+
+/* サブセクション背景（旧 background: #1a1a1a + border: #333） */
+.subsection-box {
+    background: #0c1018;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* カード背景（旧 background: #2a2a2a） */
+.card-bg {
+    background: #101420;
+}
+
+/* カード枠線（旧 border: 1px solid #444） */
+.border-subtle {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* セパレータ（旧 border-bottom: 1px solid #333 / #444） */
+.border-separator {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.border-separator-top {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -726,7 +768,7 @@ textarea {
 .modal-close {
     background: none;
     border: none;
-    color: #888;
+    color: #7a8599;
     font-size: 1.5rem;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -873,7 +915,7 @@ textarea {
 }
 
 .coming-soon-box p {
-    color: #888;
+    color: #7a8599;
     margin-bottom: 25px;
     font-size: 16px;
     line-height: 1.6;
