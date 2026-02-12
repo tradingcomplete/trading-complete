@@ -41,7 +41,7 @@ function renderMethodList() {
     
     if (methods.length === 0) {
         container.innerHTML = `
-            <div style="color: #888; padding: 20px; text-align: center; border: 1px dashed #444; border-radius: 8px;">
+            <div style="color: #7a8599; padding: 20px; text-align: center; border: 1px dashed #444; border-radius: 8px;">
                 登録された手法はありません
             </div>
         `;
@@ -70,7 +70,7 @@ function renderMethodList() {
                     ">${escapeHtml(method.shortName)}</span>
                     <span style="font-weight: bold;">${escapeHtml(method.name)}</span>
                 </div>
-                ${method.memo ? `<div style="color: #888; font-size: 12px;">${escapeHtml(method.memo)}</div>` : ''}
+                ${method.memo ? `<div style="color: #7a8599; font-size: 12px;">${escapeHtml(method.memo)}</div>` : ''}
             </div>
             <button class="btn btn-danger" 
                     onclick="confirmDeleteMethod('${method.id}')"

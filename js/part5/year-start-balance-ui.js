@@ -47,7 +47,7 @@ function addYearStartBalanceRowUI(year, amount) {
                value="${amount}" 
                onchange="saveYearStartBalance(${year}, this.value)"
                style="flex: 1; max-width: 200px; padding: 8px; background: #374151; color: white; border: 1px solid #4b5563; border-radius: 4px; text-align: right;">
-        <span style="color: #888;">円</span>
+        <span style="color: #7a8599;">円</span>
         <button onclick="calculateFromPrevYear(${year}, this.parentElement)"
                 style="padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
                 title="前年末残高から自動計算">
