@@ -733,7 +733,7 @@ class TradeList {
                                 const titleEl = document.createElement('div');
                                 titleEl.className = 'trade-image-title';
                                 titleEl.textContent = imgTitle;
-                                titleEl.style.cssText = 'font-size: 11px; color: #888; text-align: center; margin-top: 4px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+                                titleEl.style.cssText = 'font-size: 11px; color: #7a8599; text-align: center; margin-top: 4px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
                                 wrapper.appendChild(titleEl);
                             }
                             

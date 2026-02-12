@@ -37,7 +37,7 @@ class YenProfitLossModalModule {
                         <button class="modal-close" id="yenModalClose">×</button>
                     </div>
                     <div class="modal-body">
-                        <div class="trade-info" style="background: #1a1a1a; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+                        <div class="trade-info" style="background: #0c1018; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
                             <div id="yenModalTradeInfo"></div>
                         </div>
                         <!-- 縦一列レイアウト（ブローカー削除） -->
@@ -56,7 +56,7 @@ class YenProfitLossModalModule {
                             </div>
                             <div class="input-group">
                                 <label>実損益（円）</label>
-                                <input type="number" id="yenNetProfit" readonly style="background: #2a2a2a; font-weight: bold;">
+                                <input type="number" id="yenNetProfit" readonly style="background: #101420; font-weight: bold;">
                             </div>
                         </div>
                     </div>
@@ -100,7 +100,7 @@ class YenProfitLossModalModule {
         
         const netProfitInput = document.getElementById('yenNetProfit');
         netProfitInput.value = netProfit;
-        netProfitInput.style.color = netProfit >= 0 ? '#4ade80' : '#f87171';
+        netProfitInput.style.color = netProfit >= 0 ? '#00ff88' : '#ff4466';
     }
     
     #bindGlobalFunctions() {

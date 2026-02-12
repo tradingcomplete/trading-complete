@@ -63,7 +63,7 @@ class ChartModule {
                 // データが存在しない場合の処理
                 if (!tradesData || tradesData.length === 0) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = '#888';
+                    ctx.fillStyle = '#7a8599';
                     ctx.font = '14px Arial';
                     ctx.textAlign = 'center';
                     ctx.fillText('トレードデータがありません', canvas.width / 2, canvas.height / 2);
@@ -162,7 +162,7 @@ class ChartModule {
             const centerY = canvas.height / 2;
             
             // 軸描画
-            ctx.strokeStyle = isLightMode ? '#999' : '#444';
+            ctx.strokeStyle = isLightMode ? '#999' : 'rgba(255, 255, 255, 0.06)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(padding, padding);
@@ -913,7 +913,7 @@ class ChartModule {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         if (stats.totalTrades === 0) {
-            ctx.fillStyle = isLightMode ? '#666' : '#888';
+            ctx.fillStyle = isLightMode ? '#666' : '#7a8599';
             ctx.font = isMobile ? '14px Arial' : '16px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('トレードデータがありません', canvas.width / 2, canvas.height / 2);

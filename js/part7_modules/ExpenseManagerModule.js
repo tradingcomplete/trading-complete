@@ -582,7 +582,7 @@ class ExpenseManagerModule {
             /* 経費リストコンテナ */
             .expense-list {
                 width: 100%;
-                border: 1px solid #444;
+                border: 1px solid rgba(255, 255, 255, 0.06);
                 border-radius: 8px;
                 overflow: hidden;
             }
@@ -594,8 +594,8 @@ class ExpenseManagerModule {
                 gap: 10px;
                 align-items: center;
                 padding: 12px 15px;
-                border-bottom: 1px solid #333;
-                background: #1a1a1a;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                background: #0c1018;
                 transition: background 0.2s;
             }
             
@@ -604,7 +604,7 @@ class ExpenseManagerModule {
             }
             
             .expense-item:hover {
-                background: #252525;
+                background: #0f1320;
             }
             
             /* 日付 */
@@ -688,10 +688,10 @@ class ExpenseManagerModule {
             /* カテゴリグループ */
             .expense-category-group {
                 margin-bottom: 20px;
-                border: 1px solid #444;
+                border: 1px solid rgba(255, 255, 255, 0.06);
                 border-radius: 8px;
                 overflow: hidden;
-                background: #1a1a1a;
+                background: #0c1018;
             }
             
             /* カテゴリヘッダー */
@@ -700,14 +700,14 @@ class ExpenseManagerModule {
                 justify-content: space-between;
                 align-items: center;
                 padding: 15px;
-                background: #2a2a2a;
+                background: #101420;
                 cursor: pointer;
                 transition: background 0.2s;
                 user-select: none;
             }
             
             .category-header:hover {
-                background: #3a3a3a;
+                background: #151a28;
             }
             
             /* カテゴリ情報 */
@@ -766,8 +766,8 @@ class ExpenseManagerModule {
             
             /* 経費カード */
             .expense-card {
-                background: #2a2a2a;
-                border: 1px solid #444;
+                background: #101420;
+                border: 1px solid rgba(255, 255, 255, 0.06);
                 border-radius: 8px;
                 padding: 12px;
                 margin-bottom: 10px;
@@ -779,7 +779,7 @@ class ExpenseManagerModule {
             }
             
             .expense-card:hover {
-                background: #3a3a3a;
+                background: #151a28;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                 transform: translateY(-1px);
             }
@@ -858,7 +858,7 @@ class ExpenseManagerModule {
                 text-align: center;
                 font-size: 16px;
                 font-weight: bold;
-                border-top: 2px solid #444;
+                border-top: 2px solid rgba(255, 255, 255, 0.06);
                 color: #ccc;
             }
             
@@ -1061,7 +1061,7 @@ class ExpenseManagerModule {
             // 経費0件の場合
             if (expenses.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #888;">
+                    <div style="text-align: center; padding: 40px; color: #7a8599;">
                         <p style="font-size: 18px; margin-bottom: 10px;">📭</p>
                         <p>経費データがありません</p>
                     </div>

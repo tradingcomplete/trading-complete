@@ -2,7 +2,7 @@
  * @file broker-ui.js
  * @description ブローカー管理のUI制御
  * @author AI Assistant / コンパナ
- * @version 1.0.4
+ * @version 1.0.5
  * @date 2025-11-20
  * 
  * 【責務】
@@ -96,7 +96,7 @@ function renderBrokerList() {
         container.innerHTML = `
             <div style="padding: 20px; background: rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
                 <p style="color: #aaa; margin: 0;">まだブローカーが登録されていません</p>
-                <p style="color: #888; font-size: 0.9em; margin: 10px 0 0 0;">「ブローカーを追加」ボタンから登録してください</p>
+                <p style="color: #7a8599; font-size: 0.9em; margin: 10px 0 0 0;">「ブローカーを追加」ボタンから登録してください</p>
             </div>
         `;
         return;
@@ -554,4 +554,4 @@ function debugBrokerUI() {
     console.log('Presets:', window.SettingsModule?.getPresetBrokers().length);
 }
 
-console.log('✅ broker-ui.js loaded (v1.0.4 - CSS class適用)');
+console.log('✅ broker-ui.js loaded (v1.0.5 - カラー統一)');

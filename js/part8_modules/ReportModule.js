@@ -365,9 +365,9 @@ class ReportModule {
         }
         
         /* 色分け */
-        .positive { color: #4ade80; }
-        .negative { color: #f87171; }
-        .worst-trade { border-left-color: #f87171; }
+        .positive { color: #00ff88; }
+        .negative { color: #ff4466; }
+        .worst-trade { border-left-color: #ff4466; }
         
         /* ベストプラクティス */
         .practices-section {
@@ -440,11 +440,11 @@ class ReportModule {
         
         /* 色分け */
         .stat-value.positive {
-            color: #4ade80;
+            color: #00ff88;
         }
         
         .stat-value.negative {
-            color: #f87171;
+            color: #ff4466;
         }
         
         /* トレードテーブル */
@@ -601,7 +601,7 @@ class ReportModule {
                 <div class="stat-label">円建て登録済</div>
                 <div class="stat-value">
                     ${stats.yenRegistered}/${stats.totalTrades}
-                    <span style="color: ${stats.yenRegistered === stats.totalTrades ? '#4ade80' : '#fbbf24'}">
+                    <span style="color: ${stats.yenRegistered === stats.totalTrades ? '#00ff88' : '#fbbf24'}">
                         ${stats.yenRegistered === stats.totalTrades ? '🟢' : '🟡'}
                     </span>
                 </div>
@@ -677,7 +677,7 @@ class ReportModule {
     <!-- 通貨ペア + 曜日別分析（同一ページ） -->
     <div class="pair-day-analysis-section">
         <div style="margin-bottom: 30px;">
-            <h4 style="color: #4ade80; margin-bottom: 15px;">💱 通貨ペア / 商品</h4>
+            <h4 style="color: #00ff88; margin-bottom: 15px;">💱 通貨ペア / 商品</h4>
             <table class="trades-table">
                 <thead>
                     <tr>
@@ -695,7 +695,7 @@ class ReportModule {
                             <td>${pairData.trades}</td>
                             <td>${pairData.wins}勝${pairData.losses}敗</td>
                             <td>${pairData.trades > 0 ? (pairData.wins / pairData.trades * 100).toFixed(1) : 0}%</td>
-                            <td style="color: ${pairData.pips >= 0 ? '#4ade80' : '#f87171'}">
+                            <td style="color: ${pairData.pips >= 0 ? '#00ff88' : '#ff4466'}">
                                 ${pairData.pips >= 0 ? '+' : ''}${pairData.pips.toFixed(1)}
                             </td>
                         </tr>
@@ -705,7 +705,7 @@ class ReportModule {
         </div>
         
         <div>
-            <h4 style="color: #4ade80; margin-bottom: 15px;">📅 曜日別分析（エントリー日時ベース）</h4>
+            <h4 style="color: #00ff88; margin-bottom: 15px;">📅 曜日別分析（エントリー日時ベース）</h4>
             <table class="trades-table">
                 <thead>
                     <tr>
@@ -723,10 +723,10 @@ class ReportModule {
                             <tr>
                                 <td>${day}曜日</td>
                                 <td>${dayData.trades}</td>
-                                <td style="color: ${dayData.pips >= 0 ? '#4ade80' : '#f87171'}">
+                                <td style="color: ${dayData.pips >= 0 ? '#00ff88' : '#ff4466'}">
                                     ${dayData.pips >= 0 ? '+' : ''}${dayData.pips.toFixed(1)}
                                 </td>
-                                <td style="color: ${avgPips >= 0 ? '#4ade80' : '#f87171'}">
+                                <td style="color: ${avgPips >= 0 ? '#00ff88' : '#ff4466'}">
                                     ${avgPips >= 0 ? '+' : ''}${avgPips.toFixed(1)}
                                 </td>
                             </tr>
@@ -744,7 +744,7 @@ class ReportModule {
     </div>
     
     <div class="recent-trades trade-history-section">
-        <h4 style="color: #4ade80; margin-bottom: 15px;">📈 トレード履歴</h4>
+        <h4 style="color: #00ff88; margin-bottom: 15px;">📈 トレード履歴</h4>
         <table class="trades-table">
             <thead>
                 <tr>
@@ -769,7 +769,7 @@ class ReportModule {
                         <tr>
                             <td>${exitDate.toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
                             <td>${trade.pair}</td>
-                            <td style="color: ${pips >= 0 ? '#4ade80' : '#f87171'}; font-weight: bold;">
+                            <td style="color: ${pips >= 0 ? '#00ff88' : '#ff4466'}; font-weight: bold;">
                                 ${pips >= 0 ? '+' : ''}${pips.toFixed(1)} pips
                             </td>
                             <td>${holdTimeStr}</td>
@@ -1437,20 +1437,20 @@ class ReportModule {
         content.innerHTML = `
             
             <div class="report-accordion" style="margin-top: 30px;">
-                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(74, 222, 128, 0.1); border-radius: 5px; margin-bottom: 10px;">
-                    <h4 style="color: #4ade80; margin: 0;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                    <h4 style="color: #00ff88; margin: 0;">
                         <span id="pairAnalysis-icon" 
                               onclick="window.ReportModule.toggleAccordion('pairAnalysis')" 
-                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;"
-                              onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                              onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
+                              onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                              onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                         💱 通貨ペア / 商品分析
                     </h4>
                     <span id="pairAnalysis-icon-right"
                           onclick="window.ReportModule.toggleAccordion('pairAnalysis')" 
-                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease; color: #4ade80; font-size: 16px;"
-                          onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                          onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease; color: #00ff88; font-size: 16px;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                 </div>
                 <div id="pairAnalysis-content" style="display: none;">
                 <table class="trades-table">
@@ -1477,7 +1477,7 @@ class ReportModule {
                                 <td>${stats.trades}</td>
                                 <td>${stats.wins}勝${stats.losses}敗</td>
                                 <td>${stats.trades > 0 ? (stats.wins / stats.trades * 100).toFixed(1) : 0}%</td>
-                                <td style="color: ${stats.pips >= 0 ? '#4ade80' : '#f87171'}">
+                                <td style="color: ${stats.pips >= 0 ? '#00ff88' : '#ff4466'}">
                                     ${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}
                                 </td>
                             </tr>
@@ -1490,20 +1490,20 @@ class ReportModule {
             </div>
             
             <div class="report-accordion" style="margin-top: 30px;">
-                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(74, 222, 128, 0.1); border-radius: 5px; margin-bottom: 10px;">
-                    <h4 style="color: #4ade80; margin: 0;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                    <h4 style="color: #00ff88; margin: 0;">
                         <span id="dayAnalysis-icon" 
                               onclick="window.ReportModule.toggleAccordion('dayAnalysis')" 
-                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;"
-                              onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                              onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
+                              onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                              onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                         📅 曜日別分析（エントリー日時ベース）
                     </h4>
                     <span id="dayAnalysis-icon-right"
                           onclick="window.ReportModule.toggleAccordion('dayAnalysis')" 
-                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease; color: #4ade80; font-size: 16px;"
-                          onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                          onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease; color: #00ff88; font-size: 16px;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                 </div>
                 <div id="dayAnalysis-content" style="display: none;">
                 <table class="trades-table">
@@ -1523,10 +1523,10 @@ class ReportModule {
                                 <tr>
                                     <td>${day}曜日</td>
                                     <td>${dayData.trades}</td>
-                                    <td style="color: ${dayData.pips >= 0 ? '#4ade80' : '#f87171'}">
+                                    <td style="color: ${dayData.pips >= 0 ? '#00ff88' : '#ff4466'}">
                                         ${dayData.pips >= 0 ? '+' : ''}${dayData.pips.toFixed(1)}
                                     </td>
-                                    <td style="color: ${avgPips >= 0 ? '#4ade80' : '#f87171'}">
+                                    <td style="color: ${avgPips >= 0 ? '#00ff88' : '#ff4466'}">
                                         ${avgPips >= 0 ? '+' : ''}${avgPips.toFixed(1)}
                                     </td>
                                 </tr>
@@ -1538,28 +1538,28 @@ class ReportModule {
             </div>
             
             <div class="report-accordion recent-trades" style="margin-top: 30px;">
-                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(74, 222, 128, 0.1); border-radius: 5px; margin-bottom: 10px;">
-                <h4 style="color: #4ade80; margin: 0; display: flex; align-items: center; width: 100%;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                <h4 style="color: #00ff88; margin: 0; display: flex; align-items: center; width: 100%;">
                     <span id="tradeHistory-icon" 
                           onclick="window.ReportModule.toggleAccordion('tradeHistory')" 
-                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;"
-                          onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                          onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                     <span style="margin-left: 2px;">📈 トレード履歴</span>
                     <div style="margin-left: auto; display: flex; gap: 14px; margin-right: 15px;">
-                        <button onclick="event.stopPropagation(); window.ReportModule.toggleTradeSort()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #4ade80; color: #4ade80; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">
+                        <button onclick="event.stopPropagation(); window.ReportModule.toggleTradeSort()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #00ff88; color: #00ff88; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">
                             ${window.currentTradeSort === 'entry' ? '決済日時' : 'エントリー日時'}
                         </button>
-                        <button onclick="event.stopPropagation(); window.ReportModule.toggleSortOrder()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #4ade80; color: #4ade80; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">
+                        <button onclick="event.stopPropagation(); window.ReportModule.toggleSortOrder()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #00ff88; color: #00ff88; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">
                             ${window.currentSortOrder === 'desc' ? '古い順 ↓' : '新しい順 ↓'}
                         </button>
                     </div>
                 </h4>
                 <span id="tradeHistory-icon-right"
                       onclick="window.ReportModule.toggleAccordion('tradeHistory')" 
-                      style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease; color: #4ade80; font-size: 16px;"
-                      onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                      onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                      style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease; color: #00ff88; font-size: 16px;"
+                      onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                      onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                 </div>
                 <div id="tradeHistory-content" style="display: none;">
                 <table class="trades-table">
@@ -1596,7 +1596,7 @@ class ReportModule {
                                     <td>${window.formatDateTimeForDisplay(displayDate)}</td>
                                     <td>${trade.pair}</td>
                                     <td>
-                                        <span class="${pips >= 0 ? 'win' : 'loss'}" style="color: ${pips >= 0 ? '#4ade80' : '#f87171'}">
+                                        <span class="${pips >= 0 ? 'win' : 'loss'}" style="color: ${pips >= 0 ? '#00ff88' : '#ff4466'}">
                                             ${pips >= 0 ? '+' : ''}${pips.toFixed(1)} pips
                                         </span>
                                     </td>
@@ -1620,20 +1620,20 @@ class ReportModule {
         const reflectionHTML = this.#generateReflectionList(data);
         const accordionReflection = `
             <div class="report-accordion" style="margin-top: 30px;">
-                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(74, 222, 128, 0.1); border-radius: 5px; margin-bottom: 10px;">
-                    <h4 style="color: #4ade80; margin: 0;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                    <h4 style="color: #00ff88; margin: 0;">
                         <span id="reflectionList-icon" 
                               onclick="window.ReportModule.toggleAccordion('reflectionList')" 
-                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;"
-                              onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                              onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
+                              onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                              onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                         📝 振り返り一覧
                     </h4>
                     <span id="reflectionList-icon-right"
                           onclick="window.ReportModule.toggleAccordion('reflectionList')" 
-                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease; color: #4ade80; font-size: 16px;"
-                          onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                          onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease; color: #00ff88; font-size: 16px;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                 </div>
                 <div id="reflectionList-content" style="display: none;">
                     ${reflectionHTML}
@@ -1651,7 +1651,7 @@ class ReportModule {
             if (monthEndNote) {
                 content.innerHTML += `
                     <div style="margin-top: 30px; background: rgba(255, 253, 240, 0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(240, 230, 140, 0.3);">
-                        <h4 style="color: #4ade80; margin-bottom: 15px;">📝 月間総括メモ</h4>
+                        <h4 style="color: #00ff88; margin-bottom: 15px;">📝 月間総括メモ</h4>
                         <div style="color: #ccc; line-height: 1.8;">
                             ${monthEndNote}
                         </div>
@@ -1667,7 +1667,7 @@ class ReportModule {
                     <button onclick="printMonthlyReport()" class="btn btn-primary">
                         📄 月次レポートをPDF保存
                     </button>
-                    <p class="report-hint-text" style="margin-top: 15px; font-size: 0.85em; color: #888;">
+                    <p class="report-hint-text" style="margin-top: 15px; font-size: 0.85em; color: #7a8599;">
                         💡 相場ノートの月末日の【メモ欄】に<br class="mobile-break">「月間総括」or「月末まとめ」と書いて<br class="mobile-break">コメント入力するとレポートに反映されます。
                     </p>
                 </div>
@@ -1768,7 +1768,7 @@ class ReportModule {
                 
                 ${paginatedWins.length > 0 ? `
                 <div class="reflection-win-section" style="margin-bottom: 30px;">
-                    <h4 style="color: #4ade80; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                    <h4 style="color: #00ff88; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 20px;">▲</span>
                         勝ちトレード (${winWithReflection.length}件)
                     </h4>
@@ -1778,7 +1778,7 @@ class ReportModule {
                 
                 ${paginatedLosses.length > 0 ? `
                 <div class="reflection-loss-section">
-                    <h4 style="color: #f87171; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                    <h4 style="color: #ff4466; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 20px;">▼</span>
                         負けトレード (${lossWithReflection.length}件)
                     </h4>
@@ -1787,7 +1787,7 @@ class ReportModule {
                 ` : ''}
                 
                 ${paginatedWins.length === 0 && paginatedLosses.length === 0 ? `
-                    <p style="color: #888; text-align: center; padding: 20px;">
+                    <p style="color: #7a8599; text-align: center; padding: 20px;">
                         振り返りが記入されたトレードはありません
                     </p>
                 ` : ''}
@@ -1817,11 +1817,11 @@ class ReportModule {
         
         // 色設定
         const isWin = type === 'win';
-        const color = isWin ? '#4ade80' : '#f87171';
-        const bgColor = isWin ? 'rgba(74, 222, 128, 0.08)' : 'rgba(248, 113, 113, 0.08)';
-        const borderColor = isWin ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)';
-        const hoverBg = isWin ? 'rgba(74, 222, 128, 0.1)' : 'rgba(248, 113, 113, 0.1)';
-        const badgeBg = isWin ? 'rgba(74, 222, 128, 0.3)' : 'rgba(248, 113, 113, 0.3)';
+        const color = isWin ? '#00ff88' : '#ff4466';
+        const bgColor = isWin ? 'rgba(0, 255, 136, 0.08)' : 'rgba(248, 113, 113, 0.08)';
+        const borderColor = isWin ? 'rgba(0, 255, 136, 0.2)' : 'rgba(248, 113, 113, 0.2)';
+        const hoverBg = isWin ? 'rgba(0, 255, 136, 0.1)' : 'rgba(248, 113, 113, 0.1)';
+        const badgeBg = isWin ? 'rgba(0, 255, 136, 0.3)' : 'rgba(248, 113, 113, 0.3)';
         
         return `
             <div style="background: ${bgColor}; 
@@ -1857,7 +1857,7 @@ class ReportModule {
                                     ${window.escapeHtml(line)}
                                 </div>
                             `).join('') : 
-                            '<span style="color: #888; font-style: italic;">振り返り未記入</span>'
+                            '<span style="color: #7a8599; font-style: italic;">振り返り未記入</span>'
                         }
                     </div>
                     
@@ -1910,10 +1910,10 @@ class ReportModule {
         }
         
         return `
-            <div class="pagination-controls" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(74, 222, 128, 0.05); border-radius: 5px;">
+            <div class="pagination-controls" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.05); border-radius: 5px;">
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <label style="color: #aaa; font-size: 14px;">表示件数:</label>
-                    <select onchange="window.ReportModule.changePagination('${sectionId}', 'perPage', this.value)" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #4ade80; color: #4ade80; padding: 5px 10px; border-radius: 5px; cursor: pointer;">
+                    <select onchange="window.ReportModule.changePagination('${sectionId}', 'perPage', this.value)" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #00ff88; color: #00ff88; padding: 5px 10px; border-radius: 5px; cursor: pointer;">
                         <option value="10" ${state.perPage === 10 ? 'selected' : ''}>10件</option>
                         <option value="20" ${state.perPage === 20 ? 'selected' : ''}>20件</option>
                         <option value="50" ${state.perPage === 50 ? 'selected' : ''}>50件</option>
@@ -1924,19 +1924,19 @@ class ReportModule {
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <button onclick="window.ReportModule.changePagination('${sectionId}', 'prev')" 
                             ${currentPage <= 1 ? 'disabled' : ''}
-                            style="background: rgba(255, 255, 255, 0.1); border: 1px solid #4ade80; color: #4ade80; padding: 5px 15px; border-radius: 5px; cursor: pointer; ${currentPage <= 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+                            style="background: rgba(255, 255, 255, 0.1); border: 1px solid #00ff88; color: #00ff88; padding: 5px 15px; border-radius: 5px; cursor: pointer; ${currentPage <= 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
                         ◀ 前へ
                     </button>
-                    <span style="color: #4ade80; font-size: 14px;">
+                    <span style="color: #00ff88; font-size: 14px;">
                         ${currentPage} / ${totalPages} ページ
                     </span>
                     <button onclick="window.ReportModule.changePagination('${sectionId}', 'next')" 
                             ${currentPage >= totalPages ? 'disabled' : ''}
-                            style="background: rgba(255, 255, 255, 0.1); border: 1px solid #4ade80; color: #4ade80; padding: 5px 15px; border-radius: 5px; cursor: pointer; ${currentPage >= totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+                            style="background: rgba(255, 255, 255, 0.1); border: 1px solid #00ff88; color: #00ff88; padding: 5px 15px; border-radius: 5px; cursor: pointer; ${currentPage >= totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
                         次へ ▶
                     </button>
                 </div>
-                <div style="color: #888; font-size: 12px;">
+                <div style="color: #7a8599; font-size: 12px;">
                     全${totalItems}件中 ${Math.min((currentPage - 1) * state.perPage + 1, totalItems)}-${Math.min(currentPage * state.perPage, totalItems)}件を表示
                 </div>
             </div>
@@ -2816,11 +2816,11 @@ class ReportModule {
                     <td style="text-align: center;">-</td>
                 </tr>`;
             }
-            const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+            const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
             const evPips = stats.pips / stats.count;
-            const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+            const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
             const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
-            const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
+            const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
             return `<tr>
                 <td style="text-align: center;">${badge}</td>
                 <td style="text-align: center;">${stats.count}件</td>
@@ -2837,11 +2837,11 @@ class ReportModule {
             .sort((a, b) => b[1].pips - a[1].pips)  // Pips降順
             .map(([methodId, stats]) => {
                 const name = getMethodName(methodId);
-                const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+                const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
                 const evPips = stats.count > 0 ? stats.pips / stats.count : 0;
-                const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+                const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
                 const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
-                const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
+                const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
                 return `<tr>
                     <td style="text-align: left; padding-left: 10px;">${name}</td>
                     <td style="text-align: center;">${stats.count}件</td>
@@ -2861,29 +2861,29 @@ class ReportModule {
             font-size: 0.9rem;
         `;
         const thStyle = `
-            background: rgba(74, 222, 128, 0.1);
-            color: #4ade80;
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
             padding: 10px 5px;
             text-align: center;
-            border-bottom: 1px solid rgba(74, 222, 128, 0.3);
+            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
         `;
         
         return `
             <div class="report-accordion" style="margin-top: 30px;">
-                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(74, 222, 128, 0.1); border-radius: 5px; margin-bottom: 10px;">
-                    <h4 style="color: #4ade80; margin: 0;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                    <h4 style="color: #00ff88; margin: 0;">
                         <span id="ruleRiskAnalysis-icon" 
                               onclick="window.ReportModule.toggleAccordion('ruleRiskAnalysis')" 
-                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;"
-                              onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                              onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
+                              onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                              onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                         ⭕ ルール遵守・リスク分析
                     </h4>
                     <span id="ruleRiskAnalysis-icon-right"
                           onclick="window.ReportModule.toggleAccordion('ruleRiskAnalysis')" 
-                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15); transition: all 0.3s ease; color: #4ade80; font-size: 16px;"
-                          onmouseover="this.style.boxShadow='0 0 12px rgba(74, 222, 128, 0.5), 0 0 24px rgba(74, 222, 128, 0.35), 0 0 36px rgba(74, 222, 128, 0.2)'; this.style.transform='scale(1.1)';"
-                          onmouseout="this.style.boxShadow='0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.25), 0 0 24px rgba(74, 222, 128, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease; color: #00ff88; font-size: 16px;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
                 </div>
                 <div id="ruleRiskAnalysis-content" style="display: none;">
                     
@@ -3065,11 +3065,11 @@ class ReportModule {
                     <td style="text-align: center;">-</td>
                 </tr>`;
             }
-            const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+            const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
             const evPips = stats.pips / stats.count;
-            const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+            const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
             const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
-            const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
+            const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
             return `<tr>
                 <td style="text-align: center;">${badge}</td>
                 <td style="text-align: center;">${stats.count}件</td>
@@ -3086,11 +3086,11 @@ class ReportModule {
             .sort((a, b) => b[1].pips - a[1].pips)
             .map(([methodId, stats]) => {
                 const name = getMethodName(methodId);
-                const pipsColor = stats.pips >= 0 ? '#4ade80' : '#f87171';
+                const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
                 const evPips = stats.count > 0 ? stats.pips / stats.count : 0;
-                const evPipsColor = evPips >= 0 ? '#4ade80' : '#f87171';
+                const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
                 const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
-                const evYenColor = evYen >= 0 ? '#4ade80' : '#f87171';
+                const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
                 return `<tr>
                     <td style="text-align: left;">${name}</td>
                     <td style="text-align: center;">${stats.count}件</td>
@@ -3105,7 +3105,7 @@ class ReportModule {
         return `
             <!-- ルール遵守別成績 -->
             <div style="margin-bottom: 25px;">
-                <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 ルール遵守別成績</h4>
+                <h4 style="color: #7a8599; margin-bottom: 10px; font-size: 14px;">📋 ルール遵守別成績</h4>
                 <table class="trades-table" style="font-size: 12px;">
                     <thead>
                         <tr>
@@ -3127,7 +3127,7 @@ class ReportModule {
             
             <!-- 許容損失別成績 -->
             <div style="margin-bottom: 25px;">
-                <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 許容損失別成績</h4>
+                <h4 style="color: #7a8599; margin-bottom: 10px; font-size: 14px;">📋 許容損失別成績</h4>
                 <table class="trades-table" style="font-size: 12px;">
                     <thead>
                         <tr>
@@ -3150,7 +3150,7 @@ class ReportModule {
             
             <!-- 手法別成績 -->
             <div>
-                <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 手法別成績</h4>
+                <h4 style="color: #7a8599; margin-bottom: 10px; font-size: 14px;">📋 手法別成績</h4>
                 <table class="trades-table" style="font-size: 12px;">
                     <thead>
                         <tr>

@@ -2179,11 +2179,11 @@ function calculateNetProfit() {
         
         // 色分け表示
         if (netProfit > 0) {
-            display.style.color = '#00ff88';  // 緑
+            display.style.color = '#4ade80';  // 緑
             display.classList.remove('loss');
             display.classList.add('profit');
         } else if (netProfit < 0) {
-            display.style.color = '#ff4466';  // 赤
+            display.style.color = '#f87171';  // 赤
             display.classList.remove('profit');
             display.classList.add('loss');
         } else {
@@ -2441,7 +2441,7 @@ window.TradeListRenderer = {
         if (trades.length === 0) {
             const p = document.createElement('p');
             p.style.textAlign = 'center';
-            p.style.color = '#7a8599';
+            p.style.color = '#888';
             p.textContent = 'トレード記録がありません';
             this.fragment.appendChild(p);
         } else {
@@ -2656,7 +2656,7 @@ function updateQuickStats() {
     const yenPLElement = document.getElementById('monthlyYenPL');
     if (yenPLElement) {
         yenPLElement.textContent = `¥${monthlyYenPL.toLocaleString('ja-JP')}`;
-        yenPLElement.style.color = monthlyYenPL >= 0 ? '#00ff88' : '#ff4466';
+        yenPLElement.style.color = monthlyYenPL >= 0 ? '#4ade80' : '#f87171';
     }
 }
 
@@ -2862,7 +2862,7 @@ function addYenProfitLoss(tradeId) {
         </div>
         <div style="padding: 20px;">
             <h3>${trade.pair} ${trade.direction === 'long' ? 'LONG' : 'SHORT'}</h3>
-            <p style="color: #7a8599; margin-bottom: 20px;">
+            <p style="color: #888; margin-bottom: 20px;">
                 ${formatDateTimeForDisplay(trade.entryTime)} → 
                 ${trade.exits.length > 0 ? formatDateTimeForDisplay(trade.exits[trade.exits.length - 1].time) : '未決済'}
             </p>
@@ -2932,10 +2932,10 @@ function addYenProfitLoss(tradeId) {
                 <span style="text-align: right;">${swapPoints >= 0 ? '+' : ''}¥${swapPoints.toLocaleString('ja-JP')}</span>
                 
                 <span>手数料:</span>
-                <span style="text-align: right; color: #ff4466;">-¥${commission.toLocaleString('ja-JP')}</span>
+                <span style="text-align: right; color: #f87171;">-¥${commission.toLocaleString('ja-JP')}</span>
                 
                 <span class="net-profit-label" style="font-weight: bold; padding-top: 10px;">純損益:</span>
-                <span class="net-profit-value" style="text-align: right; font-weight: bold; padding-top: 10px; color: ${netProfitLoss >= 0 ? '#00ff88' : '#ff4466'};">
+                <span class="net-profit-value" style="text-align: right; font-weight: bold; padding-top: 10px; color: ${netProfitLoss >= 0 ? '#4ade80' : '#f87171'};">
                     ¥${netProfitLoss.toLocaleString('ja-JP')}
                 </span>
             </div>
@@ -2975,7 +2975,7 @@ function editYenProfitLoss(tradeId) {
         </div>
         <div style="padding: 20px;">
             <h3>${trade.pair} ${trade.direction === 'long' ? 'LONG' : 'SHORT'}</h3>
-            <p style="color: #7a8599; margin-bottom: 20px;">
+            <p style="color: #888; margin-bottom: 20px;">
                 ${formatDateTimeForDisplay(trade.entryTime)} → 
                 ${trade.exits.length > 0 ? formatDateTimeForDisplay(trade.exits[trade.exits.length - 1].time) : '未決済'}
             </p>
@@ -3043,10 +3043,10 @@ function editYenProfitLoss(tradeId) {
                 <span style="text-align: right;">${swapPoints >= 0 ? '+' : ''}¥${swapPoints.toLocaleString('ja-JP')}</span>
                 
                 <span>手数料:</span>
-                <span style="text-align: right; color: #ff4466;">-¥${commission.toLocaleString('ja-JP')}</span>
+                <span style="text-align: right; color: #f87171;">-¥${commission.toLocaleString('ja-JP')}</span>
                 
                 <span class="net-profit-label" style="font-weight: bold; padding-top: 10px;">純損益:</span>
-                <span class="net-profit-value" style="text-align: right; font-weight: bold; padding-top: 10px; color: ${netProfitLoss >= 0 ? '#00ff88' : '#ff4466'};">
+                <span class="net-profit-value" style="text-align: right; font-weight: bold; padding-top: 10px; color: ${netProfitLoss >= 0 ? '#4ade80' : '#f87171'};">
                     ¥${netProfitLoss.toLocaleString('ja-JP')}
                 </span>
             </div>
@@ -3914,7 +3914,7 @@ function displayExpenseTab() {
     expenseTab.innerHTML = `
         <div class="section">
             <h2>💰 収支管理</h2>
-            <p style="color: #7a8599; margin-bottom: 20px;">月次締め・経費管理・申告準備</p>
+            <p style="color: #888; margin-bottom: 20px;">月次締め・経費管理・申告準備</p>
             
             <!-- 免責事項 -->
             <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
@@ -4258,7 +4258,7 @@ function displayExpenseTab() {
             <!-- 締め処理セクション -->
             <div id="expense-section-closing" class="expense-section" style="display: none;">
                 <h3 style="margin-bottom: 20px;">📅 締め処理</h3>
-                <p style="margin-bottom: 20px; color: #7a8599;">月次・四半期・年次の締め処理を実行します。締めた期間のデータは確定され、集計に使用されます。</p>
+                <p style="margin-bottom: 20px; color: #888;">月次・四半期・年次の締め処理を実行します。締めた期間のデータは確定され、集計に使用されます。</p>
                 
                 <!-- 月次締め処理カード -->
                 <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid rgba(255,255,255,0.15);">
@@ -4266,7 +4266,7 @@ function displayExpenseTab() {
                         <span style="font-size: 24px; margin-right: 10px;">📅</span>
                         <h4 style="margin: 0; font-size: 18px;">月次締め処理</h4>
                     </div>
-                    <p style="color: #7a8599; margin-bottom: 15px; font-size: 14px;">
+                    <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         選択した月のトレード記録と経費を締めます。一度締めた月は再度締められません。
                     </p>
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
@@ -4301,7 +4301,7 @@ function displayExpenseTab() {
                         <span style="font-size: 24px; margin-right: 10px;">📈</span>
                         <h4 style="margin: 0; font-size: 18px;">四半期締め処理</h4>
                     </div>
-                    <p style="color: #7a8599; margin-bottom: 15px; font-size: 14px;">
+                    <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         選択した四半期のトレード記録と経費を締めます。対象月がすべて締まっている必要があります。
                     </p>
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
@@ -4328,7 +4328,7 @@ function displayExpenseTab() {
                         <span style="font-size: 24px; margin-right: 10px;">💰</span>
                         <h4 style="margin: 0; font-size: 18px;">年次締め処理</h4>
                     </div>
-                    <p style="color: #7a8599; margin-bottom: 15px; font-size: 14px;">
+                    <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         選択した年のトレード記録と経費を締めます。全12ヶ月が締まっている必要があります。
                     </p>
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
@@ -4347,7 +4347,7 @@ function displayExpenseTab() {
                     <h4 style="margin-bottom: 15px;">📋 締め済み期間一覧</h4>
                     <div id="closingHistoryList" style="max-height: 400px; overflow-y: auto;">
                         <!-- JavaScriptで動的生成 -->
-                        <p style="color: #7a8599; text-align: center; padding: 20px;">締め処理を実行すると、ここに履歴が表示されます。</p>
+                        <p style="color: #888; text-align: center; padding: 20px;">締め処理を実行すると、ここに履歴が表示されます。</p>
                     </div>
                 </div>
             </div>
@@ -4355,7 +4355,7 @@ function displayExpenseTab() {
             <!-- データ出力セクション -->
             <div id="expense-section-export" class="expense-section" style="display: none;">
                 <h3 style="margin-bottom: 20px;">📊 データ出力</h3>
-                <p style="margin-bottom: 20px; color: #7a8599;">確定申告用のデータをCSV形式で出力します。</p>
+                <p style="margin-bottom: 20px; color: #888;">確定申告用のデータをCSV形式で出力します。</p>
                 
                 <!-- 月別CSV出力カード -->
                 <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid rgba(255,255,255,0.15);">
@@ -4363,7 +4363,7 @@ function displayExpenseTab() {
                         <span style="font-size: 24px; margin-right: 10px;">📅</span>
                         <h4 style="margin: 0; font-size: 18px;">月別CSV出力</h4>
                     </div>
-                    <p style="color: #7a8599; margin-bottom: 15px; font-size: 14px;">
+                    <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         選択した月のトレード記録と経費をまとめて出力します
                     </p>
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -4398,7 +4398,7 @@ function displayExpenseTab() {
                         <span style="font-size: 24px; margin-right: 10px;">📈</span>
                         <h4 style="margin: 0; font-size: 18px;">年次CSV出力</h4>
                     </div>
-                    <p style="color: #7a8599; margin-bottom: 15px; font-size: 14px;">
+                    <p style="color: #888; margin-bottom: 15px; font-size: 14px;">
                         年間のトレード記録、経費、収支サマリーを出力します
                     </p>
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
@@ -4517,7 +4517,7 @@ function displayExpenseTab() {
                     <button id="btnAddCapitalRecord" style="
                         width: 100%;
                         padding: 12px;
-                        background: #00ff88;
+                        background: #4ade80;
                         color: white;
                         border: none;
                         border-radius: 6px;
@@ -4881,14 +4881,14 @@ function updateClosingHistoryList() {
     if (!container) return;
     
     if (!window.ClosingManagerModule) {
-        container.innerHTML = '<p style="color: #7a8599; text-align: center; padding: 20px;">締め処理機能が利用できません</p>';
+        container.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">締め処理機能が利用できません</p>';
         return;
     }
     
     const closedPeriods = window.ClosingManagerModule.getClosedPeriods();
     
     if (!closedPeriods || closedPeriods.length === 0) {
-        container.innerHTML = '<p style="color: #7a8599; text-align: center; padding: 20px;">締め処理を実行すると、ここに履歴が表示されます。</p>';
+        container.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">締め処理を実行すると、ここに履歴が表示されます。</p>';
         return;
     }
     
@@ -4896,7 +4896,7 @@ function updateClosingHistoryList() {
         <div style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <strong style="font-size: 16px;">${period.period}</strong>
-                <span style="color: #7a8599; font-size: 14px;">${new Date(period.closedAt).toLocaleDateString('ja-JP')}</span>
+                <span style="color: #888; font-size: 14px;">${new Date(period.closedAt).toLocaleDateString('ja-JP')}</span>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <span style="padding: 4px 8px; background: rgba(79,172,254,0.2); border: 1px solid rgba(79,172,254,0.5); border-radius: 4px; font-size: 12px; color: #4facfe;">
@@ -5581,7 +5581,7 @@ function displayReport(data) {
         <div class="recent-trades" style="margin-top: 30px;">
             <h4 style="color: #00ff88; margin-bottom: 15px;">
                 📈 トレード履歴 
-                <span style="font-size: 12px; color: #7a8599;">(クリックで詳細表示)</span>
+                <span style="font-size: 12px; color: #888;">(クリックで詳細表示)</span>
                 <div style="float: right;">
                     <button onclick="toggleTradeSort()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #00ff88; color: #00ff88; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; margin-left: 5px;">
                         ${currentTradeSort === 'entry' ? '決済日時に切替' : 'エントリー日時に切替'}
@@ -5669,7 +5669,7 @@ function updateMonthlyPerformanceChart() {
         // データが存在しない場合の処理
         if (!trades || trades.length === 0) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#7a8599';
+            ctx.fillStyle = '#888';
             ctx.font = '14px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('トレードデータがありません', canvas.width / 2, canvas.height / 2);

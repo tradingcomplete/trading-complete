@@ -13,7 +13,7 @@ class TradeDetail {
      */
     #formatYenProfitLoss(yenProfitLoss) {
         if (!yenProfitLoss || !yenProfitLoss.length) {
-            return '<p style="color: #888;">円建て損益が未設定です</p>';
+            return '<p class="text-hint">円建て損益が未設定です</p>';
         }
         
         const totalYen = yenProfitLoss.reduce((sum, pl) => sum + pl.amount, 0);
@@ -61,7 +61,7 @@ class TradeDetail {
         // 新しいセクションを作成
         const yenSection = document.createElement('div');
         yenSection.className = 'trade-detail-section yen-profit-loss-section';
-        yenSection.style.cssText = 'background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;';
+        yenSection.className = 'subsection-box';
         
         // 円建て損益の内容を条件分岐で生成
         let yenContent = '';
@@ -77,14 +77,14 @@ class TradeDetail {
                 <p>スワップ: ¥${(trade.yenProfitLoss.swap || 0).toLocaleString()}</p>
                 <p>手数料: ¥${(trade.yenProfitLoss.commission || 0).toLocaleString()}</p>
                 <p class="net-profit"><strong>実損益: 
-                    <span class="${(trade.yenProfitLoss.netProfit || 0) >= 0 ? 'profit' : 'loss'}" style="color: ${(trade.yenProfitLoss.netProfit || 0) >= 0 ? '#4ade80' : '#f87171'};">
+                    <span class="${(trade.yenProfitLoss.netProfit || 0) >= 0 ? 'profit' : 'loss'}" style="color: ${(trade.yenProfitLoss.netProfit || 0) >= 0 ? '#00ff88' : '#ff4466'};">
                         ${(trade.yenProfitLoss.netProfit || 0) >= 0 ? '+' : ''}¥${(trade.yenProfitLoss.netProfit || 0).toLocaleString()}
                     </span>
                 </strong></p>
             `;
         } else {
             // データがない場合
-            yenContent = '<p style="color: #888;">円建て損益が未設定です</p>';
+            yenContent = '<p class="text-hint">円建て損益が未設定です</p>';
         }
         
         yenSection.innerHTML = `
@@ -129,7 +129,7 @@ class TradeDetail {
         // 配列の場合（現在の実装）
         if (Array.isArray(yenProfitLoss)) {
             if (!yenProfitLoss.length) {
-                return '<p style="color: #888;">円建て損益が未設定です</p>';
+                return '<p class="text-hint">円建て損益が未設定です</p>';
             }
             
             const totalYen = yenProfitLoss.reduce((sum, pl) => sum + pl.amount, 0);
@@ -151,7 +151,7 @@ class TradeDetail {
         
         // オブジェクトの場合（将来の実装用）
         if (!yenProfitLoss) {
-            return '<p style="color: #888;">円建て損益が未設定です</p>';
+            return '<p class="text-hint">円建て損益が未設定です</p>';
         }
         
         return `
@@ -364,7 +364,7 @@ class TradeDetail {
         let detailHTML = `
             <h3>${trade.pair} ${trade.direction === 'buy' || trade.direction === 'long' ? 'LONG' : 'SHORT'}</h3>
             
-            <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
+            <div class="trade-detail-section subsection-box">
                 <h4 class="detail-section-header">
                     📍 エントリー情報
                     <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editBasicInfo('${trade.id}')">編集</button>
@@ -377,7 +377,7 @@ class TradeDetail {
                 <p>感情: ${trade.entryEmotion || '-'}</p>
             </div>
             
-            <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
+            <div class="trade-detail-section subsection-box">
                 <h4 class="detail-section-header">
                     🎯 チェックリスト
                     <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editTradeReasons('${trade.id}')">編集</button>
@@ -396,7 +396,7 @@ class TradeDetail {
             // 通常の決済情報がある場合
             if (trade.exits && trade.exits.length > 0) {
                 detailHTML += `
-                    <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
+                    <div class="trade-detail-section subsection-box">
                         <h4 class="detail-section-header">
                             📊 決済情報
                             <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editExitInfo('${trade.id}')">編集</button>
@@ -424,7 +424,7 @@ class TradeDetail {
                 : '';
             
             detailHTML += `
-                <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
+                <div class="trade-detail-section subsection-box">
                     <h4 class="detail-section-header">
                         📝 振り返り
                         <button class="btn btn-small btn-secondary detail-edit-btn" onclick="editReflection('${trade.id}')">編集</button>
@@ -436,7 +436,7 @@ class TradeDetail {
         
         // 画像セクション
         detailHTML += `
-            <div class="trade-detail-section" style="background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
+            <div class="trade-detail-section subsection-box">
                 <h4 class="detail-section-header">📸 画像</h4>
                 
                 ${(() => {

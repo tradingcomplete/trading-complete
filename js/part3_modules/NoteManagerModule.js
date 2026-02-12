@@ -2436,7 +2436,7 @@ class NoteManagerModule {
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'day-preview-line';
             emptyDiv.innerHTML = '（内容なし）';
-            emptyDiv.style.color = '#888';
+            emptyDiv.style.color = '#7a8599';
             contentDiv.appendChild(emptyDiv);
         }
     }

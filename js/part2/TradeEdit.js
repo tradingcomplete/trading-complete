@@ -1,7 +1,6 @@
 // js/part2/TradeEdit.js
 // Part 2 モジュール化 第5段階 - トレード編集機能の分離
 // 作成日: 2025/09/17
-// 更新日: 2026/01/14 - セキュリティ適用（サニタイズ追加）
 
 /**
  * TradeEdit クラス
@@ -21,32 +20,6 @@ class TradeEdit {
         
         // EventBusリスナーを設定
         this.#setupEventBusListeners();
-    }
-    
-    // ==================== セキュリティ: サニタイズ ====================
-    
-    /**
-     * テキストをサニタイズ（XSS対策）
-     * @private
-     * @param {*} text - 入力テキスト
-     * @returns {string} サニタイズ済みテキスト
-     */
-    #sanitize(text) {
-        if (!text) return '';
-        // window.escapeHtml() を使用（script.jsで定義済み）
-        return window.escapeHtml(String(text).trim());
-    }
-    
-    /**
-     * 数値をサニタイズ
-     * @private
-     * @param {*} value - 入力値
-     * @param {number} defaultValue - デフォルト値
-     * @returns {number} サニタイズ済み数値
-     */
-    #sanitizeNumber(value, defaultValue = 0) {
-        const num = parseFloat(value);
-        return isNaN(num) ? defaultValue : num;
     }
     
     // ==================== 公開メソッド ====================
@@ -134,7 +107,7 @@ class TradeEdit {
     }
     
     /**
-     * 基本情報の保存（サニタイズ適用）
+     * 基本情報の保存
      * @param {string|number} tradeId - トレードID
      */
     saveBasicInfo(tradeId) {
@@ -143,21 +116,18 @@ class TradeEdit {
         
         const entryTimeValue = this.#getFieldValue('editEntryTime');
         
-        // === セキュリティ: テキストフィールドをサニタイズ ===
         const updates = {
-            pair: this.#sanitize(this.#getFieldValue('editPair')) || trade.pair,
+            pair: this.#getFieldValue('editPair') || trade.pair,
             direction: this.#getFieldValue('editDirection'),
-            broker: this.#sanitize(this.#getFieldValue('editBroker')) || trade.broker || '',
+            broker: this.#getFieldValue('editBroker') || trade.broker || '',
             entryTime: entryTimeValue || trade.entryTime,
             entryPrice: parseFloat(this.#getFieldValue('editEntryPrice')) || trade.entryPrice,
             lotSize: parseFloat(this.#getFieldValue('editLotSize')) || trade.lotSize,
             stopLoss: parseFloat(this.#getFieldValue('editStopLoss')) || trade.stopLoss,
             takeProfit: parseFloat(this.#getFieldValue('editTakeProfit')) || trade.takeProfit,
-            scenario: this.#sanitize(this.#getFieldValue('editScenario')) || trade.scenario,
-            entryEmotion: this.#sanitize(this.#getFieldValue('editEmotion')) || trade.entryEmotion
+            scenario: this.#getFieldValue('editScenario') || trade.scenario,
+            entryEmotion: this.#getFieldValue('editEmotion') || trade.entryEmotion
         };
-        
-        console.log('[TradeEdit] saveBasicInfo: サニタイズ適用完了');
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, updates)
         
@@ -176,21 +146,19 @@ class TradeEdit {
     }
     
     /**
-     * エントリー根拠の保存（サニタイズ適用）
+     * エントリー根拠の保存
      * @param {string|number} tradeId - トレードID
      */
     saveReasons(tradeId) {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // === セキュリティ: テキストフィールドをサニタイズ ===
+        // reasonsが存在しない場合は初期化
         const reasons = [
-            this.#sanitize(this.#getFieldValue('editReason1')) || '',
-            this.#sanitize(this.#getFieldValue('editReason2')) || '',
-            this.#sanitize(this.#getFieldValue('editReason3')) || ''
+            this.#getFieldValue('editReason1') || '',
+            this.#getFieldValue('editReason2') || '',
+            this.#getFieldValue('editReason3') || ''
         ];
-        
-        console.log('[TradeEdit] saveReasons: サニタイズ適用完了');
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, { reasons });
         
@@ -716,7 +684,7 @@ class TradeEdit {
         
         if (favoritePairs.length === 0) {
             dropdown.innerHTML = `
-                <div style="padding: 15px; color: #888; text-align: center;">
+                <div style="padding: 15px; color: #7a8599; text-align: center;">
                     お気に入りが登録されていません<br>
                     <small>設定タブで追加してください</small>
                 </div>
@@ -746,7 +714,7 @@ class TradeEdit {
                      onmouseover="this.style.background='rgba(255, 193, 7, 0.1)'"
                      onmouseout="this.style.background='transparent'">
                     <span style="font-weight: bold;">⭐ ${displayName}</span>
-                    <span style="color: #888; font-size: 0.85em;">${pipInfo}</span>
+                    <span style="color: #7a8599; font-size: 0.85em;">${pipInfo}</span>
                 </div>
             `;
         }).join('');
@@ -792,7 +760,7 @@ class TradeEdit {
                 onmouseout="this.style.background='transparent'"
                 onclick="window.tradeEdit.selectEditPair('${pair.id}')">
                 <span style="font-weight: bold; color: #00ff88;">${pair.name}</span>
-                <span style="color: #888; font-size: 0.85em;">1pips=${pair.pipValue}</span>
+                <span style="color: #7a8599; font-size: 0.85em;">1pips=${pair.pipValue}</span>
             </div>
         `).join('');
         
@@ -895,15 +863,15 @@ class TradeEdit {
                         <h4 style="margin: 0 0 10px 0; color: #00ff88; font-size: 14px;">📌 参考情報（エントリー）</h4>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
                             <div>
-                                <label style="font-size: 12px; color: #888; display: block; margin-bottom: 3px;">通貨ペア</label>
+                                <label style="font-size: 12px; color: #7a8599; display: block; margin-bottom: 3px;">通貨ペア</label>
                                 <div style="padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: #fff;">${trade.pair || '-'}</div>
                             </div>
                             <div>
-                                <label style="font-size: 12px; color: #888; display: block; margin-bottom: 3px;">売買方向</label>
+                                <label style="font-size: 12px; color: #7a8599; display: block; margin-bottom: 3px;">売買方向</label>
                                 <div style="padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: ${(trade.direction === 'buy' || trade.direction === 'long') ? '#00ff88' : '#ff4444'};">${directionText}</div>
                             </div>
                             <div>
-                                <label style="font-size: 12px; color: #888; display: block; margin-bottom: 3px;">エントリー価格</label>
+                                <label style="font-size: 12px; color: #7a8599; display: block; margin-bottom: 3px;">エントリー価格</label>
                                 <div style="padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: #ffd700; font-weight: bold;">${trade.entryPrice || '-'}</div>
                             </div>
                         </div>
@@ -1094,10 +1062,7 @@ class TradeEdit {
         const trade = this.#tradeManager.getTradeById(tradeId);
         if (!trade) return;
         
-        // === セキュリティ: テキストフィールドをサニタイズ ===
-        const reflectionText = this.#sanitize(this.#getFieldValue('editReflectionText'));
-        
-        console.log('[TradeEdit] saveReflection: サニタイズ適用完了');
+        const reflectionText = this.#getFieldValue('editReflectionText');
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, {
             reflection: reflectionText || ''
@@ -1533,4 +1498,4 @@ window.tradeEdit = new TradeEdit();
 // selectEditPairをグローバルに公開（onclick用）
 window.tradeEdit.selectEditPair = window.tradeEdit.selectEditPair.bind(window.tradeEdit);
 
-console.log('TradeEdit.js loaded successfully (with sanitization)');
+console.log('TradeEdit.js loaded successfully');

@@ -899,7 +899,7 @@ class StatisticsModule {
                         <div class="stat-value" style="
                             font-size: 1.8em; 
                             font-weight: bold;
-                            color: ${yenStats.netProfitLoss >= 0 ? '#4ade80' : '#f87171'}">
+                            color: ${yenStats.netProfitLoss >= 0 ? '#00ff88' : '#ff4466'}">
                             ¥${yenStats.netProfitLoss.toLocaleString('ja-JP')}
                         </div>
                     </div>
