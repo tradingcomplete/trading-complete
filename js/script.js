@@ -3925,7 +3925,28 @@ function displayExpenseTab() {
             
             <!-- サマリー表示 -->
             <div class="summary-section">
-                <h3>📊 ${currentYear}年 収支サマリー</h3>
+                <h3 style="display: flex; align-items: center; gap: 10px;">
+                    📊
+                    <select id="summaryYearSelect" onchange="changeSummaryYear()" style="
+                        padding: 6px 12px;
+                        background: rgb(75, 85, 99);
+                        color: rgb(255, 255, 255);
+                        border: 1px solid rgba(255, 255, 255, 0.3);
+                        border-radius: 4px;
+                        font-size: 1em;
+                        cursor: pointer;
+                    ">
+                        ${(() => {
+                            let options = '';
+                            const startYear = 2020;
+                            for (let y = currentYear; y >= startYear; y--) {
+                                options += '<option value="' + y + '"' + (y === currentYear ? ' selected' : '') + '>' + y + '年</option>';
+                            }
+                            return options;
+                        })()}
+                    </select>
+                    収支サマリー
+                </h3>
                 <div class="summary-grid">
                     <div class="summary-item">
                         <div class="summary-label">トレード損益</div>
@@ -4733,7 +4754,8 @@ function updateExpenseSummary() {
     const summarySection = document.querySelector('.summary-section');
     if (!summarySection) return;
     
-    const currentYear = new Date().getFullYear();
+    const summaryYearSelect = document.getElementById('summaryYearSelect');
+    const currentYear = summaryYearSelect ? parseInt(summaryYearSelect.value) : new Date().getFullYear();
     const yearlySummary = window.SummaryCalculatorModule ? 
         window.SummaryCalculatorModule.calculateYearlySummary(currentYear) : 
         { trades: { netProfit: 0 }, expenses: { total: 0 }, taxableIncome: 0 };
@@ -4767,6 +4789,12 @@ function updateExpenseSummary() {
         経費合計: yearlySummary.expenses.total,
         課税対象所得: yearlySummary.taxableIncome
     });
+}
+
+// 収支サマリー年度切替
+function changeSummaryYear() {
+    updateExpenseSummary();
+    console.log('changeSummaryYear: year changed to', document.getElementById('summaryYearSelect')?.value);
 }
 
 // セクション切り替え
