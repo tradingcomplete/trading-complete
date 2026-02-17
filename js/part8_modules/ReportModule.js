@@ -312,9 +312,9 @@ class ReportModule {
             font-family: 'Helvetica Neue', Arial, 'Hiragino Sans', sans-serif;
             max-width: 210mm;
             margin: 0 auto;
-            padding: 20mm;
+            padding: 12mm 15mm;
             color: #333;
-            line-height: 1.8;
+            line-height: 1.4;
         }
         
         /* 統計グリッド（3カラム対応） */
@@ -359,13 +359,13 @@ class ReportModule {
         }
         h1 {
             text-align: center;
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 20px;
+            margin-bottom: 4px;
         }
         .date {
             text-align: center;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 12px;
         }
         
         /* 月間サマリー */
@@ -402,17 +402,17 @@ class ReportModule {
         
         /* トレード一覧 */
         .trades-section {
-            margin-bottom: 30px;
+            margin-bottom: 10px;
         }
         .trades-section h2 {
-            font-size: 18px;
-            padding-bottom: 10px;
+            font-size: 15px;
+            padding-bottom: 4px;
             border-bottom: 2px solid #333;
-            margin-bottom: 20px;
+            margin-bottom: 6px;
         }
         .trade-item {
-            margin-bottom: 20px;
-            padding: 15px;
+            margin-bottom: 6px;
+            padding: 6px 10px;
             background: #f9f9f9;
             border-radius: 5px;
             border-left: 4px solid #3498db;
@@ -420,11 +420,11 @@ class ReportModule {
         .trade-header {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
-            font-size: 16px;
+            margin-bottom: 2px;
+            font-size: 13px;
         }
         .trade-rank {
-            font-size: 20px;
+            font-size: 16px;
             margin-right: 10px;
         }
         .trade-date {
@@ -436,13 +436,14 @@ class ReportModule {
             margin-right: 15px;
         }
         .trade-pips {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
         }
         .trade-reflection {
             color: #555;
             font-style: italic;
-            padding-left: 35px;
+            padding-left: 30px;
+            font-size: 12px;
         }
         
         /* 色分け */
@@ -478,16 +479,16 @@ class ReportModule {
         
         /* 新しい統計セクション */
         .stats-section {
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             background: #f8f9fa;
-            padding: 20px;
+            padding: 10px 14px;
             border-radius: 8px;
         }
         
         .stats-section h2 {
-            font-size: 18px;
-            margin: 0 0 15px 0;
-            padding-bottom: 10px;
+            font-size: 15px;
+            margin: 0 0 6px 0;
+            padding-bottom: 4px;
             border-bottom: 2px solid #3498db;
         }
         
@@ -495,26 +496,26 @@ class ReportModule {
         .stats-grid-6col {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 6px;
+            margin-bottom: 6px;
         }
         
         .stat-item {
             background: white;
-            padding: 12px;
+            padding: 5px 4px;
             border-radius: 5px;
             text-align: center;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
         
         .stat-value {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
             color: #333;
         }
@@ -556,14 +557,13 @@ class ReportModule {
             
             /* ページ区切り制御 */
             
-            /* Pips統計と円建て統計は同じページ → 円建て統計の後で改ページ */
+            /* Pips統計と円建て統計はベスト・ワーストと同じページ */
             .yen-stats {
-                page-break-after: always;
+                /* page-break-after: 削除（1ページに統合） */
             }
             
-            /* ベスト・ワーストトレードを同じページに */
+            /* ベスト・ワーストトレードを統計と同じページに */
             .best-worst-combined-section {
-                page-break-before: always;
                 page-break-after: always;
             }
             
@@ -606,7 +606,7 @@ class ReportModule {
             
             /* タイトルの後の余白調整 */
             h1 {
-                margin-bottom: 20px;
+                margin-bottom: 4px;
             }
         }
     </style>
@@ -749,7 +749,7 @@ class ReportModule {
             ${bestTrades}
         </div>
         
-        <div class="trades-section worst-trades-section" style="margin-top: 30px;">
+        <div class="trades-section worst-trades-section" style="margin-top: 8px;">
             <h2>📉 ワーストトレード TOP3</h2>
             ${worstTrades}
         </div>
@@ -831,7 +831,7 @@ class ReportModule {
                 </tr>
             </thead>
             <tbody>
-                ${['oceania', 'tokyo', 'london', 'ny'].map(key => {
+                ${['tokyo', 'london', 'ny', 'oceania'].map(key => {
                     const s = stats.sessionStats?.[key] || { trades: 0, wins: 0, losses: 0, pips: 0 };
                     const winRate = s.trades > 0 ? (s.wins / s.trades * 100).toFixed(1) : '0.0';
                     return `
@@ -1696,7 +1696,7 @@ class ReportModule {
                         </tr>
                     </thead>
                     <tbody>
-                        ${['oceania', 'tokyo', 'london', 'ny'].map(key => {
+                        ${['tokyo', 'london', 'ny', 'oceania'].map(key => {
                             const s = data.sessionStats[key];
                             const winRate = s.trades > 0 ? (s.wins / s.trades * 100).toFixed(1) : '0.0';
                             return `
