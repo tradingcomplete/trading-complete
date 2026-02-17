@@ -1,7 +1,7 @@
-# Supabase テーブル構造（Phase 7 リスク管理対応版）
+# Supabase テーブル構造（Phase 7.2 tags対応版）
 
 **作成日**: 2025-12-30  
-**更新日**: 2026-02-02  
+**更新日**: 2026-02-17  
 **用途**: SyncModule.js データ変換・引き継ぎ資料
 
 ---
@@ -143,7 +143,7 @@ WITH CHECK (
 
 ---
 
-## 1. trades テーブル（最終構成：29カラム）✅ 同期完了
+## 1. trades テーブル（最終構成：30カラム）✅ 同期完了
 
 ### 1.1 テーブル定義
 
@@ -189,6 +189,9 @@ CREATE TABLE trades (
   reasons JSONB DEFAULT '[]',
   entry_emotion TEXT,
   
+  -- タグ（Phase 7.2で追加）
+  tags JSONB DEFAULT '[]',
+  
   -- リスク管理（Phase 7で追加）
   method_id TEXT,
   risk_tolerance DECIMAL,
@@ -217,7 +220,7 @@ CREATE POLICY "Users can CRUD own trades"
   WITH CHECK (auth.uid() = user_id);
 ```
 
-### 1.2 全カラム一覧（29カラム）
+### 1.2 全カラム一覧（30カラム）
 
 | # | カラム名 | データ型 | 説明 |
 |---|---------|---------|------|
@@ -250,6 +253,7 @@ CREATE POLICY "Users can CRUD own trades"
 | 27 | calculated_lot | numeric | 計算された適正ロット |
 | 28 | risk_status | text | リスク状態（normal/warning/danger） |
 | 29 | is_over_risk | boolean | 許容損失超過フラグ |
+| 30 | tags | jsonb | タグ配列（セッション・曜日等） |
 
 ---
 
@@ -288,6 +292,7 @@ CREATE POLICY "Users can CRUD own trades"
 | calculatedLot | calculated_lot | numeric | 適正ロット |
 | riskStatus | risk_status | text | リスク状態 |
 | isOverRisk | is_over_risk | boolean | 超過フラグ |
+| tags | tags | jsonb | 配列形式 ["東京時間", "月曜", "ロング"] |
 
 ---
 
@@ -551,7 +556,8 @@ CREATE TABLE user_settings (
 | **Phase 6画像説明欄対応版** | **2026-01-22** | **画像データ構造詳細追加（title/description/path）、URL期限切れ対応、imageUtils.js v1.3.0** |
 | **Phase 7リスク管理対応版** | **2026-01-29** | **tradesテーブル: リスク管理7カラム追加（22→29カラム）、user_settingsテーブル: methods/risk_tolerance/show_broker_badge追加、SyncModule.js対応** |
 | **Phase 7.1利益率機能対応版** | **2026-02-02** | **year_start_balancesカラム追加、SyncModule v1.8.0** |
+| **Phase 7.2 tags対応版** | **2026-02-17** | **tradesテーブル: tagsカラム追加（29→30カラム）、SyncModule.js双方向マッピング追加** |
 
 ---
 
-*このドキュメントをPhase 7以降の開発で参照してください。*
+*このドキュメントをPhase 7.2以降の開発で参照してください。*

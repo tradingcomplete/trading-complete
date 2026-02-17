@@ -1621,6 +1621,9 @@
                 risk_status: local.riskStatus || null,
                 is_over_risk: local.isOverRisk || false,
                 
+                // tags（セッションタグ等）
+                tags: local.tags || [],
+                
                 created_at: local.createdAt || local.timestamp || new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
@@ -1672,6 +1675,9 @@
                 calculatedLot: supa.calculated_lot ? parseFloat(supa.calculated_lot) : null,
                 riskStatus: supa.risk_status || null,
                 isOverRisk: supa.is_over_risk || false,
+                
+                // tags（セッションタグ等）
+                tags: supa.tags || [],
                 
                 timestamp: supa.created_at,
                 createdAt: supa.created_at,

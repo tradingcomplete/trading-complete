@@ -39,6 +39,7 @@ class NoteManagerModule {
         monthly: false              // false = 開いている（▲）
     };
     #isShiftPressed = false;        // Shiftキー状態（スマートペースト用）
+    #lastCopiedHTML = null;         // エディタからコピーしたHTML（装飾維持ペースト用）
 
     constructor() {
         this.#eventBus = window.eventBus;
@@ -1958,8 +1959,9 @@ class NoteManagerModule {
     /**
      * 自動保存の設定（スマートペースト対応）
      * - Ctrl+V: プレーンテキスト（外部サイトから）
-     * - Ctrl+Shift+V: HTML維持（装飾を保持、同じノート間）
-     * v2.0: ClipboardEventにshiftKeyがないため、keydown/keyupで状態追跡
+     * - Ctrl+Shift+V: 装飾維持（エディタ内でコピーした場合）
+     * v2.1: ブラウザがCtrl+Shift+VでHTMLを除去する問題を
+     *       copyイベント保存 + keydownインターセプトで対応
      */
     setupNoteAutoSave() {
         const memoElement = document.getElementById('noteMemo');
@@ -1976,6 +1978,64 @@ class NoteManagerModule {
             if (e.key === 'Shift') this.#isShiftPressed = false;
         });
         
+        // === エディタ内コピー時にHTMLを保存 ===
+        // ブラウザのCtrl+Shift+VはHTMLデータを除去するため、
+        // コピー時点でHTMLを自前保存しておく
+        document.addEventListener('copy', () => {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) {
+                return; // 選択なしの場合は何もしない（前回の保存を維持）
+            }
+            
+            const range = selection.getRangeAt(0);
+            const ancestor = range.commonAncestorContainer;
+            const element = (ancestor.nodeType === Node.TEXT_NODE)
+                ? ancestor.parentElement
+                : ancestor;
+            
+            // エディタ内からのコピーかチェック
+            const isInEditor = element?.closest?.(
+                '#noteMemo, #noteMarketView, #editNoteMemo, #editNoteMarketView'
+            );
+            
+            if (isInEditor) {
+                // 選択範囲のHTMLを保存
+                const fragment = range.cloneContents();
+                const tempDiv = document.createElement('div');
+                tempDiv.appendChild(fragment);
+                this.#lastCopiedHTML = tempDiv.innerHTML;
+                console.log('[NoteManager] エディタHTMLを保存（装飾維持ペースト用）');
+            } else {
+                // 外部からのコピーは保存をクリア
+                this.#lastCopiedHTML = null;
+            }
+        });
+        
+        // cutイベントでも同様にHTMLを保存
+        document.addEventListener('cut', () => {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) return;
+            
+            const range = selection.getRangeAt(0);
+            const ancestor = range.commonAncestorContainer;
+            const element = (ancestor.nodeType === Node.TEXT_NODE)
+                ? ancestor.parentElement
+                : ancestor;
+            
+            const isInEditor = element?.closest?.(
+                '#noteMemo, #noteMarketView, #editNoteMemo, #editNoteMarketView'
+            );
+            
+            if (isInEditor) {
+                const fragment = range.cloneContents();
+                const tempDiv = document.createElement('div');
+                tempDiv.appendChild(fragment);
+                this.#lastCopiedHTML = tempDiv.innerHTML;
+            } else {
+                this.#lastCopiedHTML = null;
+            }
+        });
+        
         [memoElement, marketViewElement].forEach(element => {
             element.addEventListener('input', () => {
                 clearTimeout(this.#autoSaveTimer);
@@ -1989,13 +2049,35 @@ class NoteManagerModule {
                 this.autoSaveNoteQuietly();
             });
             
-            // === スマートペースト機能 ===
-            // Ctrl+V = プレーンテキスト、Ctrl+Shift+V = HTML維持
+            // === Ctrl+Shift+V: keydownでインターセプト ===
+            // ブラウザのCtrl+Shift+VはHTMLを除去するため、
+            // keydownの時点で保存済みHTMLを挿入する
+            element.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+                    if (this.#lastCopiedHTML) {
+                        e.preventDefault();
+                        
+                        // 保存済みHTMLを挿入
+                        document.execCommand('insertHTML', false, this.#lastCopiedHTML);
+                        
+                        console.log('[NoteManager] 装飾維持ペースト実行');
+                        
+                        // 自動保存トリガー
+                        clearTimeout(this.#autoSaveTimer);
+                        this.#autoSaveTimer = setTimeout(() => {
+                            this.autoSaveNoteQuietly();
+                        }, 2000);
+                    }
+                    // lastCopiedHTMLがない場合（外部コピー）
+                    // → ブラウザデフォルト動作（プレーンテキスト貼付）
+                }
+            });
+            
+            // === Ctrl+V: プレーンテキストペースト ===
             element.addEventListener('paste', (e) => {
-                // Shift+Ctrl+Vの場合はデフォルト動作（HTML維持）
+                // Shift押下中の場合はデフォルト動作に任せる
+                // （keydownハンドラーで処理済み or ブラウザデフォルト）
                 if (this.#isShiftPressed) {
-                    // デフォルト動作を許可（何もしない）
-                    // 自動保存だけトリガー
                     clearTimeout(this.#autoSaveTimer);
                     this.#autoSaveTimer = setTimeout(() => {
                         this.autoSaveNoteQuietly();
