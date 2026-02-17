@@ -594,9 +594,9 @@ class ReportModule {
                 page-break-before: always;
             }
             
-            /* 月間総括メモの前で改ページ */
+            /* 月間総括メモはトレード履歴と同じページに */
             .month-summary-note {
-                page-break-before: always;
+                /* page-break-before: 削除（トレード履歴と統合） */
             }
             
             /* セクション内での改ページを防止 */
