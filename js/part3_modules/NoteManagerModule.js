@@ -38,6 +38,7 @@ class NoteManagerModule {
         anomaly: false,             // false = 開いている（▲）
         monthly: false              // false = 開いている（▲）
     };
+    #isShiftPressed = false;        // Shiftキー状態（スマートペースト用）
 
     constructor() {
         this.#eventBus = window.eventBus;
@@ -1903,59 +1904,51 @@ class NoteManagerModule {
     
     /**
      * 選択範囲内のfont-sizeスタイルを解除（プライベートメソッド）
+     * v2.0: TreeWalker方式から親要素走査+querySelectorAll方式に変更
      * @private
      * @param {Range} range - 選択範囲
      * @param {HTMLElement} editor - エディタ要素
      */
     #removeFontSizeInRange(range, editor) {
-        // エディタ内の選択範囲にあるfont-size付き要素を直接処理
-        const selectedNodes = this.#getNodesInRange(range);
-        selectedNodes.forEach(node => {
-            if (node.nodeType === Node.ELEMENT_NODE && node.style?.fontSize) {
-                // spanのfont-sizeを削除
-                node.style.fontSize = '';
-                if (!node.getAttribute('style')?.trim()) {
-                    node.removeAttribute('style');
-                }
-                // 空のspanは中身を取り出して置換
-                if (node.tagName === 'SPAN' && !node.hasAttribute('style') && !node.hasAttribute('class')) {
-                    const parent = node.parentNode;
-                    while (node.firstChild) {
-                        parent.insertBefore(node.firstChild, node);
-                    }
-                    parent.removeChild(node);
-                }
+        // font-size付きspanを解除するヘルパー関数
+        const unwrapFontSize = (el) => {
+            el.style.fontSize = '';
+            if (!el.getAttribute('style')?.trim()) {
+                el.removeAttribute('style');
             }
-        });
-    }
-    
-    /**
-     * 選択範囲内のノードを取得（プライベートメソッド）
-     * @private
-     * @param {Range} range - 選択範囲
-     * @returns {Array<Node>} ノード配列
-     */
-    #getNodesInRange(range) {
-        const nodes = [];
-        const treeWalker = document.createTreeWalker(
-            range.commonAncestorContainer,
-            NodeFilter.SHOW_ELEMENT,
-            {
-                acceptNode: (node) => {
-                    if (range.intersectsNode(node)) {
-                        return NodeFilter.FILTER_ACCEPT;
-                    }
-                    return NodeFilter.FILTER_REJECT;
+            // スタイルもクラスもないspanは中身を取り出して置換
+            if (el.tagName === 'SPAN' && !el.hasAttribute('style') && !el.hasAttribute('class')) {
+                const parent = el.parentNode;
+                while (el.firstChild) {
+                    parent.insertBefore(el.firstChild, el);
                 }
+                parent.removeChild(el);
             }
-        );
+        };
         
-        let node;
-        while (node = treeWalker.nextNode()) {
-            nodes.push(node);
+        // 方法1: 選択範囲を含む親要素を辿ってfont-size付きspanを探す
+        let ancestor = range.commonAncestorContainer;
+        if (ancestor.nodeType === Node.TEXT_NODE) {
+            ancestor = ancestor.parentElement;
         }
         
-        return nodes;
+        let current = ancestor;
+        while (current && current !== editor) {
+            if (current.nodeType === Node.ELEMENT_NODE && current.style?.fontSize) {
+                unwrapFontSize(current);
+                break;
+            }
+            current = current.parentElement;
+        }
+        
+        // 方法2: 選択範囲内の子要素にfont-size付きspanがあれば解除
+        const searchRoot = (ancestor && ancestor.nodeType === Node.ELEMENT_NODE) ? ancestor : editor;
+        const fontSizeElements = searchRoot.querySelectorAll('span[style*="font-size"]');
+        fontSizeElements.forEach(el => {
+            if (range.intersectsNode(el)) {
+                unwrapFontSize(el);
+            }
+        });
     }
 
     // ================
@@ -1966,12 +1959,22 @@ class NoteManagerModule {
      * 自動保存の設定（スマートペースト対応）
      * - Ctrl+V: プレーンテキスト（外部サイトから）
      * - Ctrl+Shift+V: HTML維持（装飾を保持、同じノート間）
+     * v2.0: ClipboardEventにshiftKeyがないため、keydown/keyupで状態追跡
      */
     setupNoteAutoSave() {
         const memoElement = document.getElementById('noteMemo');
         const marketViewElement = document.getElementById('noteMarketView');
         
         if (!memoElement || !marketViewElement) return;
+        
+        // Shiftキー状態をkeydown/keyupで追跡
+        // （ClipboardEvent（paste）にはshiftKeyプロパティが存在しないため）
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Shift') this.#isShiftPressed = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Shift') this.#isShiftPressed = false;
+        });
         
         [memoElement, marketViewElement].forEach(element => {
             element.addEventListener('input', () => {
@@ -1986,11 +1989,11 @@ class NoteManagerModule {
                 this.autoSaveNoteQuietly();
             });
             
-            // === 追加: スマートペースト機能 ===
+            // === スマートペースト機能 ===
             // Ctrl+V = プレーンテキスト、Ctrl+Shift+V = HTML維持
             element.addEventListener('paste', (e) => {
                 // Shift+Ctrl+Vの場合はデフォルト動作（HTML維持）
-                if (e.shiftKey) {
+                if (this.#isShiftPressed) {
                     // デフォルト動作を許可（何もしない）
                     // 自動保存だけトリガー
                     clearTimeout(this.#autoSaveTimer);
