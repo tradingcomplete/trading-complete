@@ -411,8 +411,8 @@ class ReportModule {
             margin-bottom: 6px;
         }
         .trade-item {
-            margin-bottom: 6px;
-            padding: 6px 10px;
+            margin-bottom: 8px;
+            padding: 8px 10px;
             background: #f9f9f9;
             border-radius: 5px;
             border-left: 4px solid #3498db;
@@ -443,7 +443,9 @@ class ReportModule {
             color: #555;
             font-style: italic;
             padding-left: 30px;
-            font-size: 12px;
+            font-size: 10px;
+            line-height: 1.4;
+            word-break: break-all;
         }
         
         /* 色分け */
@@ -819,7 +821,7 @@ class ReportModule {
     </div>
     
     <div>
-        <h4 style="color: #00ff88; margin-bottom: 15px;">🕐 セッション別分析（エントリー時間ベース・DST自動対応）</h4>
+        <h4 style="color: #00ff88; margin-bottom: 15px;">🕐 セッション別分析</h4>
         <table class="trades-table">
             <thead>
                 <tr>
@@ -1676,7 +1678,7 @@ class ReportModule {
                               style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
                               onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
                               onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
-                        🕐 セッション別分析（エントリー時間ベース・DST自動対応）
+                        🕐 セッション別分析
                     </h4>
                     <span id="sessionAnalysis-icon-right"
                           onclick="window.ReportModule.toggleAccordion('sessionAnalysis')" 
@@ -2436,7 +2438,7 @@ class ReportModule {
                         </span>
                     </div>
                     <div class="trade-reflection">
-                        「${trade.reflection || '振り返りを記入してください'}」
+                        「${typeof trade.reflection === 'string' ? trade.reflection : (trade.reflection?.text || '振り返りを記入してください')}」
                     </div>
                 </div>
             `;
@@ -2476,7 +2478,7 @@ class ReportModule {
                         </span>
                     </div>
                     <div class="trade-reflection">
-                        「${trade.reflection || '振り返りを記入してください'}」
+                        「${typeof trade.reflection === 'string' ? trade.reflection : (trade.reflection?.text || '振り返りを記入してください')}」
                     </div>
                 </div>
             `;
