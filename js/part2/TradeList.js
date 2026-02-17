@@ -885,6 +885,16 @@ class TradeList {
             filteredTrades = filteredTrades.filter(t => t.methodId === methodFilter);
         }
         
+        // セッションフィルター（DST自動判定対応）
+        const sessionFilter = document.getElementById('sessionFilter')?.value || '';
+        if (sessionFilter) {
+            filteredTrades = filteredTrades.filter(t => {
+                const entryDate = new Date(t.entryTime || t.entryDatetime || t.date);
+                if (isNaN(entryDate.getTime())) return false;
+                return window.getTradeSession(entryDate) === sessionFilter;
+            });
+        }
+        
         // ステータスフィルター
         if (statusFilter) {
             if (statusFilter === 'active') {

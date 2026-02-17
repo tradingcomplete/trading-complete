@@ -22,6 +22,7 @@ class ReportModule {
     #accordionStates = {
         pairAnalysis: false,
         dayAnalysis: false,
+        sessionAnalysis: false,  // セッション別分析（v2.0追加）
         tradeHistory: false,  // 初期状態は閉じている
         ruleRiskAnalysis: false,  // ルール遵守・リスク分析（Phase 5追加）
         reflectionList: false
@@ -34,6 +35,86 @@ class ReportModule {
         
         // 初期化
         this.#initialize();
+    }
+    
+    // ==================== セッション判定（DST自動対応） ====================
+    
+    /**
+     * 米国DST（夏時間）判定
+     * ルール: 3月第2日曜日〜11月第1日曜日（2007年〜 Energy Policy Act準拠）
+     * @private
+     * @param {Date} date - 判定する日付
+     * @returns {boolean} true = 夏時間期間中
+     */
+    #isUSDaylightSaving(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1; // 1-12
+
+        // 4月〜10月は確実に夏時間
+        if (month >= 4 && month <= 10) return true;
+        // 12月〜2月は確実に冬時間
+        if (month === 12 || month <= 2) return false;
+
+        // 3月: 第2日曜日以降が夏時間
+        if (month === 3) {
+            const firstDay = new Date(year, 2, 1).getDay();
+            const secondSunday = firstDay === 0 ? 8 : (7 - firstDay) + 8;
+            return date.getDate() >= secondSunday;
+        }
+
+        // 11月: 第1日曜日より前が夏時間
+        if (month === 11) {
+            const firstDay = new Date(year, 10, 1).getDay();
+            const firstSunday = firstDay === 0 ? 1 : (7 - firstDay) + 1;
+            return date.getDate() < firstSunday;
+        }
+
+        return false;
+    }
+
+    /**
+     * エントリー時間からセッション名を取得（DST自動対応）
+     *
+     * 夏時間: オセアニア 3-9時 / 東京 9-15時 / ロンドン 15-21時 / NY 21-3時
+     * 冬時間: オセアニア 3-9時 / 東京 9-16時 / ロンドン 16-22時 / NY 22-3時
+     *
+     * @param {Date} date - エントリー日時（JST）
+     * @returns {string} 'oceania' | 'tokyo' | 'london' | 'ny'
+     */
+    getTradeSession(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return 'tokyo';
+        }
+
+        const hour = date.getHours();
+        const isDST = this.#isUSDaylightSaving(date);
+
+        if (isDST) {
+            if (hour >= 3 && hour < 9)  return 'oceania';
+            if (hour >= 9 && hour < 15) return 'tokyo';
+            if (hour >= 15 && hour < 21) return 'london';
+            return 'ny';
+        } else {
+            if (hour >= 3 && hour < 9)  return 'oceania';
+            if (hour >= 9 && hour < 16) return 'tokyo';
+            if (hour >= 16 && hour < 22) return 'london';
+            return 'ny';
+        }
+    }
+
+    /**
+     * セッションキーから日本語表示名を取得
+     * @param {string} sessionKey - 'oceania' | 'tokyo' | 'london' | 'ny'
+     * @returns {string} 日本語表示名
+     */
+    getSessionDisplayName(sessionKey) {
+        const names = {
+            oceania: 'オセアニア',
+            tokyo: '東京',
+            london: 'ロンドン',
+            ny: 'ニューヨーク'
+        };
+        return names[sessionKey] || sessionKey;
     }
     
     // ================
@@ -737,6 +818,38 @@ class ReportModule {
         </div>
     </div>
     
+    <div>
+        <h4 style="color: #00ff88; margin-bottom: 15px;">🕐 セッション別分析（エントリー時間ベース・DST自動対応）</h4>
+        <table class="trades-table">
+            <thead>
+                <tr>
+                    <th>セッション</th>
+                    <th>トレード数</th>
+                    <th>勝敗</th>
+                    <th>勝率</th>
+                    <th>獲得Pips</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${['oceania', 'tokyo', 'london', 'ny'].map(key => {
+                    const s = stats.sessionStats?.[key] || { trades: 0, wins: 0, losses: 0, pips: 0 };
+                    const winRate = s.trades > 0 ? (s.wins / s.trades * 100).toFixed(1) : '0.0';
+                    return `
+                        <tr>
+                            <td>${window.getSessionDisplayName(key)}</td>
+                            <td>${s.trades}</td>
+                            <td>${s.wins}勝${s.losses}敗</td>
+                            <td>${winRate}%</td>
+                            <td style="color: ${s.pips >= 0 ? '#00ff88' : '#ff4466'}">
+                                ${s.pips >= 0 ? '+' : ''}${s.pips.toFixed(1)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    </div>
+    
     <!-- ルール遵守・リスク分析（Phase 5） -->
     <div class="rule-risk-analysis-section">
         <h2>⭕ ルール遵守・リスク分析</h2>
@@ -1340,6 +1453,14 @@ class ReportModule {
             6: { trades: 0, pips: 0 }  // 土曜
         };
         
+        // セッション別統計（DST自動対応）
+        const sessionStats = {
+            oceania: { trades: 0, wins: 0, losses: 0, pips: 0 },
+            tokyo:   { trades: 0, wins: 0, losses: 0, pips: 0 },
+            london:  { trades: 0, wins: 0, losses: 0, pips: 0 },
+            ny:      { trades: 0, wins: 0, losses: 0, pips: 0 }
+        };
+        
         closedTrades.forEach(trade => {
             const pips = this.#calculateTradePips(trade);
             totalPips += pips;
@@ -1380,6 +1501,15 @@ class ReportModule {
                 dayStats[dayOfWeek].trades++;
                 dayStats[dayOfWeek].pips += pips;
             }
+            
+            // セッション別統計（DST自動対応）
+            if (!isNaN(entryDate.getTime())) {
+                const session = this.getTradeSession(entryDate);
+                sessionStats[session].trades++;
+                sessionStats[session].pips += pips;
+                if (pips > 0) sessionStats[session].wins++;
+                else if (pips < 0) sessionStats[session].losses++;
+            }
         });
         
         const winRate = closedTrades.length > 0 ? (wins / closedTrades.length * 100) : 0;
@@ -1405,6 +1535,7 @@ class ReportModule {
             consecutiveLosses,
             pairStats,
             dayStats,
+            sessionStats,
             trades: closedTrades
         };
     }
@@ -1531,6 +1662,54 @@ class ReportModule {
                                     </td>
                                 </tr>
                             `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            
+            <div class="report-accordion" style="margin-top: 30px;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                    <h4 style="color: #00ff88; margin: 0;">
+                        <span id="sessionAnalysis-icon" 
+                              onclick="window.ReportModule.toggleAccordion('sessionAnalysis')" 
+                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
+                              onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                              onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                        🕐 セッション別分析（エントリー時間ベース・DST自動対応）
+                    </h4>
+                    <span id="sessionAnalysis-icon-right"
+                          onclick="window.ReportModule.toggleAccordion('sessionAnalysis')" 
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease; color: #00ff88; font-size: 16px;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                </div>
+                <div id="sessionAnalysis-content" style="display: none;">
+                <table class="trades-table">
+                    <thead>
+                        <tr>
+                            <th>セッション</th>
+                            <th>トレード数</th>
+                            <th>勝敗</th>
+                            <th>勝率</th>
+                            <th>獲得Pips</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${['oceania', 'tokyo', 'london', 'ny'].map(key => {
+                            const s = data.sessionStats[key];
+                            const winRate = s.trades > 0 ? (s.wins / s.trades * 100).toFixed(1) : '0.0';
+                            return `
+                            <tr>
+                                <td>${window.getSessionDisplayName(key)}</td>
+                                <td>${s.trades}</td>
+                                <td>${s.wins}勝${s.losses}敗</td>
+                                <td>${winRate}%</td>
+                                <td style="color: ${s.pips >= 0 ? '#00ff88' : '#ff4466'}">
+                                    ${s.pips >= 0 ? '+' : ''}${s.pips.toFixed(1)}
+                                </td>
+                            </tr>
+                        `;
                         }).join('')}
                     </tbody>
                 </table>
@@ -1986,7 +2165,13 @@ class ReportModule {
                 maxLoss: 0,
                 avgHoldTime: '0時間0分',
                 pairStats: {},
-                dayStats: Array(7).fill(null).map(() => ({ trades: 0, pips: 0 }))
+                dayStats: Array(7).fill(null).map(() => ({ trades: 0, pips: 0 })),
+                sessionStats: {
+                    oceania: { trades: 0, wins: 0, losses: 0, pips: 0 },
+                    tokyo:   { trades: 0, wins: 0, losses: 0, pips: 0 },
+                    london:  { trades: 0, wins: 0, losses: 0, pips: 0 },
+                    ny:      { trades: 0, wins: 0, losses: 0, pips: 0 }
+                }
             };
         }
         
@@ -2147,12 +2332,28 @@ class ReportModule {
         
         // 曜日別統計
         const dayStats = Array(7).fill(null).map(() => ({ trades: 0, pips: 0 }));
+        
+        // セッション別統計（DST自動対応）
+        const sessionStats = {
+            oceania: { trades: 0, wins: 0, losses: 0, pips: 0 },
+            tokyo:   { trades: 0, wins: 0, losses: 0, pips: 0 },
+            london:  { trades: 0, wins: 0, losses: 0, pips: 0 },
+            ny:      { trades: 0, wins: 0, losses: 0, pips: 0 }
+        };
+        
         monthlyTrades.forEach(trade => {
             const entryDate = new Date(trade.entryTime || trade.entryDatetime || trade.date);
             const dayOfWeek = entryDate.getDay();
             const pips = this.#calculateTradePips(trade);
             dayStats[dayOfWeek].trades++;
             dayStats[dayOfWeek].pips += pips;
+            
+            // セッション別統計（DST自動対応）
+            const session = this.getTradeSession(entryDate);
+            sessionStats[session].trades++;
+            sessionStats[session].pips += pips;
+            if (pips > 0) sessionStats[session].wins++;
+            else if (pips < 0) sessionStats[session].losses++;
         });
         
         return {
@@ -2197,7 +2398,8 @@ class ReportModule {
             
             // 詳細分析
             pairStats,
-            dayStats
+            dayStats,
+            sessionStats
         };
     }
     
@@ -3174,6 +3376,14 @@ class ReportModule {
 
 // 即座に初期化（シングルトン）
 window.ReportModule = new ReportModule();
+
+// セッション判定のグローバル公開（橋渡しのみ・ロジックはクラス内）
+window.getTradeSession = function(date) {
+    return window.ReportModule.getTradeSession(date);
+};
+window.getSessionDisplayName = function(key) {
+    return window.ReportModule.getSessionDisplayName(key);
+};
 
 // アコーディオン用のグローバル関数を追加
 if (!window.ReportModule.toggleAccordion) {

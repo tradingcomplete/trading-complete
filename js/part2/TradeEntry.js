@@ -599,15 +599,30 @@ class TradeEntry {
             tags.push(days[date.getDay()]);
         }
         
-        // 時間帯タグ
+        // 時間帯タグ（サマータイム自動判定対応）
         if (formData.entryDatetime) {
-            const hour = new Date(formData.entryDatetime).getHours();
-            if (hour >= 9 && hour < 15) {
-                tags.push('東京時間');
-            } else if (hour >= 15 && hour < 21) {
-                tags.push('ロンドン時間');
-            } else if (hour >= 21 || hour < 3) {
-                tags.push('ニューヨーク時間');
+            const entryDate = new Date(formData.entryDatetime);
+            if (window.getTradeSession) {
+                const session = window.getTradeSession(entryDate);
+                const sessionLabels = {
+                    oceania: 'オセアニア時間',
+                    tokyo: '東京時間',
+                    london: 'ロンドン時間',
+                    ny: 'ニューヨーク時間'
+                };
+                tags.push(sessionLabels[session]);
+            } else {
+                // フォールバック（グローバル関数未読み込み時）
+                const hour = entryDate.getHours();
+                if (hour >= 3 && hour < 9) {
+                    tags.push('オセアニア時間');
+                } else if (hour >= 9 && hour < 15) {
+                    tags.push('東京時間');
+                } else if (hour >= 15 && hour < 21) {
+                    tags.push('ロンドン時間');
+                } else {
+                    tags.push('ニューヨーク時間');
+                }
             }
         }
         

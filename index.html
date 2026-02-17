@@ -477,6 +477,16 @@
                                 <!-- 動的に追加 -->
                             </select>
                         </div>
+                        <div class="filter-group">
+                            <label>セッション</label>
+                            <select id="sessionFilter" onchange="filterTrades()">
+                                <option value="">全て</option>
+                                <option value="oceania">オセアニア</option>
+                                <option value="tokyo">東京</option>
+                                <option value="london">ロンドン</option>
+                                <option value="ny">ニューヨーク</option>
+                            </select>
+                        </div>
                         <button class="btn btn-secondary" onclick="filterTrades()">適用</button>
                     </div>
                 </div>
