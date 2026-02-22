@@ -157,6 +157,27 @@ class MonthlyCalendarModule {
     }
     
     /**
+     * 日別トレード一覧モーダル表示
+     * @public
+     * @param {string} date - 日付（YYYY-MM-DD）
+     */
+    showDayTradesModal(date) {
+        console.log('MonthlyCalendarModule.showDayTradesModal:', date);
+        this.#renderDayTradesModal(date);
+    }
+    
+    /**
+     * 日別トレード一覧モーダルを閉じる
+     * @public
+     */
+    closeDayTradesModal() {
+        const modal = document.getElementById('dayTradesModal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+    
+    /**
      * モジュール状態取得（デバッグ用）
      * @public
      * @returns {Object} モジュールの状態
@@ -361,7 +382,7 @@ class MonthlyCalendarModule {
             `;
             
             // クリックイベントを設定
-            const onclick = `window.MonthlyCalendarModule.showDayTooltip(event, '${dateKey}', ${profit}, ${count})`;
+            const onclick = `window.MonthlyCalendarModule.showDayTradesModal('${dateKey}')`;
             
             return `<div class="${classes}" onclick="${onclick}">${content}</div>`;
         }
@@ -537,6 +558,142 @@ class MonthlyCalendarModule {
     }
     
     /**
+     * 日別トレード一覧モーダルを描画
+     * @private
+     * @param {string} date - 日付（YYYY-MM-DD）
+     */
+    #renderDayTradesModal(date) {
+        // 既存モーダルがあれば削除
+        this.closeDayTradesModal();
+        
+        if (!this.#tradeManager) {
+            console.warn('MonthlyCalendarModule: TradeManager未設定');
+            return;
+        }
+        
+        // 該当日の決済済みトレードを取得
+        const allTrades = this.#tradeManager.getAllTrades();
+        const dayTrades = allTrades.filter(trade => {
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const lastExit = trade.exits[trade.exits.length - 1];
+            const exitDate = lastExit.time.split('T')[0];
+            return exitDate === date;
+        });
+        
+        // 日付フォーマット
+        const [year, month, day] = date.split('-');
+        const dateFormatted = `${parseInt(year)}年${parseInt(month)}月${parseInt(day)}日`;
+        
+        // 合計損益を計算
+        let totalProfit = 0;
+        dayTrades.forEach(trade => {
+            totalProfit += trade.yenProfitLoss?.netProfit || 0;
+        });
+        
+        const profitFormatted = this.#formatYen(totalProfit);
+        const profitColor = totalProfit >= 0 ? '#4ade80' : '#f87171';
+        
+        // トレードカードHTMLを生成
+        let tradesHTML = '';
+        
+        if (dayTrades.length === 0) {
+            tradesHTML = `
+                <div style="text-align: center; padding: 40px 20px; color: #7a8599;">
+                    この日に決済したトレードはありません
+                </div>
+            `;
+        } else {
+            dayTrades.forEach(trade => {
+                const netProfit = trade.yenProfitLoss?.netProfit || 0;
+                const pips = this.#calculateTradePipsForModal(trade);
+                const cardColor = netProfit >= 0 ? '#4ade80' : '#f87171';
+                const directionLabel = (trade.direction === 'buy' || trade.direction === 'long') ? 'LONG' : 'SHORT';
+                const directionColor = (trade.direction === 'buy' || trade.direction === 'long') ? '#4ade80' : '#f87171';
+                
+                tradesHTML += `
+                    <div onclick="window.showTradeDetail('${trade.id}')" 
+                         style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid ${cardColor}; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s;"
+                         onmouseover="this.style.background='rgba(255,255,255,0.07)'"
+                         onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: bold; font-size: 15px; color: #e0e0e0;">${trade.pair}</span>
+                                <span style="color: ${directionColor}; font-size: 13px; margin-left: 8px;">${directionLabel}</span>
+                                <span style="color: #7a8599; font-size: 12px; margin-left: 8px;">${trade.lotSize}L</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="color: ${cardColor}; font-weight: bold; font-size: 15px;">${this.#formatYen(netProfit)}</div>
+                                <div style="color: #7a8599; font-size: 12px;">${pips >= 0 ? '+' : ''}${pips.toFixed(1)} pips</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        // モーダルを動的生成
+        const modal = document.createElement('div');
+        modal.id = 'dayTradesModal';
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>${dateFormatted} のトレード</h2>
+                    <button class="modal-close" onclick="window.closeDayTradesModal()">×</button>
+                </div>
+                <div style="padding: 0 5px;">
+                    <!-- 日次サマリー -->
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; text-align: center;">
+                        <div style="color: #7a8599; font-size: 13px; margin-bottom: 4px;">日次損益（${dayTrades.length}件）</div>
+                        <div style="color: ${profitColor}; font-size: 22px; font-weight: bold;">${profitFormatted}</div>
+                    </div>
+                    
+                    <!-- トレード一覧 -->
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        ${tradesHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // モーダル背景クリックで閉じる
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeDayTradesModal();
+            }
+        });
+        
+        document.body.appendChild(modal);
+        
+        console.log(`  - モーダル表示: ${dateFormatted} (${dayTrades.length}件)`);
+    }
+    
+    /**
+     * モーダル用Pips計算（簡易版）
+     * @private
+     * @param {Object} trade - トレードオブジェクト
+     * @returns {number} Pips
+     */
+    #calculateTradePipsForModal(trade) {
+        try {
+            if (typeof window.calculateTradePips === 'function') {
+                return window.calculateTradePips(trade);
+            }
+            // フォールバック: exits から計算
+            if (!trade.exits || trade.exits.length === 0) return 0;
+            let totalPips = 0;
+            trade.exits.forEach(exit => {
+                totalPips += exit.pips || 0;
+            });
+            return totalPips;
+        } catch (e) {
+            return 0;
+        }
+    }
+    
+    /**
      * EventBusリスナー設定
      * @private
      */
@@ -611,6 +768,11 @@ class MonthlyCalendarModule {
 
 // ========== グローバル登録 ==========
 window.MonthlyCalendarModule = new MonthlyCalendarModule();
+
+// 日別トレードモーダル用グローバル関数
+window.closeDayTradesModal = function() {
+    window.MonthlyCalendarModule?.closeDayTradesModal();
+};
 
 // デバッグ出力
 console.log('MonthlyCalendarModule: ロード完了');
