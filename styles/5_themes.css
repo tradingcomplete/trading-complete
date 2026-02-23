@@ -1952,19 +1952,19 @@ body.light-mode .calendar-day-cell {
 body.light-mode .calendar-day-cell.cal-win {
     background: linear-gradient(
         135deg,
-        rgba(0, 200, 100, 0.15) 0%,
-        rgba(0, 200, 100, 0.08) 100%
+        rgba(0, 180, 100, 0.28) 0%,
+        rgba(0, 180, 100, 0.15) 100%
     ) !important;
-    border-color: rgba(0, 180, 100, 0.35) !important;
+    border-color: rgba(0, 180, 100, 0.50) !important;
 }
 
 body.light-mode .calendar-day-cell.cal-loss {
     background: linear-gradient(
         135deg,
-        rgba(239, 68, 68, 0.15) 0%,
-        rgba(239, 68, 68, 0.08) 100%
+        rgba(220, 50, 50, 0.25) 0%,
+        rgba(220, 50, 50, 0.12) 100%
     ) !important;
-    border-color: rgba(239, 68, 68, 0.35) !important;
+    border-color: rgba(220, 50, 50, 0.45) !important;
 }
 
 body.light-mode .calendar-day-cell.cal-win:hover,
