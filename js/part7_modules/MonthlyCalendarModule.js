@@ -298,6 +298,115 @@ class MonthlyCalendarModule {
             .calendar-day-profit.negative {
                 color: #ff4466 !important;
             }
+            
+            /* ==========================================
+               日別トレードモーダル
+               ========================================== */
+            
+            /* サマリーボックス */
+            .day-trades-summary {
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 16px;
+                text-align: center;
+            }
+            
+            .day-trades-summary-label {
+                color: #7a8599;
+                font-size: 13px;
+                margin-bottom: 4px;
+            }
+            
+            .day-trades-summary-value {
+                font-size: 22px;
+                font-weight: bold;
+            }
+            
+            /* トレードカード */
+            .day-trade-card {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 8px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            
+            .day-trade-card:hover {
+                background: rgba(255, 255, 255, 0.07);
+            }
+            
+            .day-trade-pair {
+                font-weight: bold;
+                font-size: 15px;
+                color: #e0e0e0;
+            }
+            
+            .day-trade-direction {
+                font-size: 13px;
+                margin-left: 8px;
+            }
+            
+            .day-trade-lot {
+                color: #7a8599;
+                font-size: 12px;
+                margin-left: 8px;
+            }
+            
+            .day-trade-profit {
+                font-weight: bold;
+                font-size: 15px;
+            }
+            
+            .day-trade-pips {
+                color: #7a8599;
+                font-size: 12px;
+            }
+            
+            .day-trades-empty {
+                text-align: center;
+                padding: 40px 20px;
+                color: #7a8599;
+            }
+            
+            /* ==========================================
+               ライトモード対応
+               ========================================== */
+            
+            body.light-mode .day-trades-summary {
+                background: rgba(0, 0, 0, 0.04);
+            }
+            
+            body.light-mode .day-trades-summary-label {
+                color: #666666;
+            }
+            
+            body.light-mode .day-trade-card {
+                background: rgba(0, 0, 0, 0.03);
+                border-color: rgba(0, 0, 0, 0.12);
+            }
+            
+            body.light-mode .day-trade-card:hover {
+                background: rgba(0, 0, 0, 0.07);
+            }
+            
+            body.light-mode .day-trade-pair {
+                color: #333333;
+            }
+            
+            body.light-mode .day-trade-lot {
+                color: #666666;
+            }
+            
+            body.light-mode .day-trade-pips {
+                color: #666666;
+            }
+            
+            body.light-mode .day-trades-empty {
+                color: #888888;
+            }
         `;
         document.head.appendChild(style);
         
@@ -715,7 +824,7 @@ class MonthlyCalendarModule {
         
         if (dayTrades.length === 0) {
             tradesHTML = `
-                <div style="text-align: center; padding: 40px 20px; color: #7a8599;">
+                <div class="day-trades-empty">
                     この日に決済したトレードはありません
                 </div>
             `;
@@ -728,19 +837,18 @@ class MonthlyCalendarModule {
                 const directionColor = (trade.direction === 'buy' || trade.direction === 'long') ? '#00ff88' : '#ff4466';
                 
                 tradesHTML += `
-                    <div onclick="window.showTradeDetail('${trade.id}')" 
-                         style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid ${cardColor}; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s;"
-                         onmouseover="this.style.background='rgba(255,255,255,0.07)'"
-                         onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                    <div class="day-trade-card" 
+                         onclick="window.showTradeDetail('${trade.id}')"
+                         style="border-left: 3px solid ${cardColor};">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <span style="font-weight: bold; font-size: 15px; color: #e0e0e0;">${trade.pair}</span>
-                                <span style="color: ${directionColor}; font-size: 13px; margin-left: 8px;">${directionLabel}</span>
-                                <span style="color: #7a8599; font-size: 12px; margin-left: 8px;">${trade.lotSize}L</span>
+                                <span class="day-trade-pair">${trade.pair}</span>
+                                <span class="day-trade-direction" style="color: ${directionColor};">${directionLabel}</span>
+                                <span class="day-trade-lot">${trade.lotSize}L</span>
                             </div>
                             <div style="text-align: right;">
-                                <div style="color: ${cardColor}; font-weight: bold; font-size: 15px;">${this.#formatYen(netProfit)}</div>
-                                <div style="color: #7a8599; font-size: 12px;">${pips >= 0 ? '+' : ''}${pips.toFixed(1)} pips</div>
+                                <div class="day-trade-profit" style="color: ${cardColor};">${this.#formatYen(netProfit)}</div>
+                                <div class="day-trade-pips">${pips >= 0 ? '+' : ''}${pips.toFixed(1)} pips</div>
                             </div>
                         </div>
                     </div>
@@ -762,9 +870,9 @@ class MonthlyCalendarModule {
                 </div>
                 <div style="padding: 0 5px;">
                     <!-- 日次サマリー -->
-                    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; text-align: center;">
-                        <div style="color: #7a8599; font-size: 13px; margin-bottom: 4px;">日次損益（${dayTrades.length}件）</div>
-                        <div style="color: ${profitColor}; font-size: 22px; font-weight: bold;">${profitFormatted}</div>
+                    <div class="day-trades-summary">
+                        <div class="day-trades-summary-label">日次損益（${dayTrades.length}件）</div>
+                        <div class="day-trades-summary-value" style="color: ${profitColor};">${profitFormatted}</div>
                     </div>
                     
                     <!-- トレード一覧 -->
