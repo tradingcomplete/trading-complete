@@ -1948,13 +1948,37 @@ body.light-mode .calendar-day-cell {
     color: #000000 !important;
 }
 
-/* カレンダー日別損益 背景色（ライトモード） */
-body.light-mode .calendar-day-cell.profit-bg-positive {
-    background: rgba(34, 197, 94, 0.20) !important;
+/* カレンダー日別損益 背景色（ライトモード・v5準拠） */
+body.light-mode .calendar-day-cell.cal-win {
+    background: linear-gradient(
+        135deg,
+        rgba(59, 158, 255, 0.12) 0%,
+        rgba(59, 158, 255, 0.06) 100%
+    ) !important;
+    border-color: rgba(59, 158, 255, 0.30) !important;
 }
 
-body.light-mode .calendar-day-cell.profit-bg-negative {
-    background: rgba(239, 68, 68, 0.20) !important;
+body.light-mode .calendar-day-cell.cal-loss {
+    background: linear-gradient(
+        135deg,
+        rgba(255, 68, 102, 0.12) 0%,
+        rgba(255, 68, 102, 0.06) 100%
+    ) !important;
+    border-color: rgba(255, 68, 102, 0.30) !important;
+}
+
+body.light-mode .calendar-day-cell.cal-win:hover,
+body.light-mode .calendar-day-cell.cal-loss:hover {
+    box-shadow: 0 0 8px rgba(212, 165, 32, 0.15);
+    border-color: #b8860b !important;
+}
+
+body.light-mode .calendar-day-profit.positive {
+    color: #2563eb !important;
+}
+
+body.light-mode .calendar-day-profit.negative {
+    color: #dc2626 !important;
 }
 
 body.light-mode .calendar-grid > div:hover {

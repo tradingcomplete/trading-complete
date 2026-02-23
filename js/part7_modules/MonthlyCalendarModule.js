@@ -196,27 +196,112 @@ class MonthlyCalendarModule {
     // ========== Private Methods ==========
     
     /**
-     * カレンダー背景色用CSSを注入
+     * カレンダーv5スタイルを注入
      * @private
      */
     #injectCalendarStyles() {
-        // 既に注入済みならスキップ
-        if (document.getElementById('calendarBgStyles')) return;
+        if (document.getElementById('calendarV5Styles')) return;
         
         const style = document.createElement('style');
-        style.id = 'calendarBgStyles';
+        style.id = 'calendarV5Styles';
         style.textContent = `
-            /* カレンダーセル背景色（ダークモード） */
-            .calendar-day-cell.profit-bg-positive {
-                background: rgba(0, 180, 100, 0.25) !important;
+            /* ==========================================
+               カレンダーセル背景色（v5 Cyber Trading）
+               ========================================== */
+            
+            /* 勝ち日 - Blue */
+            .calendar-day-cell.cal-win {
+                background: linear-gradient(
+                    135deg,
+                    rgba(59, 158, 255, 0.18) 0%,
+                    rgba(59, 158, 255, 0.10) 100%
+                ) !important;
+                border-color: rgba(59, 158, 255, 0.25) !important;
             }
-            .calendar-day-cell.profit-bg-negative {
-                background: rgba(220, 50, 50, 0.30) !important;
+            
+            /* 負け日 - Red */
+            .calendar-day-cell.cal-loss {
+                background: linear-gradient(
+                    135deg,
+                    rgba(255, 68, 102, 0.20) 0%,
+                    rgba(255, 68, 102, 0.10) 100%
+                ) !important;
+                border-color: rgba(255, 68, 102, 0.25) !important;
+            }
+            
+            /* ホバー: ゴールドグロー */
+            .calendar-day-cell.cal-win:hover,
+            .calendar-day-cell.cal-loss:hover {
+                box-shadow: 0 0 12px var(--gold-glow);
+                border-color: var(--gold) !important;
+                transform: translateY(-2px);
+            }
+            
+            /* セル共通トランジション */
+            .calendar-day-cell {
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            /* 上辺のサイバーライン（トレードあるセルのみ） */
+            .calendar-day-cell.cal-win::before,
+            .calendar-day-cell.cal-loss::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 15%;
+                right: 15%;
+                height: 2px;
+                opacity: 0.5;
+            }
+            
+            .calendar-day-cell.cal-win::before {
+                background: linear-gradient(90deg, transparent, var(--win-bright), transparent);
+            }
+            
+            .calendar-day-cell.cal-loss::before {
+                background: linear-gradient(90deg, transparent, var(--loss-bright), transparent);
+            }
+            
+            /* ゴールドシマー（ホバー時に発動） */
+            .calendar-day-cell.cal-win::after,
+            .calendar-day-cell.cal-loss::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 60%;
+                height: 2px;
+                background: linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .calendar-day-cell.cal-win:hover::after,
+            .calendar-day-cell.cal-loss:hover::after {
+                animation: calGoldShimmer 1.2s ease-in-out;
+                opacity: 1;
+            }
+            
+            @keyframes calGoldShimmer {
+                0% { left: -60%; opacity: 0; }
+                15% { opacity: 1; }
+                100% { left: 100%; opacity: 0; }
+            }
+            
+            /* 損益テキスト色をv5に統一 */
+            .calendar-day-profit.positive {
+                color: var(--win) !important;
+            }
+            
+            .calendar-day-profit.negative {
+                color: var(--loss) !important;
             }
         `;
         document.head.appendChild(style);
         
-        console.log('MonthlyCalendarModule: カレンダー背景色CSS注入完了');
+        console.log('MonthlyCalendarModule: v5カレンダースタイル注入完了');
     }
     
     /**
@@ -401,11 +486,11 @@ class MonthlyCalendarModule {
             const profitK = this.#formatProfitK(profit);
             const profitClass = profit > 0 ? 'positive' : profit < 0 ? 'negative' : 'zero';
             
-            // セル背景色クラスを追加
+            // v5カラーシステム: Win=Blue / Loss=Red
             if (profit > 0) {
-                classes += ' profit-bg-positive';
+                classes += ' cal-win';
             } else if (profit < 0) {
-                classes += ' profit-bg-negative';
+                classes += ' cal-loss';
             }
             
             content += `
