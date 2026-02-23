@@ -38,6 +38,7 @@ class MonthlyCalendarModule {
         console.log('MonthlyCalendarModule.initialize: 開始');
         
         try {
+            this.#injectCalendarStyles();
             this.#generateYearOptions();
             this.updateCalendar();
             this.#setupEventListeners();
@@ -193,6 +194,30 @@ class MonthlyCalendarModule {
     }
     
     // ========== Private Methods ==========
+    
+    /**
+     * カレンダー背景色用CSSを注入
+     * @private
+     */
+    #injectCalendarStyles() {
+        // 既に注入済みならスキップ
+        if (document.getElementById('calendarBgStyles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'calendarBgStyles';
+        style.textContent = `
+            /* カレンダーセル背景色（ダークモード） */
+            .calendar-day-cell.profit-bg-positive {
+                background: rgba(0, 180, 100, 0.25) !important;
+            }
+            .calendar-day-cell.profit-bg-negative {
+                background: rgba(220, 50, 50, 0.30) !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        console.log('MonthlyCalendarModule: カレンダー背景色CSS注入完了');
+    }
     
     /**
      * 年選択ドロップダウンの生成
@@ -375,6 +400,13 @@ class MonthlyCalendarModule {
             const count = dayData.count;
             const profitK = this.#formatProfitK(profit);
             const profitClass = profit > 0 ? 'positive' : profit < 0 ? 'negative' : 'zero';
+            
+            // セル背景色クラスを追加
+            if (profit > 0) {
+                classes += ' profit-bg-positive';
+            } else if (profit < 0) {
+                classes += ' profit-bg-negative';
+            }
             
             content += `
                 <div class="calendar-day-profit ${profitClass}">${profitK}</div>
