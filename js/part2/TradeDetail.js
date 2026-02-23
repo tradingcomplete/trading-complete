@@ -60,8 +60,7 @@ class TradeDetail {
         
         // 新しいセクションを作成
         const yenSection = document.createElement('div');
-        yenSection.className = 'trade-detail-section yen-profit-loss-section';
-        yenSection.className = 'subsection-box';
+        yenSection.className = 'trade-detail-section subsection-box yen-profit-loss-section';
         
         // 円建て損益の内容を条件分岐で生成
         let yenContent = '';
