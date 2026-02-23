@@ -206,25 +206,32 @@ class MonthlyCalendarModule {
         style.id = 'calendarV5Styles';
         style.textContent = `
             /* ==========================================
-               カレンダーセル背景色（v5 Cyber Trading）
+               カレンダーセル背景色（Green/Red + Cyber FX）
                ========================================== */
             
-            /* 勝ち日 - Blue */
+            /* セル共通 */
+            .calendar-day-cell {
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            /* 勝ち日 - Green */
             .calendar-day-cell.cal-win {
                 background: linear-gradient(
                     135deg,
-                    rgba(59, 158, 255, 0.35) 0%,
-                    rgba(59, 158, 255, 0.20) 100%
+                    rgba(0, 255, 136, 0.30) 0%,
+                    rgba(0, 255, 136, 0.15) 100%
                 ) !important;
-                border-color: rgba(59, 158, 255, 0.50) !important;
+                border-color: rgba(0, 255, 136, 0.45) !important;
             }
             
             /* 負け日 - Red */
             .calendar-day-cell.cal-loss {
                 background: linear-gradient(
                     135deg,
-                    rgba(255, 68, 102, 0.38) 0%,
-                    rgba(255, 68, 102, 0.22) 100%
+                    rgba(255, 68, 102, 0.35) 0%,
+                    rgba(255, 68, 102, 0.18) 100%
                 ) !important;
                 border-color: rgba(255, 68, 102, 0.50) !important;
             }
@@ -232,39 +239,32 @@ class MonthlyCalendarModule {
             /* ホバー: ゴールドグロー */
             .calendar-day-cell.cal-win:hover,
             .calendar-day-cell.cal-loss:hover {
-                box-shadow: 0 0 12px var(--gold-glow);
+                box-shadow: 0 0 15px var(--gold-glow);
                 border-color: var(--gold) !important;
                 transform: translateY(-2px);
             }
             
-            /* セル共通トランジション */
-            .calendar-day-cell {
-                transition: all 0.3s ease;
-                position: relative;
-                overflow: hidden;
-            }
-            
-            /* 上辺のサイバーライン（トレードあるセルのみ） */
+            /* 上辺サイバーライン（常時表示） */
             .calendar-day-cell.cal-win::before,
             .calendar-day-cell.cal-loss::before {
                 content: '';
                 position: absolute;
                 top: 0;
-                left: 15%;
-                right: 15%;
+                left: 10%;
+                right: 10%;
                 height: 2px;
-                opacity: 0.5;
+                opacity: 0.6;
             }
             
             .calendar-day-cell.cal-win::before {
-                background: linear-gradient(90deg, transparent, var(--win-bright), transparent);
+                background: linear-gradient(90deg, transparent, #00ff88, transparent);
             }
             
             .calendar-day-cell.cal-loss::before {
-                background: linear-gradient(90deg, transparent, var(--loss-bright), transparent);
+                background: linear-gradient(90deg, transparent, #ff4466, transparent);
             }
             
-            /* ゴールドシマー（ホバー時に発動） */
+            /* ゴールドシマー（常時アニメーション） */
             .calendar-day-cell.cal-win::after,
             .calendar-day-cell.cal-loss::after {
                 content: '';
@@ -274,29 +274,29 @@ class MonthlyCalendarModule {
                 width: 60%;
                 height: 2px;
                 background: linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
+                animation: calGoldShimmer 6s ease-in-out infinite;
                 opacity: 0;
-                transition: opacity 0.3s ease;
             }
             
-            .calendar-day-cell.cal-win:hover::after,
-            .calendar-day-cell.cal-loss:hover::after {
-                animation: calGoldShimmer 1.2s ease-in-out;
-                opacity: 1;
-            }
+            /* セルごとにアニメーションをずらす */
+            .calendar-day-cell.cal-win::after { animation-delay: 0s; }
+            .calendar-day-cell.cal-loss::after { animation-delay: 3s; }
             
             @keyframes calGoldShimmer {
                 0% { left: -60%; opacity: 0; }
-                15% { opacity: 1; }
+                8% { opacity: 0.9; }
+                35% { left: 100%; opacity: 0.9; }
+                45% { left: 100%; opacity: 0; }
                 100% { left: 100%; opacity: 0; }
             }
             
-            /* 損益テキスト色をv5に統一 */
+            /* 損益テキスト色 */
             .calendar-day-profit.positive {
-                color: var(--win) !important;
+                color: #00ff88 !important;
             }
             
             .calendar-day-profit.negative {
-                color: var(--loss) !important;
+                color: #ff4466 !important;
             }
         `;
         document.head.appendChild(style);
@@ -708,7 +708,7 @@ class MonthlyCalendarModule {
         });
         
         const profitFormatted = this.#formatYen(totalProfit);
-        const profitColor = totalProfit >= 0 ? '#4ade80' : '#f87171';
+        const profitColor = totalProfit >= 0 ? '#00ff88' : '#ff4466';
         
         // トレードカードHTMLを生成
         let tradesHTML = '';
@@ -723,9 +723,9 @@ class MonthlyCalendarModule {
             dayTrades.forEach(trade => {
                 const netProfit = trade.yenProfitLoss?.netProfit || 0;
                 const pips = this.#calculateTradePipsForModal(trade);
-                const cardColor = netProfit >= 0 ? '#4ade80' : '#f87171';
+                const cardColor = netProfit >= 0 ? '#00ff88' : '#ff4466';
                 const directionLabel = (trade.direction === 'buy' || trade.direction === 'long') ? 'LONG' : 'SHORT';
-                const directionColor = (trade.direction === 'buy' || trade.direction === 'long') ? '#4ade80' : '#f87171';
+                const directionColor = (trade.direction === 'buy' || trade.direction === 'long') ? '#00ff88' : '#ff4466';
                 
                 tradesHTML += `
                     <div onclick="window.showTradeDetail('${trade.id}')" 

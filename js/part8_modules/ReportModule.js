@@ -2093,7 +2093,7 @@ class ReportModule {
         return `
             <div class="pagination-controls" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.05); border-radius: 5px;">
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <label style="color: #aaa; font-size: 14px;">表示件数:</label>
+                    <label style="color: #8a94a6; font-size: 14px;">表示件数:</label>
                     <select onchange="window.ReportModule.changePagination('${sectionId}', 'perPage', this.value)" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #00ff88; color: #00ff88; padding: 5px 10px; border-radius: 5px; cursor: pointer;">
                         <option value="10" ${state.perPage === 10 ? 'selected' : ''}>10件</option>
                         <option value="20" ${state.perPage === 20 ? 'selected' : ''}>20件</option>
