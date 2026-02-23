@@ -213,20 +213,20 @@ class MonthlyCalendarModule {
             .calendar-day-cell.cal-win {
                 background: linear-gradient(
                     135deg,
-                    rgba(59, 158, 255, 0.18) 0%,
-                    rgba(59, 158, 255, 0.10) 100%
+                    rgba(59, 158, 255, 0.35) 0%,
+                    rgba(59, 158, 255, 0.20) 100%
                 ) !important;
-                border-color: rgba(59, 158, 255, 0.25) !important;
+                border-color: rgba(59, 158, 255, 0.50) !important;
             }
             
             /* 負け日 - Red */
             .calendar-day-cell.cal-loss {
                 background: linear-gradient(
                     135deg,
-                    rgba(255, 68, 102, 0.20) 0%,
-                    rgba(255, 68, 102, 0.10) 100%
+                    rgba(255, 68, 102, 0.38) 0%,
+                    rgba(255, 68, 102, 0.22) 100%
                 ) !important;
-                border-color: rgba(255, 68, 102, 0.25) !important;
+                border-color: rgba(255, 68, 102, 0.50) !important;
             }
             
             /* ホバー: ゴールドグロー */
