@@ -209,18 +209,21 @@
         padding: 8px;
     }
     
-    /* === 画像追加モーダル: 「次へ」ボタン折り返し防止 === */
-    .image-add-modal-content .btn {
-        white-space: nowrap !important;
-    }
-    
+    /* === 画像追加モーダル: 「次へ」ボタン修正 === */
     .url-input-group {
         flex-wrap: nowrap !important;
     }
     
     .url-input-group .btn-secondary {
         flex-shrink: 0 !important;
+        width: auto !important;
+        min-width: 56px !important;
         padding: 10px 16px !important;
+        white-space: nowrap !important;
+    }
+    
+    .url-input-section {
+        overflow: hidden !important;
     }
 }
 
@@ -700,6 +703,20 @@
     
     .btn {
         width: 100%;
+    }
+    
+    /* 画像追加モーダルの「次へ」ボタンは100%幅にしない */
+    .url-input-group .btn,
+    .url-input-group .btn-secondary {
+        width: auto !important;
+        flex-shrink: 0 !important;
+        min-width: 56px !important;
+        padding: 10px 16px !important;
+        white-space: nowrap !important;
+    }
+    
+    .url-input-section {
+        overflow: hidden !important;
     }
     
     /* テーブルのスクロール対応 */
