@@ -2869,50 +2869,11 @@
 
     <!-- 円建て損益セクションのスタイル -->
     <style>
-    .yen-profit-loss-section {
-        background: #101420;
-        border-radius: 8px;
-        padding: 20px;
-        margin-top: 20px;
-    }
-
-    .yen-profit-loss-section .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .yen-profit-loss-section h3 {
-        color: #00ff88;
-        margin: 0;
-    }
-
-    .yen-profit-loss-section .btn-edit {
-        background: #00ff88;
-        color: #000;
-        border: none;
-        padding: 5px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-
-    .yen-profit-loss-section .btn-edit:hover {
-        background: #00dd77;
-    }
-
-    .yen-profit-loss-section .section-content p {
-        margin: 8px 0;
-        color: #ccc;
-    }
-
+    /* 円建て損益: 基本スタイルは trade-detail-section subsection-box から継承 */
+    /* 実損益行のみ独自スタイル */
     .yen-profit-loss-section .net-profit {
         font-size: 18px;
         font-weight: bold;
-        color: #00ff88;
         margin-top: 15px;
         padding-top: 10px;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
