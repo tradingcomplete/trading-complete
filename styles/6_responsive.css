@@ -1046,33 +1046,38 @@
         font-size: 0.65rem !important;
     }
     
-    /* === 収支管理タブ - 締め処理セクション 1行化 === */
-    /* 月次締め処理の行 */
-    #closingMonthYear {
-        min-width: 70px !important;
-        padding: 6px 8px !important;
-        font-size: 0.75rem !important;
+    /* === 収支管理タブ - 締め処理セクション レイアウト改善 === */
+    
+    /* フォーム行の折り返しを許可（インラインのflex-wrap: nowrapを上書き） */
+    #expense-section-closing > div > div[style*="flex-wrap"] {
+        flex-wrap: wrap !important;
     }
     
-    #closingMonth {
-        min-width: 60px !important;
-        padding: 6px 8px !important;
-        font-size: 0.75rem !important;
+    /* ラベルの折り返しを防止 */
+    #expense-section-closing label {
+        white-space: nowrap !important;
+        font-size: 0.8rem !important;
     }
     
-    /* 四半期締め処理 */
+    /* 全select共通 */
+    #closingMonthYear,
+    #closingMonth,
     #closingQuarterYear,
-    #closingQuarter {
+    #closingQuarter,
+    #closingYear {
         min-width: 70px !important;
         padding: 6px 8px !important;
-        font-size: 0.75rem !important;
+        font-size: 0.8rem !important;
+        flex: 1 !important;
     }
     
-    /* 年次締め処理 */
-    #closingYearYear {
-        min-width: 70px !important;
-        padding: 6px 8px !important;
-        font-size: 0.75rem !important;
+    /* 締め処理ボタンを横幅いっぱいに（新しい行に配置） */
+    #expense-section-closing button[onclick*="ClosingUI"] {
+        flex-basis: 100% !important;
+        margin-top: 4px !important;
+        padding: 10px 16px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
     }
     
     /* === 経費入力フォーム - 3列レイアウト維持 === */
