@@ -208,6 +208,20 @@
     .trades-table td {
         padding: 8px;
     }
+    
+    /* === 画像追加モーダル: 「次へ」ボタン折り返し防止 === */
+    .image-add-modal-content .btn {
+        white-space: nowrap !important;
+    }
+    
+    .url-input-group {
+        flex-wrap: nowrap !important;
+    }
+    
+    .url-input-group .btn-secondary {
+        flex-shrink: 0 !important;
+        padding: 10px 16px !important;
+    }
 }
 
 /* =====================================================

@@ -2418,4 +2418,93 @@ body.light-mode .monthly-memo-textarea:focus {
     color: #000000;
 }
 
+/* ライトモード 画像追加モーダル */
+body.light-mode .image-add-modal-content {
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+}
+
+body.light-mode .image-add-modal-content .modal-header {
+    border-bottom: 1px solid #e0e0e0 !important;
+}
+
+body.light-mode .image-add-modal-content .modal-header h2 {
+    color: #1a1a2e !important;
+}
+
+body.light-mode .drop-zone {
+    background: #f5f5f5 !important;
+    border-color: #cccccc !important;
+}
+
+body.light-mode .drop-zone:hover {
+    border-color: #00aa5a !important;
+    background: #e8f5e9 !important;
+}
+
+body.light-mode .drop-zone-text {
+    color: #333333 !important;
+}
+
+body.light-mode .drop-zone-or {
+    color: #666666 !important;
+}
+
+body.light-mode .drop-zone-hint {
+    color: #888888 !important;
+}
+
+body.light-mode .divider-with-text {
+    color: #999999 !important;
+}
+
+body.light-mode .divider-with-text::before,
+body.light-mode .divider-with-text::after {
+    border-bottom-color: #e0e0e0 !important;
+}
+
+body.light-mode .url-input-section {
+    background: #f5f5f5 !important;
+}
+
+body.light-mode .url-input-label {
+    color: #333333 !important;
+}
+
+body.light-mode .url-input {
+    background: #ffffff !important;
+    border-color: #cccccc !important;
+    color: #1a1a2e !important;
+}
+
+body.light-mode .url-input::placeholder {
+    color: #999999 !important;
+}
+
+body.light-mode .url-input:focus {
+    border-color: #00aa5a !important;
+}
+
+body.light-mode .url-hint {
+    color: #888888 !important;
+}
+
+body.light-mode .image-add-modal-content .btn-primary {
+    background: #00aa5a !important;
+    color: #ffffff !important;
+}
+
+body.light-mode .image-add-modal-content .btn-primary:hover {
+    background: #009950 !important;
+}
+
+body.light-mode .image-add-modal-content .btn-secondary {
+    color: #00aa5a !important;
+    border-color: #00aa5a !important;
+}
+
+body.light-mode .image-add-modal-content .btn-secondary:hover {
+    background: rgba(0, 170, 90, 0.1) !important;
+}
+
 /* ========== 5_themes.css 終了 ==========*/
