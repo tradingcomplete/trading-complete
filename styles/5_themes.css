@@ -2413,4 +2413,9 @@ body.light-mode .monthly-memo-textarea:focus {
     border-color: rgba(255, 255, 255, 0.5) !important;
 }
 
+.size-select option {
+    background: #ffffff;
+    color: #000000;
+}
+
 /* ========== 5_themes.css 終了 ==========*/

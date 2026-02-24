@@ -1901,6 +1901,18 @@ class NoteManagerModule {
         
         // EventBus発火
         this.#eventBus?.emit('note:fontSizeApplied', { editorId, size });
+        
+        // selectの値をリセット（同じサイズを連続選択できるようにする）
+        // onchangeは値が変わった時のみ発火するため、適用後にselectedIndexを-1にリセット
+        const toolbarSelects = editor.parentElement?.querySelectorAll('.size-select');
+        if (!toolbarSelects || toolbarSelects.length === 0) {
+            // editor-toolbarはeditorの兄弟要素（同じform-group内）
+            const formGroup = editor.closest('.form-group');
+            const select = formGroup?.querySelector('.size-select');
+            if (select) select.selectedIndex = -1;
+        } else {
+            toolbarSelects.forEach(s => s.selectedIndex = -1);
+        }
     }
     
     /**
