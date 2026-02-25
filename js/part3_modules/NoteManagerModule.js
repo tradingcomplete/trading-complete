@@ -3019,9 +3019,9 @@ class NoteManagerModule {
                 <button class="modal-close" onclick="closeWeekCalendarModal()">×</button>
             </div>
             <div style="padding: 20px;">
-                <div class="calendar-navigation" style="margin-bottom: 20px; text-align: center;">
+                <div class="calendar-navigation" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
                     <button class="btn btn-small btn-secondary" onclick="changeCalendarMonth(-1)">◀ 前月</button>
-                    <span id="calendarMonthYear" style="font-size: 1.2rem; font-weight: bold; margin: 0 20px;"></span>
+                    <span id="calendarMonthYear" style="font-size: 1.2rem; font-weight: bold; margin: 0 15px; white-space: nowrap;"></span>
                     <button class="btn btn-small btn-secondary" onclick="changeCalendarMonth(1)">翌月 ▶</button>
                 </div>
                 <div id="weekCalendarGrid"></div>
@@ -3060,7 +3060,7 @@ class NoteManagerModule {
         
         // 曜日ヘッダー
         let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px;">';
-        const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+        const weekDays = ['月', '火', '水', '木', '金', '土', '日'];
         weekDays.forEach(day => {
             html += `<div style="text-align: center; font-weight: bold; padding: 5px;">${day}</div>`;
         });
