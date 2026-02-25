@@ -117,7 +117,7 @@ body::after {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     cursor: pointer;
-    transition: all 0.4s ease;
+    transition: filter 0.4s ease;
     margin-bottom: 5px;
 }
 
