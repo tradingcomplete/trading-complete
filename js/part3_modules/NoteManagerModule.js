@@ -3004,6 +3004,11 @@ class NoteManagerModule {
             this.#currentCalendarDate = new Date();
         }
         
+        const isLight = document.body.classList.contains('light-mode');
+        const btnBg = isLight ? '#e8e8e8' : 'rgba(255, 255, 255, 0.1)';
+        const btnColor = isLight ? '#333' : '#fff';
+        const btnBorder = isLight ? '1px solid #999' : '1px solid rgba(255, 255, 255, 0.2)';
+        
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.id = 'weekCalendarModal';
@@ -3019,10 +3024,10 @@ class NoteManagerModule {
                 <button class="modal-close" onclick="closeWeekCalendarModal()">×</button>
             </div>
             <div style="padding: 20px;">
-                <div class="calendar-navigation" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <button class="btn btn-small btn-secondary" style="white-space: nowrap; flex-shrink: 0;" onclick="changeCalendarMonth(-1)">◀ 前月</button>
+                <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <button onclick="changeCalendarMonth(-1)" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; white-space: nowrap; background: ${btnBg}; color: ${btnColor}; border: ${btnBorder};">◀ 前月</button>
                     <span id="calendarMonthYear" style="font-size: 1.2rem; font-weight: bold; white-space: nowrap;"></span>
-                    <button class="btn btn-small btn-secondary" style="white-space: nowrap; flex-shrink: 0;" onclick="changeCalendarMonth(1)">翌月 ▶</button>
+                    <button onclick="changeCalendarMonth(1)" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; white-space: nowrap; background: ${btnBg}; color: ${btnColor}; border: ${btnBorder};">翌月 ▶</button>
                 </div>
                 <div id="weekCalendarGrid"></div>
             </div>
@@ -3052,37 +3057,54 @@ class NoteManagerModule {
         
         monthYearElement.textContent = `${year}年${month + 1}月`;
         
+        // テーマ判定
+        const isLight = document.body.classList.contains('light-mode');
+        
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
         const firstDayOfWeek = firstDay.getDay();
         const startDate = new Date(firstDay);
-        startDate.setDate(startDate.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek));
+        // 月曜始まり: 日曜(0)→6日戻る、月曜(1)→0日、火曜(2)→1日...
+        startDate.setDate(startDate.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1));
         
         // 曜日ヘッダーと日付を1つのgridに統合
-        let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">';
+        let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">';
         
         // 曜日ヘッダー行
+        const headerColor = isLight ? '#666' : '#aaa';
         const weekDays = ['月', '火', '水', '木', '金', '土', '日'];
         weekDays.forEach(day => {
-            html += `<div style="text-align: center; font-weight: bold; padding: 5px 0; margin-bottom: 5px;">${day}</div>`;
+            html += `<div style="text-align: center; font-weight: bold; padding: 8px 0; color: ${headerColor};">${day}</div>`;
         });
+        
+        // 日付セルの色設定
+        const todayBg = isLight ? 'rgba(0, 170, 90, 0.2)' : 'rgba(0, 255, 136, 0.2)';
+        const normalBg = isLight ? '#e8e8e8' : 'rgba(255, 255, 255, 0.05)';
+        const cellColor = isLight ? '#333' : '#fff';
+        const dimColor = isLight ? '#aaa' : 'inherit';
         
         // カレンダー日付
         const currentDate = new Date(startDate);
+        const todayStr = new Date().toDateString();
         for (let week = 0; week < 6; week++) {
             for (let day = 0; day < 7; day++) {
                 const dateStr = formatDateForInput(currentDate);
                 const isCurrentMonth = currentDate.getMonth() === month;
-                const isToday = currentDate.toDateString() === new Date().toDateString();
+                const isToday = currentDate.toDateString() === todayStr;
                 const hasNote = this.#notes[dateStr];
+                
+                const bgColor = isToday ? todayBg : (hasNote ? (isLight ? 'rgba(0, 170, 90, 0.15)' : 'rgba(0, 255, 136, 0.15)') : normalBg);
+                const textColor = isCurrentMonth ? cellColor : dimColor;
+                const border = isLight ? '1px solid #ccc' : '1px solid rgba(255, 255, 255, 0.08)';
                 
                 html += `
                     <div 
                         onclick="selectWeekFromDate('${dateStr}')" 
                         style="padding: 10px; text-align: center; cursor: pointer; 
-                               border-radius: 5px; 
-                               opacity: ${isCurrentMonth ? '1' : '0.5'};
-                               background: ${isToday ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 255, 255, 0.05)'}">
+                               border-radius: 5px; border: ${border};
+                               color: ${textColor};
+                               opacity: ${isCurrentMonth ? '1' : '0.4'};
+                               background: ${bgColor};">
                         ${currentDate.getDate()}
                     </div>
                 `;

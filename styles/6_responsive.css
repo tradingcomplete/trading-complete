@@ -4389,9 +4389,15 @@ body.light-mode .image-preview-img {
         width: 100%;
     }
     
+    
     .url-input-group .btn {
         white-space: nowrap;
         flex-shrink: 0;
+        width: auto;
+    }
+    
+    .url-input-group .url-input {
+        min-width: 0;
     }
 }
 
