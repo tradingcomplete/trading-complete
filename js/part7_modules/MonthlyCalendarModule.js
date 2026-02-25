@@ -2,7 +2,7 @@
  * @module MonthlyCalendarModule
  * @description 月次カレンダー表示機能 - MODULES.md準拠
  * @author コンパナ / Claude
- * @version 1.0.0
+ * @version 1.1.0
  * @important UIの変更は原則禁止。見た目は既存のまま維持すること。
  */
 class MonthlyCalendarModule {
