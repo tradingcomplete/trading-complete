@@ -1,6 +1,13 @@
 /* ========== styles/5_themes.css ========== */
 /* テーマ切り替え（ライトモード定義） */
 
+/* テキストシマーアニメーション */
+@keyframes textShimmer {
+    0% { background-position: 100% 50%; }
+    50% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
 /* =====================================================
    ライトモード カラールール（統一基準）
    =====================================================
@@ -141,28 +148,20 @@ body.light-mode .tab-btn:hover:not(.active) {
 
 /* ヘッダー */
 body.light-mode .header-title {
-    background: linear-gradient(135deg, #004d30 20%, #00995a 60%, #00cc6a 100%) !important;
+    background: linear-gradient(
+        90deg,
+        #004d30 0%,
+        #00995a 40%,
+        var(--gold-bright) 50%,
+        #00995a 60%,
+        #00cc6a 100%
+    ) !important;
+    background-size: 200% 100% !important;
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
     font-weight: 700;
-    text-shadow: none;
-    filter: drop-shadow(0 1px 1px rgba(0, 77, 48, 0.2));
-    position: relative;
-    display: inline-block;
-}
-
-body.light-mode .header-title::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: -100%;
-    width: 60%;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
-    animation: goldShimmer 6s ease-in-out infinite;
-    opacity: 0;
-    border-radius: 2px;
+    animation: textShimmer 4s ease-in-out infinite;
 }
 
 body.light-mode .header-title:hover {
@@ -170,6 +169,7 @@ body.light-mode .header-title:hover {
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
+    animation: none;
 }
 
 body.light-mode .header-subtitle {
@@ -2533,23 +2533,21 @@ body.light-mode .image-add-modal-content .btn-secondary:hover {
     background: rgba(0, 170, 90, 0.1) !important;
 }
 
-/* ダークモード用 ヘッダータイトル ゴールドシマー */
+/* ダークモード用 ヘッダータイトル テキストシマー */
 body:not(.light-mode) .header-title {
-    position: relative;
-    display: inline-block;
-}
-
-body:not(.light-mode) .header-title::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: -100%;
-    width: 60%;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
-    animation: goldShimmer 6s ease-in-out infinite;
-    opacity: 0;
-    border-radius: 2px;
+    background: linear-gradient(
+        90deg,
+        #ffffff 0%,
+        #00ff88 40%,
+        var(--gold-bright) 50%,
+        #00ff88 60%,
+        #ffffff 100%
+    ) !important;
+    background-size: 200% 100% !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    animation: textShimmer 4s ease-in-out infinite;
 }
 
 /* ========== 5_themes.css 終了 ==========*/
