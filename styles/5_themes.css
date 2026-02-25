@@ -157,11 +157,13 @@ body.light-mode .header-title {
         #00cc6a 100%
     ) !important;
     background-size: 200% 100% !important;
+    background-position: 100% 50% !important;
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
     font-weight: 700;
-    animation: textShimmer 4s ease-in-out infinite;
+    animation: textShimmer 4s ease-in-out infinite !important;
+    transition: none !important;
 }
 
 body.light-mode .header-title:hover {
@@ -169,7 +171,7 @@ body.light-mode .header-title:hover {
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
-    animation: none;
+    animation: none !important;
 }
 
 body.light-mode .header-subtitle {
@@ -2544,10 +2546,12 @@ body:not(.light-mode) .header-title {
         #ffffff 100%
     ) !important;
     background-size: 200% 100% !important;
+    background-position: 100% 50% !important;
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
-    animation: textShimmer 4s ease-in-out infinite;
+    animation: textShimmer 4s ease-in-out infinite !important;
+    transition: none !important;
 }
 
 /* ========== 5_themes.css 終了 ==========*/

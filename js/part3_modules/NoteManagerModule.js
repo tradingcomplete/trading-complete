@@ -1807,7 +1807,7 @@ class NoteManagerModule {
     }
 
     /**
-     * フォントサイズ適用（改善版）
+     * フォントサイズ適用（v2 - 選択範囲保持対応）
      * @param {string} editorId - エディタID
      * @param {string} size - 'small'|'medium'|'large'
      */
@@ -1846,48 +1846,44 @@ class NoteManagerModule {
         if (!selection.rangeCount) return;
         
         const range = selection.getRangeAt(0);
-        if (range.collapsed) return; // 選択範囲がない場合は何もしない
+        if (range.collapsed) return;
         
-        // 選択範囲が指定エディタ内か確認
+        // 選択範囲がエディタ内か確認
         if (!editor.contains(range.commonAncestorContainer)) return;
         
-        // === 改善ポイント: 選択範囲内の既存font-sizeを解除 ===
-        this.#removeFontSizeInRange(range, editor);
+        // 選択テキストを取得（後で使用）
+        const selectedText = selection.toString();
+        if (!selectedText) return;
         
-        // 選択範囲を再取得（DOM操作後に更新される場合があるため）
-        const newSelection = window.getSelection();
-        if (!newSelection.rangeCount) {
-            editor.focus();
-            return;
-        }
-        const newRange = newSelection.getRangeAt(0);
-        if (newRange.collapsed) {
-            editor.focus();
-            return;
-        }
-        
-        // 新しいフォントサイズを適用
-        const span = document.createElement('span');
-        span.style.fontSize = fontSize;
+        // === 方針: 選択範囲の内容を抽出 → クリーンアップ → 新しいspanで囲む ===
         
         try {
-            // 選択範囲のコンテンツを抽出してspanに入れる
-            const contents = newRange.extractContents();
-            span.appendChild(contents);
-            newRange.insertNode(span);
+            // 1. 選択範囲の内容を抽出
+            const fragment = range.extractContents();
             
-            // 選択範囲を更新（適用した部分を選択状態に維持）
-            newSelection.removeAllRanges();
-            const updatedRange = document.createRange();
-            updatedRange.selectNodeContents(span);
-            newSelection.addRange(updatedRange);
+            // 2. fragment内のfont-sizeスタイルを全て除去
+            this.#cleanFontSizeFromFragment(fragment);
+            
+            // 3. 新しいspanを作成してfragmentを入れる
+            const span = document.createElement('span');
+            span.style.fontSize = fontSize;
+            span.appendChild(fragment);
+            
+            // 4. spanを挿入
+            range.insertNode(span);
+            
+            // 5. 選択範囲を新しいspanに設定
+            selection.removeAllRanges();
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            selection.addRange(newRange);
+            
         } catch (e) {
-            console.warn('[NoteManager] フォントサイズ適用でフォールバック使用:', e);
+            console.warn('[NoteManager] applyFontSize フォールバック使用:', e);
             // フォールバック: execCommandを使用
             document.execCommand('styleWithCSS', false, true);
             document.execCommand('fontSize', false, '7');
             
-            // 適用された要素を探してfont-sizeを上書き
             const fontElements = editor.querySelectorAll('font[size="7"]');
             fontElements.forEach(el => {
                 const newSpan = document.createElement('span');
@@ -1916,50 +1912,37 @@ class NoteManagerModule {
     }
     
     /**
-     * 選択範囲内のfont-sizeスタイルを解除（プライベートメソッド）
-     * v2.0: TreeWalker方式から親要素走査+querySelectorAll方式に変更
+     * DocumentFragment内のfont-sizeスタイルを再帰的に除去
      * @private
-     * @param {Range} range - 選択範囲
-     * @param {HTMLElement} editor - エディタ要素
+     * @param {DocumentFragment|Node} node - 処理対象ノード
      */
-    #removeFontSizeInRange(range, editor) {
-        // font-size付きspanを解除するヘルパー関数
-        const unwrapFontSize = (el) => {
-            el.style.fontSize = '';
-            if (!el.getAttribute('style')?.trim()) {
-                el.removeAttribute('style');
-            }
-            // スタイルもクラスもないspanは中身を取り出して置換
-            if (el.tagName === 'SPAN' && !el.hasAttribute('style') && !el.hasAttribute('class')) {
-                const parent = el.parentNode;
-                while (el.firstChild) {
-                    parent.insertBefore(el.firstChild, el);
+    #cleanFontSizeFromFragment(node) {
+        // 子ノードを配列にコピー（処理中にDOMが変わる可能性があるため）
+        const children = Array.from(node.childNodes);
+        
+        children.forEach(child => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                // font-sizeスタイルを削除
+                if (child.style?.fontSize) {
+                    child.style.fontSize = '';
                 }
-                parent.removeChild(el);
-            }
-        };
-        
-        // 方法1: 選択範囲を含む親要素を辿ってfont-size付きspanを探す
-        let ancestor = range.commonAncestorContainer;
-        if (ancestor.nodeType === Node.TEXT_NODE) {
-            ancestor = ancestor.parentElement;
-        }
-        
-        let current = ancestor;
-        while (current && current !== editor) {
-            if (current.nodeType === Node.ELEMENT_NODE && current.style?.fontSize) {
-                unwrapFontSize(current);
-                break;
-            }
-            current = current.parentElement;
-        }
-        
-        // 方法2: 選択範囲内の子要素にfont-size付きspanがあれば解除
-        const searchRoot = (ancestor && ancestor.nodeType === Node.ELEMENT_NODE) ? ancestor : editor;
-        const fontSizeElements = searchRoot.querySelectorAll('span[style*="font-size"]');
-        fontSizeElements.forEach(el => {
-            if (range.intersectsNode(el)) {
-                unwrapFontSize(el);
+                
+                // style属性が空になったら削除
+                if (child.hasAttribute('style') && !child.getAttribute('style').trim()) {
+                    child.removeAttribute('style');
+                }
+                
+                // spanタグでstyleもclassもなければ、中身を取り出して置換
+                if (child.tagName === 'SPAN' && !child.hasAttribute('style') && !child.hasAttribute('class')) {
+                    // spanの中身を親に移動
+                    while (child.firstChild) {
+                        node.insertBefore(child.firstChild, child);
+                    }
+                    node.removeChild(child);
+                } else {
+                    // 子要素を再帰処理
+                    this.#cleanFontSizeFromFragment(child);
+                }
             }
         });
     }
