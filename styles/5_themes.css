@@ -141,8 +141,9 @@ body.light-mode .tab-btn:hover:not(.active) {
 
 /* ヘッダー */
 body.light-mode .header-title {
-    color: #00995a;
+    color: #007a45;
     font-weight: 700;
+    text-shadow: 0 0 1px rgba(0, 122, 69, 0.3);
 }
 
 body.light-mode .header-subtitle {
@@ -974,9 +975,12 @@ body.light-mode .trades-table th * {
 }
 
 body.light-mode .trade-pair,
-body.light-mode .section h2,
-body.light-mode .header-title {
+body.light-mode .section h2 {
     color: #00995a !important;
+}
+
+body.light-mode .header-title {
+    color: #007a45 !important;
 }
 
 body.light-mode .stat-value.positive {
