@@ -3457,6 +3457,17 @@ body.light-mode .image-caption-outside {
     #capitalHistoryTable td {
         padding: 5px 3px !important;
         font-size: 0.65rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* 入出金履歴テーブルの横スクロール対応 */
+    div:has(> #capitalHistoryTable) {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #capitalHistoryTable {
+        min-width: 450px !important;
     }
     
     #capitalHistoryTable .btn-danger {
