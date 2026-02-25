@@ -1807,7 +1807,7 @@ class NoteManagerModule {
     }
 
     /**
-     * フォントサイズ適用（v3 - シンプル＆確実版）
+     * フォントサイズ適用（v4 - 装飾保持版）
      * @param {string} editorId - エディタID
      * @param {string} size - 'small'|'medium'|'large'
      */
@@ -1851,30 +1851,33 @@ class NoteManagerModule {
         // 選択範囲がエディタ内か確認
         if (!editor.contains(range.commonAncestorContainer)) return;
         
-        // 選択テキストを取得（プレーンテキスト）
+        // 選択テキストがあるか確認
         const selectedText = selection.toString();
         if (!selectedText) return;
         
         try {
-            // 1. 選択範囲を削除
-            range.deleteContents();
+            // 1. 選択範囲のHTMLを抽出（装飾は保持される）
+            const fragment = range.extractContents();
             
-            // 2. 新しいspanを作成
+            // 2. fragment内のfont-sizeスタイルだけを除去（色などは保持）
+            this.#removeFontSizeOnly(fragment);
+            
+            // 3. 新しいspanを作成してfragmentを入れる
             const span = document.createElement('span');
             span.style.fontSize = fontSize;
-            span.textContent = selectedText;
+            span.appendChild(fragment);
             
-            // 3. spanを挿入
+            // 4. spanを挿入
             range.insertNode(span);
             
-            // 4. 選択範囲を新しいspanに設定
+            // 5. 選択範囲を新しいspanに設定
             selection.removeAllRanges();
             const newRange = document.createRange();
             newRange.selectNodeContents(span);
             selection.addRange(newRange);
             
-            // 5. エディタ内の空spanと不要なネストをクリーンアップ
-            this.#cleanupEditorSpans(editor);
+            // 6. エディタ内の空spanを除去
+            this.#removeEmptySpans(editor);
             
         } catch (e) {
             console.warn('[NoteManager] applyFontSize エラー:', e);
@@ -1899,15 +1902,40 @@ class NoteManagerModule {
     }
     
     /**
-     * エディタ内の空spanと不要なネストをクリーンアップ
+     * ノード内のfont-sizeスタイルだけを再帰的に除去（他のスタイルは保持）
+     * @private
+     * @param {Node} node - 処理対象ノード
+     */
+    #removeFontSizeOnly(node) {
+        const children = Array.from(node.childNodes);
+        
+        children.forEach(child => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                // font-sizeスタイルだけを削除（colorなどは保持）
+                if (child.style?.fontSize) {
+                    child.style.fontSize = '';
+                }
+                
+                // style属性が空になったら削除
+                if (child.hasAttribute('style') && !child.getAttribute('style').trim()) {
+                    child.removeAttribute('style');
+                }
+                
+                // 子要素を再帰処理
+                this.#removeFontSizeOnly(child);
+            }
+        });
+    }
+    
+    /**
+     * エディタ内の空spanを除去
      * @private
      * @param {HTMLElement} editor - エディタ要素
      */
-    #cleanupEditorSpans(editor) {
-        // 空のspanを削除（繰り返し実行して全て除去）
+    #removeEmptySpans(editor) {
         let changed = true;
         let iterations = 0;
-        const maxIterations = 10; // 無限ループ防止
+        const maxIterations = 20;
         
         while (changed && iterations < maxIterations) {
             changed = false;
@@ -1920,30 +1948,9 @@ class NoteManagerModule {
                 changed = true;
             });
             
-            // font-sizeのみのspanで中身がテキストだけの場合、不要なネストを解消
-            const fontSizeSpans = editor.querySelectorAll('span[style*="font-size"]');
-            fontSizeSpans.forEach(span => {
-                // 親もfont-size付きspanで、このspanの中身がテキストのみの場合
-                const parent = span.parentElement;
-                if (parent && 
-                    parent.tagName === 'SPAN' && 
-                    parent.style.fontSize &&
-                    span.childNodes.length === 1 &&
-                    span.firstChild.nodeType === Node.TEXT_NODE) {
-                    // 親のfont-sizeを削除（子のfont-sizeが優先されるべき）
-                    // ただし、他のスタイルがある場合は維持
-                    parent.style.fontSize = '';
-                    if (!parent.getAttribute('style')?.trim()) {
-                        parent.removeAttribute('style');
-                    }
-                    changed = true;
-                }
-            });
-            
-            // style属性が空のspanをアンラップ
-            const styleEmptySpans = editor.querySelectorAll('span:not([style]):not([class])');
-            styleEmptySpans.forEach(span => {
-                // spanの中身を親に移動
+            // styleもclassもないspanをアンラップ
+            const bareSpans = editor.querySelectorAll('span:not([style]):not([class])');
+            bareSpans.forEach(span => {
                 const parent = span.parentNode;
                 while (span.firstChild) {
                     parent.insertBefore(span.firstChild, span);
