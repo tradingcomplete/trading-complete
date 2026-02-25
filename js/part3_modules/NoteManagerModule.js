@@ -3023,7 +3023,7 @@ class NoteManagerModule {
                 <h2>📅 週を選択</h2>
                 <button class="modal-close" onclick="closeWeekCalendarModal()">×</button>
             </div>
-            <div style="padding: 15px 5px;">
+            <div style="padding: 10px 0;">
                 <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
                     <button onclick="changeCalendarMonth(-1)" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; white-space: nowrap; background: ${btnBg}; color: ${btnColor}; border: ${btnBorder};">◀ 前月</button>
                     <span id="calendarMonthYear" style="font-size: 1.2rem; font-weight: bold; white-space: nowrap;"></span>
@@ -3067,8 +3067,8 @@ class NoteManagerModule {
         // 月曜始まり: 日曜(0)→6日戻る、月曜(1)→0日、火曜(2)→1日...
         startDate.setDate(startDate.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1));
         
-        // 曜日ヘッダーと日付を1つのgridに統合
-        let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">';
+        // 曜日ヘッダーと日付を1つのgridに統合（minmax(0,1fr)で幅強制収縮）
+        let html = '<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px;">';
         
         // 曜日ヘッダー行
         const headerColor = isLight ? '#666' : '#aaa';
@@ -3078,7 +3078,8 @@ class NoteManagerModule {
         });
         
         // 日付セルの色設定
-        const todayBg = isLight ? 'rgba(0, 170, 90, 0.2)' : 'rgba(0, 255, 136, 0.2)';
+        const todayBg = isLight ? 'rgba(0, 170, 90, 0.25)' : 'rgba(0, 255, 136, 0.2)';
+        const noteBg = isLight ? 'rgba(0, 170, 90, 0.15)' : 'rgba(0, 255, 136, 0.15)';
         const normalBg = isLight ? '#e8e8e8' : 'rgba(255, 255, 255, 0.05)';
         const cellColor = isLight ? '#333' : '#fff';
         const dimColor = isLight ? '#aaa' : 'inherit';
@@ -3093,15 +3094,14 @@ class NoteManagerModule {
                 const isToday = currentDate.toDateString() === todayStr;
                 const hasNote = this.#notes[dateStr];
                 
-                const bgColor = isToday ? todayBg : (hasNote ? (isLight ? 'rgba(0, 170, 90, 0.15)' : 'rgba(0, 255, 136, 0.15)') : normalBg);
+                const bgColor = isToday ? todayBg : (hasNote ? noteBg : normalBg);
                 const textColor = isCurrentMonth ? cellColor : dimColor;
-                const border = isLight ? '1px solid #ccc' : '1px solid rgba(255, 255, 255, 0.08)';
                 
                 html += `
                     <div 
                         onclick="selectWeekFromDate('${dateStr}')" 
-                        style="padding: 10px; text-align: center; cursor: pointer; 
-                               border-radius: 5px; border: ${border};
+                        style="padding: 10px 0; text-align: center; cursor: pointer; 
+                               border-radius: 4px;
                                color: ${textColor};
                                opacity: ${isCurrentMonth ? '1' : '0.4'};
                                background: ${bgColor};">
