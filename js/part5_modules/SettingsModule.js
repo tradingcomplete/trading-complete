@@ -1454,6 +1454,22 @@ class SettingsModule {
             }
         });
         
+        // クラウド同期完了後にローカルデータを再読み込みして表示更新
+        this.#eventBus?.on('sync:settings:synced', () => {
+            console.log('SettingsModule: sync:settings:synced 受信、データ再読み込み');
+            this.#loadAll();
+            this.updateGoalsDisplay();
+            // サイトタイトル・サブタイトルもヘッダーに反映
+            const titleEl = document.getElementById('siteTitle');
+            const subtitleEl = document.getElementById('siteSubtitle');
+            if (titleEl) titleEl.textContent = this.#siteTitle;
+            if (subtitleEl) subtitleEl.textContent = this.#siteSubtitle;
+            // アイコン更新
+            const iconEl = document.getElementById('userIconDisplay');
+            if (iconEl && this.#userIcon) iconEl.src = this.#userIcon;
+            console.log('SettingsModule: クラウド同期データを表示に反映完了');
+        });
+        
         console.log('SettingsModule: Events bound (including keyboard shortcuts)');
     }
     
