@@ -555,23 +555,37 @@ class SettingsModule {
                 if (textInput && deadlineInput) {
                     this.#goals.goals[i-1].text = textInput.value;
                     this.#goals.goals[i-1].deadline = deadlineInput.value;
+                    
+                    // 個別キーにも保存（後方互換性）
+                    localStorage.setItem(`goalText${i}`, textInput.value);
+                    localStorage.setItem(`goalDeadline${i}`, deadlineInput.value);
                 }
             }
             
-            // 保存
+            // 統合JSON保存
             localStorage.setItem(SettingsModule.STORAGE_KEYS.GOALS, JSON.stringify(this.#goals));
             
             // ヘッダー表示を更新
             this.updateGoalsDisplay();
             
-            // EventBus通知
+            // EventBus通知（Supabase同期用にsettings:changedも発火）
             this.#eventBus?.emit('settings:goalsSaved', { goals: this.#goals });
+            this.#eventBus?.emit('settings:changed', { source: 'goals' });
+            
+            // ユーザーに保存完了を通知
+            if (window.showToast) {
+                window.showToast('セルフイメージを保存しました', 'success');
+            }
             
             console.log('SettingsModule: Goals saved');
             return true;
             
         } catch (error) {
             console.error('SettingsModule.saveGoals error:', error);
+            // エラー時もユーザーに通知
+            if (window.showToast) {
+                window.showToast('保存に失敗しました', 'error');
+            }
             return false;
         }
     }
