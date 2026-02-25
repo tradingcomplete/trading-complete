@@ -3459,6 +3459,10 @@ body.light-mode .image-caption-outside {
         font-size: 0.65rem !important;
     }
     
+    #capitalHistoryTable .btn-danger {
+        white-space: nowrap;
+    }
+    
     /* === モーダル: ブローカー追加・通貨ペア追加 === */
     .broker-add-modal-content,
     .favorite-pair-modal-content {
