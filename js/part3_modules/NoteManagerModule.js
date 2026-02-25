@@ -3023,7 +3023,7 @@ class NoteManagerModule {
                 <h2>📅 週を選択</h2>
                 <button class="modal-close" onclick="closeWeekCalendarModal()">×</button>
             </div>
-            <div style="padding: 20px;">
+            <div style="padding: 15px 5px;">
                 <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
                     <button onclick="changeCalendarMonth(-1)" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; white-space: nowrap; background: ${btnBg}; color: ${btnColor}; border: ${btnBorder};">◀ 前月</button>
                     <span id="calendarMonthYear" style="font-size: 1.2rem; font-weight: bold; white-space: nowrap;"></span>
