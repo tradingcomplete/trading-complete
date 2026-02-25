@@ -148,6 +148,21 @@ body.light-mode .header-title {
     font-weight: 700;
     text-shadow: none;
     filter: drop-shadow(0 1px 1px rgba(0, 77, 48, 0.2));
+    position: relative;
+    display: inline-block;
+}
+
+body.light-mode .header-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -100%;
+    width: 60%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
+    animation: goldShimmer 6s ease-in-out infinite;
+    opacity: 0;
+    border-radius: 2px;
 }
 
 body.light-mode .header-title:hover {
@@ -2516,6 +2531,25 @@ body.light-mode .image-add-modal-content .btn-secondary {
 
 body.light-mode .image-add-modal-content .btn-secondary:hover {
     background: rgba(0, 170, 90, 0.1) !important;
+}
+
+/* ダークモード用 ヘッダータイトル ゴールドシマー */
+body:not(.light-mode) .header-title {
+    position: relative;
+    display: inline-block;
+}
+
+body:not(.light-mode) .header-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -100%;
+    width: 60%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
+    animation: goldShimmer 6s ease-in-out infinite;
+    opacity: 0;
+    border-radius: 2px;
 }
 
 /* ========== 5_themes.css 終了 ==========*/
