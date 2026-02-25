@@ -113,6 +113,12 @@ function updateCapitalHistory() {
         return;
     }
     
+    // 親要素にスクロールコンテナクラスを追加（iOS対応）
+    const table = document.getElementById('capitalHistoryTable');
+    if (table && table.parentElement) {
+        table.parentElement.classList.add('capital-table-scroll-container');
+    }
+    
     // 全記録を取得
     const records = window.CapitalManagerModule.getAllRecords();
     

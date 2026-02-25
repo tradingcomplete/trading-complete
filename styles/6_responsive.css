@@ -3461,19 +3461,15 @@ body.light-mode .image-caption-outside {
     }
     
     
+    
     /* 入出金履歴テーブルの横スクロール対応 */
-    #capitalHistoryTable {
-        display: block !important;
+    .capital-table-scroll-container {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
-        min-width: 100% !important;
     }
     
-    #capitalHistoryTable thead,
-    #capitalHistoryTable tbody {
-        display: table;
-        width: 100%;
-        min-width: 450px;
+    #capitalHistoryTable {
+        min-width: 450px !important;
     }
     
     #capitalHistoryTable .btn-danger {
