@@ -636,13 +636,24 @@ class SettingsModule {
      */
     updateGoalsDisplay() {
         try {
+            const goals = this.#goals.goals;
+            
+            // 設定タブの入力フィールドも同期
+            for (let i = 0; i < 3; i++) {
+                const goal = goals[i];
+                const textInput = document.getElementById(`goalText${i + 1}`);
+                const deadlineInput = document.getElementById(`goalDeadline${i + 1}`);
+                if (textInput) textInput.value = goal?.text || '';
+                if (deadlineInput) deadlineInput.value = goal?.deadline || '';
+            }
+            
+            // ヘッダー表示を更新
             const goalsDisplay = document.getElementById('goalsDisplay');
             if (!goalsDisplay) {
                 console.warn('SettingsModule: goalsDisplay element not found');
                 return;
             }
 
-            const goals = this.#goals.goals;
             let html = '';
 
             for (let i = 0; i < 3; i++) {
