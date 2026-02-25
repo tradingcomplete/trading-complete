@@ -3019,10 +3019,10 @@ class NoteManagerModule {
                 <button class="modal-close" onclick="closeWeekCalendarModal()">×</button>
             </div>
             <div style="padding: 20px;">
-                <div class="calendar-navigation" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                    <button class="btn btn-small btn-secondary" onclick="changeCalendarMonth(-1)">◀ 前月</button>
-                    <span id="calendarMonthYear" style="font-size: 1.2rem; font-weight: bold; margin: 0 15px; white-space: nowrap;"></span>
-                    <button class="btn btn-small btn-secondary" onclick="changeCalendarMonth(1)">翌月 ▶</button>
+                <div class="calendar-navigation" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <button class="btn btn-small btn-secondary" style="white-space: nowrap; flex-shrink: 0;" onclick="changeCalendarMonth(-1)">◀ 前月</button>
+                    <span id="calendarMonthYear" style="font-size: 1.2rem; font-weight: bold; white-space: nowrap;"></span>
+                    <button class="btn btn-small btn-secondary" style="white-space: nowrap; flex-shrink: 0;" onclick="changeCalendarMonth(1)">翌月 ▶</button>
                 </div>
                 <div id="weekCalendarGrid"></div>
             </div>
@@ -3058,17 +3058,16 @@ class NoteManagerModule {
         const startDate = new Date(firstDay);
         startDate.setDate(startDate.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek));
         
-        // 曜日ヘッダー
-        let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px;">';
+        // 曜日ヘッダーと日付を1つのgridに統合
+        let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">';
+        
+        // 曜日ヘッダー行
         const weekDays = ['月', '火', '水', '木', '金', '土', '日'];
         weekDays.forEach(day => {
-            html += `<div style="text-align: center; font-weight: bold; padding: 5px;">${day}</div>`;
+            html += `<div style="text-align: center; font-weight: bold; padding: 5px 0; margin-bottom: 5px;">${day}</div>`;
         });
-        html += '</div>';
         
         // カレンダー日付
-        html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">';
-        
         const currentDate = new Date(startDate);
         for (let week = 0; week < 6; week++) {
             for (let day = 0; day < 7; day++) {
