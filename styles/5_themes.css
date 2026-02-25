@@ -1,12 +1,7 @@
 /* ========== styles/5_themes.css ========== */
 /* テーマ切り替え（ライトモード定義） */
 
-/* テキストシマーアニメーション */
-@keyframes textShimmer {
-    0% { background-position: 100% 50%; }
-    50% { background-position: 0% 50%; }
-    100% { background-position: 100% 50%; }
-}
+/* テキストシマーアニメーション - JSで制御（Chrome互換） */
 
 /* =====================================================
    ライトモード カラールール（統一基準）
@@ -161,8 +156,6 @@ body.light-mode .header-title {
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
     font-weight: 700;
-    animation: textShimmer 4s ease-in-out infinite !important;
-    transition: none !important;
 }
 
 body.light-mode .header-title:hover {
@@ -170,7 +163,6 @@ body.light-mode .header-title:hover {
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
-    animation: none !important;
 }
 
 body.light-mode .header-subtitle {
@@ -2548,8 +2540,6 @@ body:not(.light-mode) .header-title {
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
-    animation: textShimmer 4s ease-in-out infinite !important;
-    transition: none !important;
 }
 
 /* ========== 5_themes.css 終了 ==========*/
