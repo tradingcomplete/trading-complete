@@ -670,7 +670,17 @@ function setupEventListeners() {
         });
     });
     
-    // ヘッダータイトル ホバーでシマー停止/再開
+    // ヘッダータイトル シマーアニメーション初期化
+    startHeaderShimmer();
+    
+    // テーマ変更時にシマー再開（SettingsModule連携）
+    if (window.eventBus) {
+        window.eventBus.on('settings:themeChanged', function() {
+            startHeaderShimmer();
+        });
+    }
+    
+    // ホバーでシマー停止/再開
     const headerTitle = document.getElementById('headerTitle');
     if (headerTitle) {
         headerTitle.addEventListener('mouseenter', function() {

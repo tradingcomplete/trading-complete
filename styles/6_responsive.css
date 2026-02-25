@@ -208,23 +208,6 @@
     .trades-table td {
         padding: 8px;
     }
-    
-    /* === 画像追加モーダル: 「次へ」ボタン修正 === */
-    .url-input-group {
-        flex-wrap: nowrap !important;
-    }
-    
-    .url-input-group .btn-secondary {
-        flex-shrink: 0 !important;
-        width: auto !important;
-        min-width: 56px !important;
-        padding: 10px 16px !important;
-        white-space: nowrap !important;
-    }
-    
-    .url-input-section {
-        overflow: hidden !important;
-    }
 }
 
 /* =====================================================
@@ -705,20 +688,6 @@
         width: 100%;
     }
     
-    /* 画像追加モーダルの「次へ」ボタンは100%幅にしない */
-    .url-input-group .btn,
-    .url-input-group .btn-secondary {
-        width: auto !important;
-        flex-shrink: 0 !important;
-        min-width: 56px !important;
-        padding: 10px 16px !important;
-        white-space: nowrap !important;
-    }
-    
-    .url-input-section {
-        overflow: hidden !important;
-    }
-    
     /* テーブルのスクロール対応 */
     .trades-table {
         display: block;
@@ -1077,37 +1046,65 @@
         font-size: 0.65rem !important;
     }
     
-    /* === 収支管理タブ - 締め処理セクション レイアウト改善 === */
-    
-    /* フォーム行の折り返しを許可（インラインのflex-wrap: nowrapを上書き） */
-    #expense-section-closing > div > div[style*="flex-wrap"] {
-        flex-wrap: wrap !important;
-    }
-    
-    /* ラベルの折り返しを防止 */
-    #expense-section-closing label {
-        white-space: nowrap !important;
-        font-size: 0.8rem !important;
-    }
-    
-    /* 全select共通 */
-    #closingMonthYear,
-    #closingMonth,
-    #closingQuarterYear,
-    #closingQuarter,
-    #closingYear {
+    /* === 収支管理タブ - 締め処理セクション 1行化 === */
+    /* 月次締め処理の行 */
+    #closingMonthYear {
         min-width: 70px !important;
         padding: 6px 8px !important;
-        font-size: 0.8rem !important;
-        flex: 1 !important;
+        font-size: 0.75rem !important;
     }
     
-    /* 締め処理ボタンを横幅いっぱいに（新しい行に配置） */
-    #expense-section-closing button[onclick*="ClosingUI"] {
-        flex-basis: 100% !important;
-        margin-top: 4px !important;
-        padding: 10px 16px !important;
-        font-size: 0.8rem !important;
+    #closingMonth {
+        min-width: 60px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* 四半期締め処理 */
+    #closingQuarterYear,
+    #closingQuarter {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* 年次締め処理 */
+    #closingYearYear {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* 締め処理フォーム行を縦並びに変更 */
+    .closing-form-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+    
+    .closing-form-row > div {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    
+    /* 締め処理ボタンを幅いっぱいに */
+    .closing-form-row .btn,
+    .closing-form-row button {
+        width: 100% !important;
+        margin-top: 8px !important;
+    }
+    
+    /* 締め済み期間一覧テーブルのスクロール対応 */
+    .closing-history,
+    #closingHistory {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .closing-history table,
+    #closingHistory table {
+        min-width: 400px !important;
         white-space: nowrap !important;
     }
     
@@ -1552,6 +1549,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 100px;
+    border-radius: 8px;
     background: rgba(255, 255, 255, 0.05);
     border: 2px dashed #444;
 }
@@ -2915,15 +2914,7 @@ body.light-mode .image-caption-outside {
     
     #capitalHistoryTable th:nth-child(5),
     #capitalHistoryTable td:nth-child(5) {
-        width: auto !important;
-        white-space: nowrap !important;
-    }
-    
-    #capitalHistoryTable .btn-danger,
-    #capitalHistoryTable button {
-        white-space: nowrap !important;
-        padding: 4px 8px !important;
-        font-size: 0.65rem !important;
+        width: 40px !important;
     }
     
     /* === チャート画像コンテナ === */
@@ -3466,13 +3457,6 @@ body.light-mode .image-caption-outside {
     #capitalHistoryTable td {
         padding: 5px 3px !important;
         font-size: 0.65rem !important;
-    }
-    
-    #capitalHistoryTable .btn-danger,
-    #capitalHistoryTable button {
-        white-space: nowrap !important;
-        padding: 3px 6px !important;
-        font-size: 0.6rem !important;
     }
     
     /* === モーダル: ブローカー追加・通貨ペア追加 === */
