@@ -3460,14 +3460,20 @@ body.light-mode .image-caption-outside {
         white-space: nowrap !important;
     }
     
+    
     /* 入出金履歴テーブルの横スクロール対応 */
-    div:has(> #capitalHistoryTable) {
+    #capitalHistoryTable {
+        display: block !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
+        min-width: 100% !important;
     }
     
-    #capitalHistoryTable {
-        min-width: 450px !important;
+    #capitalHistoryTable thead,
+    #capitalHistoryTable tbody {
+        display: table;
+        width: 100%;
+        min-width: 450px;
     }
     
     #capitalHistoryTable .btn-danger {
