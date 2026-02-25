@@ -670,6 +670,17 @@ function setupEventListeners() {
         });
     });
     
+    // ヘッダータイトル ホバーでシマー停止/再開
+    const headerTitle = document.getElementById('headerTitle');
+    if (headerTitle) {
+        headerTitle.addEventListener('mouseenter', function() {
+            stopHeaderShimmer();
+        });
+        headerTitle.addEventListener('mouseleave', function() {
+            startHeaderShimmer();
+        });
+    }
+    
     // ペーストイベント
     document.addEventListener('paste', handlePaste);
     
@@ -1373,6 +1384,38 @@ function compressImage(dataURL, maxWidth = 800, quality = 0.7) {
 // 10. テーマ管理
 // ============================
 
+// ヘッダータイトル シマーアニメーション（Chrome互換: JSで制御）
+let shimmerAnimationId = null;
+
+function startHeaderShimmer() {
+    const el = document.querySelector('.header-title');
+    if (!el) return;
+    
+    if (shimmerAnimationId) {
+        cancelAnimationFrame(shimmerAnimationId);
+    }
+    
+    let start = null;
+    const duration = 10000;
+    
+    function animate(timestamp) {
+        if (!start) start = timestamp;
+        const progress = ((timestamp - start) % duration) / duration;
+        const pos = 50 + 50 * Math.cos(progress * 2 * Math.PI);
+        el.style.setProperty('background-position', pos + '% 50%', 'important');
+        shimmerAnimationId = requestAnimationFrame(animate);
+    }
+    
+    shimmerAnimationId = requestAnimationFrame(animate);
+}
+
+function stopHeaderShimmer() {
+    if (shimmerAnimationId) {
+        cancelAnimationFrame(shimmerAnimationId);
+        shimmerAnimationId = null;
+    }
+}
+
 // テーマ設定関数
 function setTheme(theme) {
     const body = document.body;
@@ -1391,6 +1434,9 @@ function setTheme(theme) {
             btn.classList.add('active');
         }
     });
+    
+    // シマーアニメーション開始
+    startHeaderShimmer();
     
     storage.setItem('theme', theme);
     showToast(`${theme === 'light' ? 'ライト' : 'ダーク'}モードに切り替えました`, 'success');
