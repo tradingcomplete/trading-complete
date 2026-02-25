@@ -3460,7 +3460,7 @@ body.light-mode .image-caption-outside {
     }
     
     #capitalHistoryTable .btn-danger {
-        white-space: nowrap;
+        white-space: nowrap !important;
     }
     
     /* === モーダル: ブローカー追加・通貨ペア追加 === */
