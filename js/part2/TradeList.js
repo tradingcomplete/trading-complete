@@ -305,6 +305,36 @@ class TradeList {
         pairContainer.appendChild(pairSpan);
         pairContainer.appendChild(directionBadge);
         
+        // セッションバッジを追加（常時表示）
+        if (trade.entryTime && typeof window.getTradeSession === 'function') {
+            const sessionKey = window.getTradeSession(new Date(trade.entryTime));
+            if (sessionKey) {
+                const sessionBadge = document.createElement('span');
+                sessionBadge.className = 'session-badge';
+                
+                const sessionConfig = {
+                    tokyo:   { text: '東京',       bg: 'rgba(255, 152, 0, 0.15)',  color: '#ffb74d', border: 'rgba(255, 152, 0, 0.3)' },
+                    london:  { text: 'ロンドン',    bg: 'rgba(33, 150, 243, 0.15)', color: '#42a5f5', border: 'rgba(33, 150, 243, 0.3)' },
+                    ny:      { text: 'NY',          bg: 'rgba(76, 175, 80, 0.15)',  color: '#66bb6a', border: 'rgba(76, 175, 80, 0.3)' },
+                    oceania: { text: 'オセアニア',   bg: 'rgba(0, 188, 212, 0.15)',  color: '#4dd0e1', border: 'rgba(0, 188, 212, 0.3)' }
+                };
+                
+                const cfg = sessionConfig[sessionKey] || sessionConfig.tokyo;
+                sessionBadge.textContent = cfg.text;
+                sessionBadge.title = window.getSessionDisplayName ? window.getSessionDisplayName(sessionKey) : cfg.text;
+                sessionBadge.style.cssText = `
+                    padding: 4px 10px;
+                    border-radius: 4px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    background: ${cfg.bg};
+                    color: ${cfg.color};
+                    border: 1px solid ${cfg.border};
+                `;
+                pairContainer.appendChild(sessionBadge);
+            }
+        }
+        
         // ブローカーバッジを追加（設定がONの場合のみ）
         const showBrokerBadge = typeof getShowBrokerBadge === 'function' ? getShowBrokerBadge() : true;
         if (trade.broker && showBrokerBadge) {
