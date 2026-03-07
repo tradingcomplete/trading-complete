@@ -92,6 +92,15 @@
                     return false;
                 }
                 
+                // --- Phase 4: プラン制限チェック（Freeプランはクラウド同期不可） ---
+                if (window.PaymentModule && typeof window.PaymentModule.canUseCloudSync === 'function') {
+                    if (!window.PaymentModule.canUseCloudSync()) {
+                        console.warn('[SyncModule] Freeプランのためクラウド同期は利用できません');
+                        return false;
+                    }
+                }
+                // --- Phase 4 ここまで ---
+
                 // settings:changed イベントをリッスン
                 this.#setupEventListeners();
                 

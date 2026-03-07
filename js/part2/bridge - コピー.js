@@ -234,20 +234,7 @@ window.calculateHoldingTime = function(entryDatetime, exitDatetime) {
 window.saveTradeRecord = function(formData = null) {
     // MODULES.md準拠: TradeEntryに処理を委譲
     // formDataがnullの場合、TradeEntry.#collectFormDataが収集する
-
-    // --- Phase 4: プラン制限チェック（Freeプラン: 累計50件まで） ---
-    if (window.PaymentModule && typeof window.PaymentModule.canAddTrade === 'function') {
-        const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-        const totalCount = trades.length;
-        if (!window.PaymentModule.canAddTrade(totalCount)) {
-            if (typeof window.showUpgradeModal === 'function') {
-                window.showUpgradeModal('trades');
-            }
-            return false;
-        }
-    }
-    // --- Phase 4 ここまで ---
-
+    
     if (window.tradeEntry && window.tradeEntry.saveTradeRecord) {
         const result = window.tradeEntry.saveTradeRecord(formData);
         // 保存成功時に一覧を更新
