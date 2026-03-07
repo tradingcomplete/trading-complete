@@ -645,6 +645,22 @@ function initializeApp() {
     
     // ブローカーバッジ設定の初期化
     initShowBrokerBadge();
+    
+    // 決済結果パラメータの処理
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentResult = urlParams.get('payment');
+    if (paymentResult === 'success') {
+        window.showToast?.('決済が完了しました！プランが更新されます。', 'success');
+        // URLからパラメータを削除
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // サブスクリプション情報を再取得
+        setTimeout(() => {
+            window.PaymentModule?.refreshSubscription();
+        }, 2000);
+    } else if (paymentResult === 'canceled') {
+        window.showToast?.('決済がキャンセルされました', 'info');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 }
 
 // ============================
@@ -2293,8 +2309,26 @@ window.calculateNetProfit = calculateNetProfit;
 window.generateTradeId = generateTradeId;
 window.resetTradeForm = resetTradeForm;
 
+// アップグレード案内モーダル表示
+function showUpgradeModal(limitType) {
+    const limits = window.PaymentModule?.PLAN_LIMITS?.free || { totalTrades: 50 };
+    const messages = {
+        trades: '無料枠の' + limits.totalTrades + '件を使い切りました。\nProプランで無制限に記録できます。',
+        sync: '複数デバイスでの同期はProプラン以上で利用できます。',
+        ai: 'AI機能はPremiumプランで利用できます。',
+    };
+
+    const modal = document.getElementById('upgradeModal');
+    const messageEl = document.getElementById('upgradeMessage');
+    if (modal && messageEl) {
+        messageEl.textContent = messages[limitType] || 'この機能はアップグレードが必要です';
+        modal.style.display = 'flex';
+    }
+}
+
 // Window関数の登録
 window.showToast = showToast;
+window.showUpgradeModal = showUpgradeModal;
 window.escapeHtml = escapeHtml;
 window.safeGetElement = safeGetElement;
 window.showImageModal = showImageModal;
@@ -2465,6 +2499,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // リスクリワード計算
         if (typeof updateRiskReward === 'function') {
             updateRiskReward();
+        }
+        
+        // PaymentModule初期化
+        if (window.PaymentModule && typeof window.PaymentModule.initialize === 'function') {
+            window.PaymentModule.initialize().then(() => {
+                console.log('PaymentModule初期化完了:', window.PaymentModule.getStatus());
+            });
         }
     }, 100);
 });
