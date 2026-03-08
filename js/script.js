@@ -696,6 +696,18 @@ function setupEventListeners() {
         });
     }
     
+    // マイページ表示時・プラン変更時にプラン情報を更新
+    if (window.eventBus) {
+        window.eventBus.on('settings:subtabChanged', function(data) {
+            if (data.subtab === 'mypage') {
+                updateMypagePlanInfo();
+            }
+        });
+        window.eventBus.on('payment:planChanged', function() {
+            updateMypagePlanInfo();
+        });
+    }
+    
     // ホバーでシマー停止/再開
     const headerTitle = document.getElementById('headerTitle');
     if (headerTitle) {
@@ -2316,6 +2328,7 @@ function showUpgradeModal(limitType) {
         trades: '無料枠の' + limits.totalTrades + '件を使い切りました。\nProプランで無制限に記録できます。',
         sync: '複数デバイスでの同期はProプラン以上で利用できます。',
         ai: 'AI機能はPremiumプランで利用できます。',
+        manual: 'Proプランにアップグレードすると、トレード記録が無制限になり、クラウド同期も使えます。',
     };
 
     const modal = document.getElementById('upgradeModal');
@@ -2329,6 +2342,51 @@ function showUpgradeModal(limitType) {
 // Window関数の登録
 window.showToast = showToast;
 window.showUpgradeModal = showUpgradeModal;
+
+// プランボタンクリック処理
+function handlePlanBtnClick() {
+    const plan = window.PaymentModule?.getCurrentPlan() || 'free';
+    if (plan === 'free') {
+        showUpgradeModal('manual');
+    } else {
+        window.PaymentModule?.openCustomerPortal();
+    }
+}
+
+// マイページのプラン情報を更新
+function updateMypagePlanInfo() {
+    const planEl = document.getElementById('mypage-current-plan');
+    const btnEl = document.getElementById('mypage-plan-btn');
+    if (!planEl || !btnEl) return;
+
+    const plan = window.PaymentModule?.getCurrentPlan() || 'free';
+
+    const planNames = {
+        free: '無料プラン（Free）',
+        pro: 'Proプラン',
+        premium: 'Premiumプラン',
+    };
+
+    planEl.textContent = planNames[plan] || plan;
+
+    if (plan === 'free') {
+        btnEl.textContent = 'アップグレード';
+        btnEl.style.background = 'linear-gradient(135deg, #00ff88, #00cc6a)';
+        btnEl.style.color = '#0c1018';
+        btnEl.style.border = 'none';
+    } else {
+        btnEl.textContent = 'プラン管理';
+        btnEl.style.background = '';
+        btnEl.style.color = '';
+        btnEl.style.border = '';
+    }
+
+    btnEl.style.display = 'inline-block';
+}
+
+window.handlePlanBtnClick = handlePlanBtnClick;
+window.updateMypagePlanInfo = updateMypagePlanInfo;
+
 window.escapeHtml = escapeHtml;
 window.safeGetElement = safeGetElement;
 window.showImageModal = showImageModal;
