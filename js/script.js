@@ -1454,6 +1454,54 @@ function stopHeaderShimmer() {
     }
 }
 
+// Premiumプラン ホログラフィックシマーアニメーション
+let premiumShimmerAnimationId = null;
+
+function startPremiumShimmer() {
+    const el = document.getElementById('mypage-current-plan');
+    if (!el) return;
+    
+    if (premiumShimmerAnimationId) {
+        cancelAnimationFrame(premiumShimmerAnimationId);
+    }
+    
+    // ホログラフィックグラデーション設定
+    el.style.background = 'linear-gradient(90deg, #7dd3fc, #c4b5fd, #f9a8d4, #fbbf24, #7dd3fc)';
+    el.style.backgroundSize = '200% 100%';
+    el.style.backgroundClip = 'text';
+    el.style.webkitBackgroundClip = 'text';
+    el.style.color = 'transparent';
+    el.style.fontWeight = 'bold';
+    
+    let start = null;
+    const duration = 3000; // 3秒で1周期
+    
+    function animate(timestamp) {
+        if (!start) start = timestamp;
+        const progress = ((timestamp - start) % duration) / duration;
+        const pos = progress * 100;
+        el.style.backgroundPosition = pos + '% 50%';
+        premiumShimmerAnimationId = requestAnimationFrame(animate);
+    }
+    
+    premiumShimmerAnimationId = requestAnimationFrame(animate);
+}
+
+function stopPremiumShimmer() {
+    if (premiumShimmerAnimationId) {
+        cancelAnimationFrame(premiumShimmerAnimationId);
+        premiumShimmerAnimationId = null;
+    }
+    const el = document.getElementById('mypage-current-plan');
+    if (el) {
+        el.style.background = '';
+        el.style.backgroundSize = '';
+        el.style.backgroundClip = '';
+        el.style.webkitBackgroundClip = '';
+        el.style.backgroundPosition = '';
+    }
+}
+
 // テーマ設定関数
 function setTheme(theme) {
     const body = document.body;
@@ -2368,6 +2416,19 @@ function updateMypagePlanInfo() {
     };
 
     planEl.textContent = planNames[plan] || plan;
+
+    // Proは金色、Premiumはキラキラアニメーションで表示
+    if (plan === 'pro') {
+        stopPremiumShimmer();
+        planEl.style.color = '#fbbf24';
+        planEl.style.fontWeight = 'bold';
+    } else if (plan === 'premium') {
+        startPremiumShimmer();
+    } else {
+        stopPremiumShimmer();
+        planEl.style.color = '';
+        planEl.style.fontWeight = '';
+    }
 
     if (plan === 'free') {
         btnEl.textContent = 'アップグレード';
