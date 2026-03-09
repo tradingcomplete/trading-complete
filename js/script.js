@@ -706,6 +706,10 @@ function setupEventListeners() {
         window.eventBus.on('payment:planChanged', function() {
             updateMypagePlanInfo();
         });
+        // ログイン確認後にプランを再取得（スマホでのセッション復元遅延対策）
+        window.eventBus.on('auth:login', function() {
+            window.PaymentModule?.refreshSubscription();
+        });
     }
     
     // ホバーでシマー停止/再開
