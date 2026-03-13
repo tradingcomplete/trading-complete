@@ -52,6 +52,7 @@ function scheduleTodayPosts() {
     // 平日のみ（土日は指標発表なし）
     if (dayForIndicator >= 1 && dayForIndicator <= 5) {
       scheduleIndicatorTriggers_();
+      scheduleResultFetchTriggers_(); // ★v6.7: 発表後5分で結果取得
     }
   } catch (e) {
     console.log('指標連動トリガーエラー（続行）: ' + e.message);
@@ -305,6 +306,87 @@ function testScheduleDryRun() {
  * 制限: 1日最大2件
  * 条件: 発表時刻が現在より未来 かつ 30分前がまだ過ぎていない
  */
+// ===== 指標結果取得トリガーを設定（発表時刻+5分・カレンダー連動） ★v6.7追加 =====
+// 固定時刻ではなくカレンダーのB列を読んで動的設定するため、サマータイムに自動対応する
+function scheduleResultFetchTriggers_() {
+  console.log('');
+  console.log('📊 指標結果取得トリガー設定中...');
+
+  var keys = getApiKeys();
+  var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('経済カレンダー');
+
+  if (!sheet || sheet.getLastRow() < 2) {
+    console.log('  ⚠️ 経済カレンダーシートが空');
+    return;
+  }
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
+  var now = new Date();
+  var today = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd');
+  var todayStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
+
+  // 今日の「高」「中」指標の発表時刻を収集（重複排除）
+  var triggerMinutes = {}; // "HH:MM" → true（重複防止）
+  var triggerCount = 0;
+
+  for (var i = 0; i < data.length; i++) {
+    if (!data[i][0] || !data[i][1] || !data[i][3]) continue;
+
+    var eventDate = new Date(data[i][0]);
+    var eventDateStr = Utilities.formatDate(eventDate, 'Asia/Tokyo', 'yyyy/MM/dd');
+    if (eventDateStr !== today) continue;
+
+    var importance = String(data[i][6] || '').trim();
+    if (importance !== '高' && importance !== '中') continue;
+
+    // ★v6.8: B列はDate型対応
+    var rawTime2 = data[i][1];
+    var hour, minute, timeStr;
+    if (rawTime2 instanceof Date) {
+      hour    = rawTime2.getHours();
+      minute  = rawTime2.getMinutes();
+      timeStr = hour + ':' + (minute < 10 ? '0' + minute : minute);
+    } else {
+      timeStr = String(rawTime2 || '').trim();
+      var timeParts2 = timeStr.split(':');
+      hour   = parseInt(timeParts2[0], 10);
+      minute = parseInt(timeParts2[1] || '0', 10);
+    }
+    if (!timeStr || timeStr === '0:00' || timeStr === '00:00') continue;
+    if (isNaN(hour) || isNaN(minute)) continue;
+
+    // 発表時刻 + 5分
+    var fetchMinute = minute + 5;
+    var fetchHour = hour;
+    if (fetchMinute >= 60) {
+      fetchMinute -= 60;
+      fetchHour += 1;
+    }
+
+    var key = padZero_(fetchHour) + ':' + padZero_(fetchMinute);
+    if (triggerMinutes[key]) continue; // 同じ時刻は1回だけ
+    triggerMinutes[key] = true;
+
+    // 過去の時刻はスキップ
+    var triggerTime = new Date(todayStr + 'T' + key + ':00');
+    if (triggerTime <= now) {
+      console.log('  スキップ（過去）: ' + timeStr + ' → ' + key);
+      continue;
+    }
+
+    ScriptApp.newTrigger('refreshTodayIndicatorResults')
+      .timeBased()
+      .at(triggerTime)
+      .create();
+
+    console.log('  ✅ 📊 ' + timeStr + ' 発表 → ' + key + ' に結果取得');
+    triggerCount++;
+  }
+
+  console.log('📊 指標結果取得トリガー: ' + triggerCount + '件設定完了');
+}
+
 function scheduleIndicatorTriggers_() {
   console.log('');
   console.log('⚡ 指標連動トリガー設定中...');
@@ -337,14 +419,21 @@ function scheduleIndicatorTriggers_() {
     var importance = String(data[i][6] || '').trim();
     if (importance !== '高') continue;
 
-    // 時刻をパース
-    var timeStr = String(data[i][1]).trim();
+    // 時刻をパース（★v6.8: B列はDate型対応）
+    var rawTime1 = data[i][1];
+    var hour, minute, timeStr;
+    if (rawTime1 instanceof Date) {
+      hour    = rawTime1.getHours();
+      minute  = rawTime1.getMinutes();
+      timeStr = hour + ':' + (minute < 10 ? '0' + minute : minute);
+    } else {
+      timeStr = String(rawTime1 || '').trim();
+      if (!timeStr || timeStr === '0:00' || timeStr === '00:00') continue;
+      var timeParts1 = timeStr.split(':');
+      hour   = parseInt(timeParts1[0], 10);
+      minute = parseInt(timeParts1[1] || '0', 10);
+    }
     if (!timeStr || timeStr === '0:00' || timeStr === '00:00') continue;
-
-    var timeParts = timeStr.split(':');
-    var hour = parseInt(timeParts[0], 10);
-    var minute = parseInt(timeParts[1] || '0', 10);
-
     if (isNaN(hour) || isNaN(minute)) continue;
 
     // 30分前の時刻を計算

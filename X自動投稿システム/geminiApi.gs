@@ -1711,6 +1711,13 @@ function calculateRateDirection_(rates, spreadsheetId) {
 // Gemini+Groundingで検索→シートに記入→MORNING注入テキスト生成
 // ========================================
 
+// ===== 【公開】定期トリガーから呼び出す指標結果取得 ★v6.7追加 =====
+// scheduler.gsのscheduleTodayPosts()で設定した定時トリガーから呼び出す
+function refreshTodayIndicatorResults() {
+  var keys = getApiKeys();
+  fetchTodayAnnouncedResults_(keys.SPREADSHEET_ID, keys.GEMINI_API_KEY);
+}
+
 // ===== 今日の発表済み指標を取得してI列に書き込む ★v6.7追加 =====
 // TOKYO/LUNCH/LONDON/GOLDEN/NY生成時に呼び出し。時刻が過ぎた今日の指標を対象にする。
 function fetchTodayAnnouncedResults_(spreadsheetId, geminiApiKey) {
@@ -1725,26 +1732,54 @@ function fetchTodayAnnouncedResults_(spreadsheetId, geminiApiKey) {
     var nowHour = now.getHours();
     var nowMin = now.getMinutes();
     
+    // ★v6.7: 深夜0:00〜5:59は前日の市場セッション中とみなし、前日分も対象にする
+    // 例: 1:04実行 → 3/12 21:30の未記入指標も取得対象になる
+    var yesterday = new Date(today.getTime() - 86400000);
+    var yesterdayStr = Utilities.formatDate(yesterday, 'Asia/Tokyo', 'yyyy/MM/dd');
+    var isLateNight = (nowHour >= 0 && nowHour < 6);
+    
     var lastCol = Math.min(sheet.getLastColumn(), 10);
     var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
     
     // 今日の発表済み（時刻が現在より前）かつI列が空の指標を抽出
+    // 深夜帯は前日分も含める
     var targets = [];
     for (var i = 0; i < data.length; i++) {
       if (!data[i][0] || !data[i][3]) continue;
       
       var eventDate = new Date(data[i][0]);
       var dateStr = Utilities.formatDate(eventDate, 'Asia/Tokyo', 'yyyy/MM/dd');
-      if (dateStr !== todayStr) continue;
+      var isToday = (dateStr === todayStr);
+      var isYesterday = isLateNight && (dateStr === yesterdayStr);
+      if (!isToday && !isYesterday) continue;
       
-      var timeStr = String(data[i][1] || '').trim();
+      // ★v6.8: B列はDate型で保存されているためgetHours/getMinutesで取得
+      var rawTime = data[i][1];
+      var timeStr = '';
+      var timeHour = 0;
+      var timeMin = 0;
+      if (rawTime instanceof Date) {
+        timeHour = rawTime.getHours();
+        timeMin  = rawTime.getMinutes();
+        timeStr  = timeHour + ':' + (timeMin < 10 ? '0' + timeMin : timeMin);
+      } else {
+        timeStr = String(rawTime || '').trim();
+      }
       if (!timeStr || timeStr === '0:00' || timeStr === '00:00') continue;
       
       // 発表時刻が現在より前かチェック
-      var timeParts = timeStr.split(':');
-      var eventHour = parseInt(timeParts[0], 10);
-      var eventMin = parseInt(timeParts[1] || '0', 10);
-      var isAnnounced = (nowHour > eventHour) || (nowHour === eventHour && nowMin >= eventMin);
+      // 前日分（isYesterday）は時刻に関係なく全て発表済み
+      var eventHour = timeHour;
+      var eventMin  = timeMin;
+      if (!(rawTime instanceof Date)) {
+        // テキスト型の場合はparseIntで取得
+        var timeParts = timeStr.split(':');
+        eventHour = parseInt(timeParts[0], 10);
+        eventMin  = parseInt(timeParts[1] || '0', 10);
+      }
+      var isAnnounced = isYesterday
+        || (nowHour > eventHour)
+        || (nowHour === eventHour && nowMin >= eventMin);
       if (!isAnnounced) continue;
       
       // I列が空またはエラーのものだけ対象
@@ -2037,10 +2072,16 @@ function writeIndicatorResults_(spreadsheetId, indicators, parsed) {
         var actual = matchedResult.actual;
         var note = matchedResult.note || '';
         
-        // I列（9列目）に結果を書き込み
+        // I列（9列目）に結果を書き込み（単位があれば結合）
         if (actual !== null && actual !== undefined && actual !== 'null' && String(actual).trim() !== '') {
-          sheet.getRange(ind.rowIndex, 9).setValue(String(actual));
-          console.log('  ✅ ' + ind.name + ': 結果 = ' + actual);
+          var unit = (matchedResult.unit && matchedResult.unit !== 'null') ? String(matchedResult.unit).trim() : '';
+          var actualWithUnit = String(actual);
+          // 単位が予想値にも含まれていれば付与。%・円・ドル・万件・万人・億ドル等
+          if (unit && actualWithUnit.indexOf(unit) === -1) {
+            actualWithUnit = actualWithUnit + unit;
+          }
+          sheet.getRange(ind.rowIndex, 9).setValue(actualWithUnit);
+          console.log('  ✅ ' + ind.name + ': 結果 = ' + actualWithUnit);
         } else if (note && note !== 'null') {
           sheet.getRange(ind.rowIndex, 9).setValue(note);
           console.log('  ✅ ' + ind.name + ': ' + note);
@@ -4749,16 +4790,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
         }
       }
       
-      // ★v6.7: 今日の発表済み指標をI列に書き込む（TOKYO/LUNCH/LONDON/GOLDEN/NY）
-      // 例: 8:50発表→9:30TOKYO、21:30発表→20:45GOLDEN でも対応
-      var todayResultTypes = ['TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY'];
-      if (todayResultTypes.indexOf(postType) !== -1) {
-        try {
-          fetchTodayAnnouncedResults_(keys.SPREADSHEET_ID, keys.GEMINI_API_KEY);
-        } catch (trErr) {
-          console.log('⚠️ 今日分指標取得スキップ: ' + trErr.message);
-        }
-      }
+      // ★v6.7: 今日の発表済み指標取得は定期トリガー(refreshTodayIndicatorResults)に移動
+      // buildPrompt_からの呼び出しは削除。scheduler.gsで9:05/10:35/14:05/21:35/22:05に実行。
       
       // ★v5.7 Layer 3: 直近1ヶ月の指標トレンド注入（MORNING, WEEKLY_REVIEW）
       if (postType === 'MORNING' || postType === 'WEEKLY_REVIEW') {
@@ -5980,6 +6013,15 @@ function getLatestIndicators_(spreadsheetId) {
     
     if (validCount === 0) return null;
     
+    // ★v6.9: F1セルにGAS読み取り日時を書き込む
+    try {
+      var now = new Date();
+      var readTime = Utilities.formatDate(now, 'Asia/Tokyo', 'GAS読み取り: yyyy/MM/dd HH:mm');
+      sheet.getRange(1, 6).setValue(readTime);
+    } catch (e2) {
+      // 書き込み失敗は無視（読み取り結果には影響させない）
+    }
+    
     return result;
   } catch (e) {
     console.log('⚠️ 指標データ読み取りエラー: ' + e.message);
@@ -6923,6 +6965,20 @@ function importFromRawSheet() {
   }
   console.log('');
   console.log('重要度 高: ' + highCount + '件 / 中: ' + midCount + '件');
+  
+  // ★v6.7: インポート後にINDICATOR・結果取得トリガーを再設定
+  // 5:00以降にインポートした場合でも重要指標のトリガーが確実に設定される
+  var nowForTrigger = new Date();
+  var dayForTrigger = nowForTrigger.getDay();
+  if (dayForTrigger >= 1 && dayForTrigger <= 5) { // 平日のみ
+    try {
+      scheduleIndicatorTriggers_();   // INDICATOR投稿（発表30分前）
+      scheduleResultFetchTriggers_(); // 結果取得（発表5分後）
+      console.log('✅ トリガーを再設定しました');
+    } catch (e) {
+      console.log('⚠️ トリガー再設定エラー（続行）: ' + e.message);
+    }
+  }
 }
 
 /**
