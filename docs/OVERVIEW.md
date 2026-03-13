@@ -1,10 +1,10 @@
 # OVERVIEW.md - Trading Complete 全体構造図
 *このファイルは変更禁止 - 全体の地図として固定*
-*最終更新: 2026-01-31 - AISummaryModule追加（Phase 6完了）*
+*最終更新: 2026-03-08 - PaymentModule追加（Stripe Phase 5完了）*
 
 ## 🗺️ システム全体図
 ```
-Trading Complete（約50,000行）
+Trading Complete（約60,000行）
 ├── index.html（6タブUI）
 ├── styles/（CSS 8ファイル）
 ├── js/
@@ -18,6 +18,8 @@ Trading Complete（約50,000行）
 │   │   └── AuthModule.js（認証管理 v1.4.0 - マイページ変更・パスワードリセット対応）
 │   ├── sync/（同期モジュール ✅）
 │   │   └── SyncModule.js ✅（クラウド同期 v1.7.0）
+│   ├── payment/（決済モジュール ✅Phase 5完了）
+│   │   └── PaymentModule.js ✅（プラン管理・Stripe連携 v1.0.0）
 │   ├── part2/（10モジュール - 完成✅）
 │   │   ├── TradeCalculator.js
 │   │   ├── TradeDetail.js
@@ -83,6 +85,7 @@ Trading Complete（約50,000行）
 | **Part 7** | 収支管理 | 経費・締め・CSV・集計・入出金・月次カレンダー | 1,603 | ✅基本機能 + ✅モジュール6/6 | js/part7/ + js/part7_modules/ + js/part5/ | ✅リリース時使用 |
 | **Part 8** | 統計 | 統計計算・レポート・グラフ・AIサマリー | 423 | ✅完成 | js/part8_modules/*（4ファイル） | ✅リリース時使用 |
 | **Cloud** | クラウド連携 | 認証・データ同期・画像Storage | - | ✅完成 | js/auth/ + js/sync/ + js/core/ | ✅リリース時使用 |
+| **Payment** | 決済管理 | プラン判定・Stripe連携・制限制御 | - | ✅完成（Phase 5テスト済み） | js/payment/ | ✅リリース時使用 |
 
 **削減実績合計**: 
 - Part4等（2025-10-28）: 744行
@@ -147,7 +150,7 @@ Trading Complete（約50,000行）
 ✅ Phase 3.5: マイページUI
 ✅ Phase 3.6: セキュリティ基盤（security.js）
 ✅ Phase 4: データ同期（SyncModule.js v1.7.0）✅ 完了
-🔄 Phase 5: 統合テスト・リリース（テスト完了、リリース準備中）
+✅ Phase 5: 統合テスト・リリース（テスト完了）
 ```
 
 **✅ クラウド同期実装完了（2026-01-15 Phase 5テスト完了）**:
@@ -326,6 +329,16 @@ SyncModule               // js/sync/SyncModule.js（v1.7.0）
   .saveCapitalRecord(record) // 入出金保存
   .saveSettings(settings) // 設定保存
   .getStatus()           // デバッグ用
+
+// 決済 - js/payment/
+PaymentModule            // js/payment/PaymentModule.js（v1.0.0）
+  .initialize()           // 初期化
+  .getCurrentPlan()       // プラン取得（'free'/'pro'/'premium'）
+  .canAddTrade(count)     // トレード追加可否
+  .canUseCloudSync()      // クラウド同期利用可否
+  .createCheckoutSession(priceId) // Stripe Checkout起動
+  .openCustomerPortal()   // プラン管理画面
+  .getStatus()            // デバッグ用
 
 // 画像処理 - js/handlers/
 ImageHandler             // js/handlers/imageHandler.js（v1.1.0）

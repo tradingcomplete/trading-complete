@@ -1,5 +1,5 @@
 # REFERENCE.md - Trading Complete 参考資料・運用ガイド
-*更新日: 2026-02-02 | 用途: 開発ガイドライン・完了履歴・ベストプラクティス*
+*更新日: 2026-03-08 | 用途: 開発ガイドライン・完了履歴・ベストプラクティス*
 
 ---
 
@@ -275,6 +275,60 @@ docs/  フォーム制御.md（詳細情報）
 
 ## 📚 Part II: 完了履歴
 
+### 2026年3月
+
+#### オフライン復帰時のデータ同期マージ（2026-03-09）
+
+| タスク | 完了日 |
+|--------|--------|
+| SyncModule v1.8.0実装（mergeAllWithCloud等5メソッド追加） | 2026-03-09 |
+| window.addEventListener('online')による復帰自動検知 | 2026-03-09 |
+| シナリオ1〜3の動作テスト全合格 | 2026-03-09 |
+| MODULES.md / TASKS.md / Supabase各ドキュメント更新 | 2026-03-09 |
+
+**実装概要**:
+- **対象テーブル**: trades / notes / expenses / capital_records
+- **トレード・ノート**: `updated_at` タイムスタンプ比較による Last Write Wins 方式
+- **経費・入出金**: IDユニオン方式（`updated_at` カラムがないため）
+- **自動検知**: `initialize()` 内で `window.addEventListener('online', ...)` を登録
+- **既存コードへの変更**: ゼロ（純粋な追加のみ）
+
+**テスト結果**:
+
+| シナリオ | 内容 | 結果 |
+|---------|------|------|
+| 1 | オフライン中にトレード追加 → 復帰で自動マージ（アップロード1件確認） | ✅ 合格 |
+| 2 | 通常使用中にマージ実行 → 重複・消失なし（全テーブル0件差分） | ✅ 合格 |
+| 3 | テストトレード削除 → ローカル・クラウド両方180件で一致 | ✅ 合格 |
+
+---
+
+#### Stripe決済システム Phase 1-5（2026-03-08）
+
+| タスク | 完了日 |
+|--------|--------|
+| Phase 1: Stripeアカウント・商品・テーブル・Webhook設定 | 2026-03-08 |
+| Phase 2: Edge Functions 3本デプロイ（create-checkout-session / stripe-webhook / customer-portal） | 2026-03-08 |
+| Phase 3: PaymentModule.js実装（index.html統合確認） | 2026-03-08 |
+| Phase 4: プラン制限ロジック（bridge.js / SyncModule.js） | 2026-03-08 |
+| Phase 5: 全9テスト合格 | 2026-03-08 |
+
+**トラブルシューティング記録（Stripe実装で発生）**:
+
+| # | エラー | 原因 | 解決方法 |
+|---|--------|------|---------|
+| 1 | success_url 404 | app.tradingcomplete.comが存在しない | create-checkout-sessionのURLをtradingcomplete.com/trading-complete/に修正 |
+| 2 | Webhook 401 Missing authorization header | JWT認証が有効だった | デプロイ時に--no-verify-jwtオプションを追加 |
+| 3 | Webhook 400 Invalid signature | STRIPE_WEBHOOK_SECRETが古い値 | Supabaseで新しいwhsec_値に更新後、再デプロイ |
+| 4 | RangeError: Invalid time value | constructEvent（同期版）を使用していた | constructEventAsync（非同期版）に変更 + nullチェック追加 |
+
+**教訓**:
+- stripe-webhookは必ず--no-verify-jwtでデプロイ（JWTなしで外部から受信するため）
+- Webhookシークレットは新しいエンドポイントを作成するたびに更新が必要
+- Deno環境ではstripe.webhooks.constructEventAsync()を使うこと（synchronous版は動作しない）
+
+---
+
 ### 2026年1月
 
 | 日付 | タスク | 優先度 | 工数 | 主な成果 | 詳細 |
@@ -290,6 +344,10 @@ docs/  フォーム制御.md（詳細情報）
 | **01/25** | **画像コメント改行・横幅問題修正** | **LOW** | **1h** | **スマホ表示時のキャプション幅をvw単位で修正（129px→387px）** | [詳細](#画像コメント改行横幅問題修正2026-01-25) |
 | **01/29-02/01** | **トレード分析強化（全6Phase完了）** | **CRITICAL** | **17日間** | **許容損失・手法管理・振り返り強化・バッジ表示・分析拡張・AIサマリー基盤** | [詳細](#トレード分析強化全phase完了) |
 | **02/02** | **利益率機能** | **MEDIUM** | **4h** | **年度別・全期間利益率表示、年初口座残高設定UI** | [詳細](#利益率機能2026-02-02) |
+| **02/12** | **Premium Redesign v5 カラー統一（全16ファイル）** | **HIGH** | **6h** | **旧カラー180箇所→新テーマ統一、CSSクラス化、サイバーUI完成** | [詳細](#premium-redesign-v5-カラー統一2026-02-12) |
+| **02/25** | **週カレンダーモーダル iPhone表示修正** | **MEDIUM** | **1.5h** | **曜日-日付列ずれ修正、ボタン折り返し修正、ライトモード対応、右端切れ解消** | REFERENCE.md |
+| **02/25** | **ヘッダーシマーアニメーション（JS実装）** | **LOW** | **1h** | **CSSアニメーションChrome非互換→requestAnimationFrame+EventBus連携** | [詳細](#教訓31-cssアニメーションのブラウザ互換性) |
+| **02/25** | **セルフイメージ保存バグ修正 + 同期後表示更新** | **MEDIUM** | **2h** | **saveGoals()トースト・同期トリガー追加、sync:settings:synced受信で表示更新** | [詳細](#セルフイメージ保存バグ修正2026-02-25) |
 
 ---
 
@@ -362,10 +420,70 @@ docs/  フォーム制御.md（詳細情報）
 - 📱 **画像コメント改行・横幅問題修正（01/25）: スマホ表示時のキャプション幅をvw単位で修正**
 - 🎯 **トレード分析強化（01/29-02/01）: 許容損失・手法管理・振り返り強化・バッジ表示・分析拡張・AIサマリー基盤**
 - 📊 **利益率機能（02/02）: 年度別・全期間利益率表示、年初口座残高設定UI**
+- 🎨 **Premium Redesign v5カラー統一（02/12）: 全16ファイル・180箇所の旧カラーを新テーマに統一、CSSクラス化推進**
 
 ---
 
 ### 完了タスク詳細
+
+#### ✅ Premium Redesign v5 カラー統一（2026-02-12）
+
+**日付**: 2026-02-12 | **工数**: 6h | **優先度**: HIGH
+
+**概要**: Premium Redesign v5のCSS変数・アニメーション定義後、JS/HTML内の180箇所以上のハードコード色をすべて新テーマカラーに統一。CSSのみで制御できない動的インラインstyleを含む全16ファイルを修正。
+
+**背景**:
+- 1_base.cssと5_themes.cssにPremium Redesign v5を適用したが、JSモジュール内のインラインstyle・動的styleブロックが旧カラーを保持していたため、UIに旧デザインが残存
+- CSSの!importantで上書きする方法ではなく、根本原因（ハードコード値）を修正するアプローチを採用
+
+**カラー置換ルール**:
+
+| 旧カラー | 用途 | 新カラー |
+|---------|------|---------|
+| #1a1a1a | セクション背景 | #0c1018 |
+| #2a2a2a | カード背景 | #101420 |
+| #252525, #3a3a3a | ホバー背景 | #0f1320, #151a28 |
+| #888, #aaa | ヒント/サブテキスト | #7a8599, #8a94a6 |
+| #333, #444 | 枠線 | rgba(255, 255, 255, 0.06) |
+| #4ade80, #22c55e | アクセント緑 | #00ff88, #00dd77 |
+| #f87171 | 損失赤 | #ff4466 |
+
+**修正ファイル（16ファイル）**:
+
+| ファイル | 変更概要 |
+|---------|---------|
+| 1_base.css | CSS変数定義、サイバーアニメーション、新CSSクラス |
+| 5_themes.css | ライトモード対応、新CSSクラスのオーバーライド |
+| index.html | styleブロック内の背景色・枠線・テキスト色 |
+| script.js | ヒントテキスト・アクセント色・損失色（28箇所） |
+| TradeDetail.js | インラインstyle→CSSクラス化（subsection-box） |
+| TradeEdit.js, TradeList.js | ヒントテキスト色 |
+| ExpenseManagerModule.js | 動的styleブロック2つの背景・枠線（10箇所） |
+| NoteManagerModule.js | emptyDivヒントテキスト色 |
+| YenProfitLossModalModule.js | モーダル背景色・profit/loss色 |
+| broker-ui.js | ヒントテキスト色 |
+| StatisticsModule.js | 円建て損益の条件分岐カラー |
+| ChartModule.js | Canvas描画色（軸テキスト・グリッド線） |
+| ReportModule.js | UI表示色・rgbaグロー色 |
+| year-start-balance-ui.js | 年初残高「円」テキスト色 |
+| method-ui.js | 手法一覧の説明テキスト色・枠線色 |
+
+**新規CSSクラス（1_base.css）**:
+
+| クラス名 | 用途 |
+|---------|------|
+| .text-hint | ヒントテキスト（#7a8599） |
+| .text-accent | アクセントテキスト（#00ff88） |
+| .subsection-box | セクションボックス |
+| .card-bg | カード背景 |
+| .border-subtle | 細い枠線 |
+
+**教訓**:
+1. **ファイルのエンコーディング注意**: sedコマンドは日本語ファイルのエンコーディングを破壊する。Pythonのバイナリモードで安全に置換
+2. **CSSだけでは不十分**: JSモジュールが動的にstyleを生成するため、インラインstyleのハードコード値を全て追跡する必要がある
+3. **検証コードの活用**: DOM全体の色検索で残存箇所を特定→関数のtoString()で出所ファイルを逆引き
+
+---
 
 #### ✅ 利益率機能（2026-02-02）
 
@@ -481,13 +599,13 @@ docs/  フォーム制御.md（詳細情報）
 
 ---
 
-#### ✅ 6_responsive.css 修正（2026-01-24）
+#### ✅ 6_responsive.css 修正（2026-01-24〜25）
 
-**日付**: 2026-01-24 | **工数**: 2h | **優先度**: MEDIUM
+**日付**: 2026-01-24〜25 | **工数**: 3h | **優先度**: MEDIUM
 
-**ファイルサイズ**: 4,628行 → 4,743行（+115行）
+**ファイルサイズ**: 4,628行 → 4,840行（+212行）
 
-**修正内容**:
+**修正内容（11項目）**:
 
 | # | 対象 | 内容 |
 |---|------|------|
@@ -497,6 +615,11 @@ docs/  フォーム制御.md（詳細情報）
 | 4 | 画像編集モーダル | `#changeImageInEditBtn` 画像変更ボタン |
 | 5 | 画像モーダル統一 | `.preview-image-container`, `.delete-image-btn` |
 | 6 | iOS自動ズーム防止 | 設定タブ入力フィールド font-size: 16px |
+| 7 | 画像説明欄改行・横幅 | `.caption-description` white-space: pre-wrap、vw単位 |
+| 8 | バッジレスポンシブ | 480px以下でpadding/font-size縮小 |
+| 9 | ルール遵守・リスク分析 | `#ruleRiskAnalysis-content` overflow-x: auto |
+| 10 | 画像追加モーダル | `.url-input-group .btn` nowrap、flex-shrink: 0 |
+| 11 | 入出金履歴テーブル | `.capital-table-scroll-container` スクロール対応 |
 
 **iOS自動ズーム防止の詳細**:
 
@@ -511,6 +634,16 @@ docs/  フォーム制御.md（詳細情報）
 | 360px以下 | セルフイメージ date | 0.6rem | 16px |
 
 **効果**: 自動ズーム❌ / ピンチズーム✅
+
+---
+
+#### ✅ capital-ui.js 修正（2026-01-25）
+
+**日付**: 2026-01-25 | **工数**: 30min | **優先度**: LOW
+
+**修正内容**: 入出金履歴テーブル iOS横スクロール対応
+- updateCapitalHistory関数内でテーブル親要素に `.capital-table-scroll-container` クラスを追加
+- iOSでテーブル要素自体のoverflow-xが効かない問題を親要素でのスクロールで解決
 
 ---
 
@@ -1144,6 +1277,106 @@ Phase 3: 決済・振り返り → 動作確認 ✅
 
 ---
 
+### 教訓31: CSSアニメーションのブラウザ互換性
+
+**問題**: `background-clip: text` + `background-position` のCSSアニメーションがChromeで動作しない。iOS Safariでは動作するがPCブラウザでは `background-position` が0% 0%で固定される。
+
+**試した対策（すべて効果なし）**:
+- transition値の変更
+- transition: none !important
+- background-position !important削除
+- will-change: background-position
+
+**原因**: Chromeの描画エンジンが `background-clip: text` 要素の `background-position` アニメーションの再描画を省略する。
+
+**解決策**: requestAnimationFrameでJSから直接制御。
+```javascript
+// !important付きでsetPropertyが必須（CSS !importantに勝つため）
+el.style.setProperty('background-position', pos + '% 50%', 'important');
+```
+
+**追加の注意点**:
+- `window.setTheme`はSettingsModuleが上書きする → script.jsのsetTheme内に追加しても呼ばれない
+- 正しいアプローチ: EventBusの `settings:themeChanged` を監視（MODULES.md準拠の疎結合パターン）
+
+**修正ファイル（2件）**:
+- 5_themes.css: @keyframes/animation/will-change削除
+- script.js: startHeaderShimmer()/stopHeaderShimmer()追加、EventBus連携
+
+---
+
+### 教訓32: iOS横スクロール対応パターン
+
+**問題**: テーブル要素の`overflow-x: auto`がiOSで効かないことがある。
+
+**解決策**: 親要素にスクロールコンテナクラスを追加してスクロール対応。
+
+```css
+/* CSS */
+.scroll-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    min-width: 450px !important;  /* 最小幅を設定 */
+}
+```
+
+```javascript
+// JS側で親要素にクラスを追加
+const table = document.getElementById('myTable');
+if (table && table.parentElement) {
+    table.parentElement.classList.add('scroll-container');
+}
+```
+
+**適用例**:
+- 入出金履歴テーブル（capital-ui.js）
+- ルール遵守・リスク分析テーブル（6_responsive.css）
+
+**追加のパターン - ボタン縦書き防止**:
+```css
+/* flexレイアウト内でボタンが縮められて縦書きになる問題 */
+.btn {
+    white-space: nowrap !important;
+    flex-shrink: 0;
+    width: auto;
+}
+```
+
+---
+
+### 教訓33: オフライン差分マージはテーブルごとに戦略を変える
+
+**背景**: SyncModule v1.8.0でオフライン復帰時の差分マージ機能を実装。
+
+**重要な気づき**: 全テーブルで同じ戦略（Last Write Wins）を使えるわけではない。
+
+| テーブル | 戦略 | 理由 |
+|---------|------|------|
+| trades | Last Write Wins（`updated_at`比較） | `updated_at`カラムが存在する |
+| notes | Last Write Wins（`updated_at`比較） | `updated_at`カラムが存在する |
+| expenses | IDユニオン方式 | `updated_at`カラムがない |
+| capital_records | IDユニオン方式 | `updated_at`カラムがない |
+
+**IDユニオン方式の考え方**:
+- ローカルにしかないID → クラウドへアップロード
+- クラウドにしかないID → ローカルへダウンロード
+- 両方にあるID → クラウド優先（経費・入出金は通常同一データのはず）
+- 結果: `[...クラウド全件, ...ローカルにしかないもの]` でマージ
+
+**Last Write Wins の注意点**:
+- `updated_at` が存在しない場合は `created_at` でフォールバック
+- 両方ともタイムスタンプがない場合は `0`（=クラウド優先）に自動的になる
+- 既存の `saveTrade()` を内部で呼ぶため、画像のStorage自動アップロードも同時に動く
+
+**オンライン復帰検知の実装位置**:
+- `initialize()` の内部（`#setupEventListeners()` の直後）に配置する
+- SyncModuleが未初期化の場合は `initialize()` 自体が走らないため、リスナーも登録されない = 安全
+
+---
+
 ## 🔧 Part VI: よくある問題と解決策
 
 ### 問題: Supabase画像トラブルシューティング
@@ -1165,8 +1398,8 @@ Phase 3: 決済・振り返り → 動作確認 ✅
 | 2026-01-14 | AuthModule v1.2.0 | ログイン時クラウド同期 |
 | 2026-01-14 | NoteManagerModule | sync:notes:synced対応、getValidImageSrc使用 |
 | 2026-01-22 | imageUtils.js v1.3.0 | v1.1.0+v1.2.0統合、画像説明欄対応 |
-| 2026-01-24 | 6_responsive.css | 画像モーダル・iOS自動ズーム対応（+115行） |
-| 2026-01-25 | 6_responsive.css | 画像コメント改行・横幅問題修正（vw単位に変更） |
+| 2026-01-24〜25 | 6_responsive.css | 画像モーダル・iOS対応・スクロール対応（4,628→4,840行、+212行） |
+| 2026-01-25 | capital-ui.js | 入出金履歴テーブルiOS横スクロール対応 |
 
 ---
 
@@ -1319,6 +1552,23 @@ Part 8: ██████████ 100% ✅（2,504行削減）
 
 ## 🔶 Part VIII: 未解決の問題
 
+### ✅ 解決済み: オフライン保存データのリロード消失（2026-03-09）
+
+**発見日**: 2026-01-15（Phase 5エッジケーステスト時）| **解決日**: 2026-03-09
+
+**問題**: オフライン中にトレード等を追加・編集した後、オンライン復帰してリロードするとクラウドデータで上書きされ、オフライン中の変更が消失する
+
+**原因**: `syncTradesToLocal()` 等の既存同期メソッドがクラウドデータでローカルを丸ごと上書きする設計だった
+
+**解決**: SyncModule v1.8.0 にて差分マージ機能を実装
+- `mergeAllWithCloud()` / `mergeTradesWithCloud()` / `mergeNotesWithCloud()` / `mergeExpensesWithCloud()` / `mergeCapitalRecordsWithCloud()` の5メソッドを追加
+- `window.addEventListener('online', ...)` でオンライン復帰を自動検知
+- 既存コードへの変更ゼロ（純粋な追加のみ）
+
+→ 詳細は [Part II: オフライン復帰時のデータ同期マージ（2026-03-09）](#オフライン復帰時のデータ同期マージ2026-03-09) を参照
+
+---
+
 ### ✅ 解決済み: iPhone Safari編集ボタン問題
 
 **発見日**: 2025-12-23 | **解決日**: 2025-12-23
@@ -1331,4 +1581,38 @@ Part 8: ██████████ 100% ✅（2,504行削減）
 
 ---
 
-*最終更新: 2026-02-02 | ドキュメントバージョン: 5.4.0（利益率機能完了）*
+### ✅ 解決済み: セルフイメージ保存バグ修正（2026-02-25）
+
+**発見日**: 2026-02-25 | **解決日**: 2026-02-25 | **工数**: 2h | **優先度**: MEDIUM
+
+**問題**: 
+1. セルフイメージ保存ボタン押下時にトースト通知がなく、保存されたか分からない（特にiOS Safariで「何も起きない」状態）
+2. 別デバイスで変更したセルフイメージが他デバイスのヘッダー・入力欄に反映されない
+3. ヘッダーと設定タブ入力欄のデータがズレる
+
+**原因（4つの複合問題）**:
+
+| # | 原因 | 影響 |
+|---|------|------|
+| 1 | saveGoals()にshowToast()がない | 保存結果がユーザーに見えない |
+| 2 | `settings:changed`イベント未発火 | SyncModuleがSupabaseに同期しない |
+| 3 | `sync:settings:synced`イベント未受信 | クラウド同期後にヘッダー表示が更新されない |
+| 4 | updateGoalsDisplay()が入力フィールドを更新しない | ヘッダーと設定タブ入力欄がズレる |
+
+**解決（SettingsModule.js 3箇所修正）**:
+
+| 修正箇所 | 内容 |
+|---------|------|
+| saveGoals() | 個別キー保存（後方互換性）、`settings:changed`発火、showToast追加 |
+| #bindEvents() | `sync:settings:synced`リスナー追加、#loadAll()→updateGoalsDisplay()で表示再反映 |
+| updateGoalsDisplay() | 冒頭で設定タブ入力フィールド（goalText1〜3, goalDeadline1〜3）にも#goalsの値を反映 |
+
+**教訓**:
+- EventBusイベント名の不一致（goalsSaved vs changed）に注意。SyncModuleが購読しているイベントと一致させること
+- トースト通知はUXだけでなくデバッグの手がかりにもなる。保存系処理には必ずつける
+- クラウド同期後の表示更新は、データ書き込みだけでなくUI反映まで含めてワンセット
+- 表示更新関数は「全ての表示箇所」を網羅しているか確認する。ヘッダーだけでなく入力フィールドも対象
+
+---
+
+*最終更新: 2026-03-09 | ドキュメントバージョン: 5.8.0（SyncModule v1.8.0 オフライン差分マージ機能完了）*

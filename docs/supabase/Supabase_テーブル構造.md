@@ -1,7 +1,7 @@
 # Supabase テーブル構造（Phase 7.2 tags対応版）
 
 **作成日**: 2025-12-30  
-**更新日**: 2026-02-17  
+**更新日**: 2026-03-08  
 **用途**: SyncModule.js データ変換・引き継ぎ資料
 
 ---
@@ -15,6 +15,87 @@
 | `expenses` | `tc_expenses` | 経費データ | ✅ | ✅ 完了 |
 | `capital_records` | `depositWithdrawals` | 入出金記録 | ✅ | ✅ 完了 |
 | `user_settings` | 複数キー | ユーザー設定 | ✅ | ✅ 完了 |
+| `subscriptions` | （なし・サーバー管理） | サブスクリプション課金状態 | ✅ | ✅ Webhook自動更新 |
+
+---
+
+## 💳 subscriptions テーブル（Stripe連携 / 2026-03-08追加）
+
+### 概要
+
+| 項目 | 内容 |
+|------|------|
+| 用途 | サブスクリプション・プラン管理 |
+| 更新方法 | Stripe Webhook経由（stripe-webhook Edge Function） |
+| RLS | ✅ SELECT: 本人のみ / INSERT・UPDATE・DELETE: service_roleのみ |
+| localStorageキー | なし（サーバー管理） |
+
+### カラム定義
+
+| カラム | 型 | 説明 | デフォルト |
+|--------|-----|------|-----------|
+| `id` | UUID | PK | gen_random_uuid() |
+| `user_id` | UUID | Supabase auth.users 外部キー（UNIQUE） | - |
+| `stripe_customer_id` | TEXT | StripeのCustomer ID | null |
+| `stripe_subscription_id` | TEXT | StripeのSubscription ID | null |
+| `stripe_price_id` | TEXT | StripeのPrice ID | null |
+| `plan` | TEXT | 'free' / 'pro' / 'premium' | 'free' |
+| `billing_period` | TEXT | 'monthly' / 'yearly' | 'monthly' |
+| `status` | TEXT | 'active' / 'past_due' / 'canceled' 等 | 'active' |
+| `current_period_start` | TIMESTAMPTZ | 現在の契約期間開始日 | null |
+| `current_period_end` | TIMESTAMPTZ | 現在の契約期間終了日 | null |
+| `cancel_at_period_end` | BOOLEAN | 期間終了時に解約するか | false |
+| `created_at` | TIMESTAMPTZ | 作成日時 | NOW() |
+| `updated_at` | TIMESTAMPTZ | 更新日時 | NOW() |
+
+### 作成SQL ✅ 適用済み
+
+```sql
+CREATE TABLE subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users NOT NULL UNIQUE,
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  stripe_price_id TEXT,
+  plan TEXT NOT NULL DEFAULT 'free',
+  billing_period TEXT DEFAULT 'monthly',
+  status TEXT NOT NULL DEFAULT 'active',
+  current_period_start TIMESTAMP WITH TIME ZONE,
+  current_period_end TIMESTAMP WITH TIME ZONE,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLSポリシー
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- ユーザーは自分のレコードのみSELECT可能
+CREATE POLICY "Users can view own subscription"
+ON subscriptions FOR SELECT
+USING (auth.uid() = user_id);
+```
+
+### Webhookによる更新フロー
+
+```
+Stripe決済イベント
+  ↓
+stripe-webhook Edge Function（--no-verify-jwt必須）
+  ↓
+customer.subscription.created/updated → upsert（plan, status, billing_period等を更新）
+customer.subscription.deleted         → plan='free', status='canceled'
+invoice.payment_failed                → status='past_due'
+```
+
+### テスト環境 Price ID（本番切替時に要更新）
+
+| 商品 | Price ID |
+|------|----------|
+| Pro 月額 | price_1T8MBRGRDglt4xkODaqhswBT |
+| Pro 年額 | price_1T8MDKGRDglt4xkO4YnLbeiV |
+| Premium 月額 | price_1T8MGTGRDglt4xkOWis6kg3p |
+| Premium 年額 | price_1T8MHrGRDglt4xkOLqvHG7K4 |
 
 ---
 
@@ -537,7 +618,7 @@ CREATE TABLE user_settings (
 
 | 項目 | 状態 | 対応 |
 |------|------|------|
-| オフライン保存 | リロードでクラウドに上書き | v1.1で差分マージ予定 |
+| ~~オフライン保存~~ | ~~リロードでクラウドに上書き~~ | ✅ 対応済み（SyncModule v1.8.0 差分マージ機能 / 2026-03-09） |
 | 同時編集 | Last Write Wins（後勝ち） | 現状維持 |
 | 署名付きURL有効期限 | 7日間 | imageUtils.jsで自動更新 |
 
@@ -557,6 +638,7 @@ CREATE TABLE user_settings (
 | **Phase 7リスク管理対応版** | **2026-01-29** | **tradesテーブル: リスク管理7カラム追加（22→29カラム）、user_settingsテーブル: methods/risk_tolerance/show_broker_badge追加、SyncModule.js対応** |
 | **Phase 7.1利益率機能対応版** | **2026-02-02** | **year_start_balancesカラム追加、SyncModule v1.8.0** |
 | **Phase 7.2 tags対応版** | **2026-02-17** | **tradesテーブル: tagsカラム追加（29→30カラム）、SyncModule.js双方向マッピング追加** |
+| **オフライン差分マージ対応版** | **2026-03-09** | **SyncModule v1.8.0: オフライン復帰時の差分マージ機能実装。既知の制限「オフライン保存」解決済みに更新** |
 
 ---
 
