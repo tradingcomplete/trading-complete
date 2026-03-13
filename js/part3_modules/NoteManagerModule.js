@@ -1836,8 +1836,8 @@ class NoteManagerModule {
         
         const sizeMap = {
             'small': '0.9em',
-            'medium': '1.1em',
-            'large': '1.3em'
+            'medium': '1.2em',
+            'large': '1.6em'
         };
         
         const fontSize = sizeMap[size] || '0.9em';
