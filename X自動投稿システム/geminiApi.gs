@@ -193,6 +193,56 @@ function generatePost(postType, context, cachedRates) {
     }
   }
   
+  // === リスクセンチメント誤記チェック（市場系投稿のみ） ===
+  // 「リスクオフ」+「円売り」の組み合わせは絶対禁止。検出したらリトライ
+  var riskSentimentTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR'];
+  if (riskSentimentTypes.indexOf(postType) !== -1) {
+    try {
+      var bodyForRiskCheck = cleanedText.split(/\n\n#/)[0];
+      var hasRiskOffYenSell = (bodyForRiskCheck.indexOf('リスクオフ') !== -1 || bodyForRiskCheck.indexOf('リスク回避') !== -1)
+                           && bodyForRiskCheck.indexOf('円売り') !== -1;
+      
+      if (hasRiskOffYenSell) {
+        console.log('⚠️ リスクセンチメント誤記を検出（リスクオフ+円売り）。リトライ...');
+        
+        var riskRetryPrompt = '以下の投稿に重大な誤りがあります。修正してください。\n\n';
+        riskRetryPrompt += '【絶対禁止ルール】\n';
+        riskRetryPrompt += 'リスクオフ（地政学リスク・株安）= 円高方向（円が買われる）\n';
+        riskRetryPrompt += '「リスクオフで円売り」「リスク回避で円売り」は完全に間違い。必ず削除または修正すること。\n\n';
+        riskRetryPrompt += '口調・フォーマット・絵文字はそのまま維持。リスクセンチメントの方向性だけ修正。\n\n';
+        riskRetryPrompt += '【修正前の投稿】\n' + cleanedText;
+        
+        var riskRetryResult = callGemini_(riskRetryPrompt, keys.GEMINI_API_KEY, true);
+        if (riskRetryResult && riskRetryResult.text) {
+          var riskRetryText = stripAIPreamble_(riskRetryResult.text);
+          riskRetryText = removeForeignText_(riskRetryText);
+          riskRetryText = enforceLineBreaks_(riskRetryText);
+          riskRetryText = removeDisallowedEmoji_(riskRetryText);
+          riskRetryText = removeMarkdown_(riskRetryText);
+          riskRetryText = replaceProhibitedPhrases_(riskRetryText);
+          riskRetryText = truncateAfterHashtag_(riskRetryText);
+          riskRetryText = generateDynamicHashtags_(riskRetryText, postType);
+          if (rates) {
+            riskRetryText = fixMissingDecimalPoint_(riskRetryText, rates);
+          }
+          
+          // リトライ後も誤記が残っていないか確認
+          var riskRetryBody = riskRetryText.split(/\n\n#/)[0];
+          var stillHasError = (riskRetryBody.indexOf('リスクオフ') !== -1 || riskRetryBody.indexOf('リスク回避') !== -1)
+                           && riskRetryBody.indexOf('円売り') !== -1;
+          if (!stillHasError) {
+            cleanedText = riskRetryText;
+            console.log('✅ リスクセンチメント修正成功');
+          } else {
+            console.log('⚠️ リスクセンチメント修正失敗。元テキストを使用（要手動確認）');
+          }
+        }
+      }
+    } catch (riskErr) {
+      console.log('⚠️ リスクセンチメントチェックエラー（投稿には影響なし）: ' + riskErr.message);
+    }
+  }
+
   // ★v6.0.2: 絵文字最低3個のバリデーション（全投稿タイプ共通）
   // プロンプトで指示しても絵文字0〜2個の投稿が生成されるケースがあるためリトライで補完
   try {
@@ -258,6 +308,71 @@ function generatePost(postType, context, cachedRates) {
     console.log('⚠️ 絵文字チェックエラー（投稿には影響なし）: ' + emojiErr.message);
   }
   
+  // ★v5.9: →が1ブロックに2本以上あるブロックを検出してリトライ
+  // 「1ブロックに→は1つだけ」ルールの後処理による担保
+  try {
+    var bodyForArrowCheck = cleanedText.split(/\n\n#/)[0]; // ハッシュタグ前の本文
+    var hasMultiArrowBlock = false;
+    
+    // 空行で分割してブロックを取得し、→の数をカウント
+    var blocks = bodyForArrowCheck.split(/\n\n+/);
+    for (var bi = 0; bi < blocks.length; bi++) {
+      var arrowCount = (blocks[bi].match(/^→/gm) || []).length;
+      if (arrowCount >= 2) {
+        hasMultiArrowBlock = true;
+        break;
+      }
+    }
+    
+    if (hasMultiArrowBlock) {
+      console.log('⚠️ →が2本以上のブロックを検出。リトライ...');
+      
+      var arrowRetryPrompt = '以下の投稿を修正してください。\n\n';
+      arrowRetryPrompt += '【絶対ルール】\n';
+      arrowRetryPrompt += '・絵文字ブロック1つに →（矢印で始まる行）は必ず1行だけ。\n';
+      arrowRetryPrompt += '・2本目以降の→は、→を外して普通の補足文として書き直せ。\n';
+      arrowRetryPrompt += '・例(NG): 「→上振れ \\n→インフレ懸念 \\n→ドル買い」\n';
+      arrowRetryPrompt += '・例(OK): 「→上振れはインフレ懸念につながり、ドル買いが加速する」\n';
+      arrowRetryPrompt += '・内容・口調・絵文字・文字数はそのまま維持。→の本数だけ直す。\n\n';
+      arrowRetryPrompt += '【元の投稿】\n' + cleanedText;
+      
+      var arrowRetryResult = callGemini_(arrowRetryPrompt, keys.GEMINI_API_KEY, false);
+      if (arrowRetryResult && arrowRetryResult.text) {
+        var arrowRetryText = stripAIPreamble_(arrowRetryResult.text);
+        arrowRetryText = removeForeignText_(arrowRetryText);
+        arrowRetryText = enforceLineBreaks_(arrowRetryText);
+        arrowRetryText = removeDisallowedEmoji_(arrowRetryText);
+        arrowRetryText = removeMarkdown_(arrowRetryText);
+        arrowRetryText = replaceProhibitedPhrases_(arrowRetryText);
+        arrowRetryText = truncateAfterHashtag_(arrowRetryText);
+        arrowRetryText = generateDynamicHashtags_(arrowRetryText, postType);
+        if (rates) {
+          arrowRetryText = fixMissingDecimalPoint_(arrowRetryText, rates);
+        }
+        
+        // リトライ後も違反が残っていないか確認
+        var retryBodyArrow = arrowRetryText.split(/\n\n#/)[0];
+        var retryBlocks = retryBodyArrow.split(/\n\n+/);
+        var stillHasMultiArrow = false;
+        for (var rbi = 0; rbi < retryBlocks.length; rbi++) {
+          if ((retryBlocks[rbi].match(/^→/gm) || []).length >= 2) {
+            stillHasMultiArrow = true;
+            break;
+          }
+        }
+        
+        if (!stillHasMultiArrow) {
+          cleanedText = arrowRetryText;
+          console.log('✅ →複数ブロック修正成功');
+        } else {
+          console.log('⚠️ →複数ブロック修正失敗。元テキストを使用');
+        }
+      }
+    }
+  } catch (arrowErr) {
+    console.log('⚠️ →複数ブロックチェックエラー（投稿には影響なし）: ' + arrowErr.message);
+  }
+
   // ★v6.1: ファクトチェック + 自動修正
   // ★v6.1.1: テスト一括実行時はスキップ（GAS 6分制限対策）
   var skipFactCheck = PropertiesService.getScriptProperties().getProperty('SKIP_FACT_CHECK') === 'true';
@@ -2401,6 +2516,125 @@ function formatIndicatorPreview_(spreadsheetId) {
   }
 }
 
+// ===== Layer 3.5: WEEKLY_REVIEW用 - 今週の主要ペア週間レートトレンド（日次OHLC版）=====
+// 日次レートシートのOHLCから今週の各日の動きを集計し、方向性・ドラマを事実として渡す
+function formatWeeklyRateTrend_(spreadsheetId, rates) {
+  try {
+    var keys = getApiKeys();
+    var ss = SpreadsheetApp.openById(spreadsheetId || keys.SPREADSHEET_ID);
+
+    // 今週月曜〜今日の日付範囲を算出
+    var now = new Date();
+    var dayOfWeek = now.getDay(); // 0=日, 1=月, ...
+    var weekStartDate = new Date(now);
+    weekStartDate.setDate(weekStartDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    var weekStartStr = Utilities.formatDate(weekStartDate, 'Asia/Tokyo', 'yyyy-MM-dd');
+    var todayStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
+
+    // 日次レートシート読み込み（A=日付, 各ペア4列: 始値/高値/安値/終値）
+    var dailySheet = ss.getSheetByName('日次レート');
+    if (!dailySheet || dailySheet.getLastRow() < 2) return null;
+    var numCols = 1 + CURRENCY_PAIRS.length * 4 + 1;
+    var dailyData = dailySheet.getRange(2, 1, dailySheet.getLastRow() - 1, numCols).getValues();
+
+    // 対象ペア（主要3ペアのみ: ドル円・ユーロドル・ポンドドル）
+    var targetPairs = [
+      { idx: 0, label: 'ドル円',     unit: '円',  digits: 2, jpyPair: true  },
+      { idx: 1, label: 'ユーロドル', unit: 'ドル', digits: 4, jpyPair: false },
+      { idx: 2, label: 'ポンドドル', unit: 'ドル', digits: 4, jpyPair: false }
+    ];
+    var dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+
+    // 今週の日次データを収集
+    var weekRows = [];
+    for (var i = 0; i < dailyData.length; i++) {
+      var rowDate = dailyData[i][0];
+      var dateStr = (rowDate instanceof Date)
+        ? Utilities.formatDate(rowDate, 'Asia/Tokyo', 'yyyy-MM-dd')
+        : String(rowDate).substring(0, 10);
+      if (dateStr < weekStartStr || dateStr > todayStr) continue;
+      var d = (rowDate instanceof Date) ? rowDate : new Date(rowDate);
+      weekRows.push({ dateStr: dateStr, dayName: dayNames[d.getDay()], row: dailyData[i] });
+    }
+
+    if (weekRows.length === 0) return null;
+    weekRows.sort(function(a, b) { return a.dateStr < b.dateStr ? -1 : 1; });
+
+    var lines = [];
+    lines.push('【今週の主要ペア週間トレンド（事実データ。通貨の方向性を正確に反映せよ）】');
+    lines.push('※ 日次レートOHLCから自動算出。このデータが事実。感覚・印象で上書き禁止。');
+    lines.push('');
+
+    for (var p = 0; p < targetPairs.length; p++) {
+      var cfg = targetPairs[p];
+      var colBase = 1 + cfg.idx * 4; // colBase+0=始値, +1=高値, +2=安値, +3=終値
+
+      var weekOpen  = Number(weekRows[0].row[colBase]);
+      var weekClose = rates && rates[CURRENCY_PAIRS[cfg.idx].key]
+                    ? Number(rates[CURRENCY_PAIRS[cfg.idx].key])
+                    : Number(weekRows[weekRows.length - 1].row[colBase + 3]);
+
+      var weekHigh = 0, weekLow = 999999;
+      for (var r = 0; r < weekRows.length; r++) {
+        var h = Number(weekRows[r].row[colBase + 1]);
+        var l = Number(weekRows[r].row[colBase + 2]);
+        if (h > weekHigh) weekHigh = h;
+        if (l < weekLow)  weekLow  = l;
+      }
+
+      var weekChange = weekClose - weekOpen;
+      var changeStr  = (weekChange >= 0 ? '+' : '') + weekChange.toFixed(cfg.digits);
+      var pips = cfg.jpyPair
+               ? Math.round(Math.abs(weekChange) * 100)
+               : Math.round(Math.abs(weekChange) * 10000);
+      var range = weekHigh - weekLow;
+      var rangeStr = cfg.jpyPair
+               ? Math.round(range * 100) + 'pips'
+               : Math.round(range * 10000) + 'pips';
+
+      var direction = '';
+      if (cfg.jpyPair) {
+        direction = weekChange > 0.1 ? 'ドル買い・円売り（ドル円上昇）'
+                  : weekChange < -0.1 ? 'ドル売り・円買い（ドル円下落）'
+                  : 'レンジ（方向感なし）';
+      } else {
+        var baseCcy = cfg.label.replace('ドル', '');
+        direction = weekChange > 0.001 ? baseCcy + '買い・ドル売り（' + cfg.label + '上昇）'
+                  : weekChange < -0.001 ? baseCcy + '売り・ドル買い（' + cfg.label + '下落）'
+                  : 'レンジ（方向感なし）';
+      }
+
+      var dailySummary = [];
+      for (var r2 = 0; r2 < weekRows.length; r2++) {
+        var open2  = Number(weekRows[r2].row[colBase]);
+        var close2 = Number(weekRows[r2].row[colBase + 3]);
+        var diff   = close2 - open2;
+        var arrow  = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+        dailySummary.push(weekRows[r2].dayName + '曜' + arrow + close2.toFixed(cfg.digits));
+      }
+
+      lines.push('■ ' + cfg.label);
+      lines.push('  週始（月曜）: ' + weekOpen.toFixed(cfg.digits) + cfg.unit
+               + ' → 現在: ' + weekClose.toFixed(cfg.digits) + cfg.unit
+               + '（' + changeStr + cfg.unit + ' / ' + pips + 'pips）');
+      lines.push('  週間レンジ: ' + weekLow.toFixed(cfg.digits) + '〜' + weekHigh.toFixed(cfg.digits) + cfg.unit
+               + '（' + rangeStr + '）');
+      lines.push('  日次推移: ' + dailySummary.join(' → '));
+      lines.push('  今週の方向性: ' + direction);
+      lines.push('');
+    }
+
+    lines.push('⚠️ 上記と矛盾する表現（例: ドル円上昇週なのに「円が買われた」等）は絶対禁止。');
+    lines.push('');
+    return lines.join('\n');
+
+  } catch (e) {
+    console.log('⚠️ formatWeeklyRateTrend_ エラー: ' + e.message);
+    return null;
+  }
+}
+
+
 // ===== Layer 3: WEEKLY_REVIEW用 - 今週の全指標結果サマリー =====
 function formatWeeklyIndicatorSummary_(spreadsheetId) {
   try {
@@ -2947,6 +3181,12 @@ function stripAIPreamble_(text) {
     /^【(修正後|修正前|元の|原文)[^】]*】\s*\n?/,
     // ★v6.1: 「〜コンパナとして〜作成/投稿します」メタ説明（autoFixPost_由来）
     /^.{0,50}コンパナとして.{0,30}(作成|投稿).+?[。\n]/,
+    // ★v5.9: 「〜すべて理解しました。」長文プロンプト読み上げ行
+    // Geminiがセクション名を列挙して「すべて理解しました」と出力するパターン
+    /^.+すべて理解しました[。]?\n?/,
+    // ★v5.9: 「今週の相場を振り返る投稿を作成します。」系
+    /^.{0,30}振り返る投稿を作成.+?[。\n]/,
+    /^今週の相場を振り返.+?[。\n]/,
   ];
   
   // 最大3回ループ（複数行の前置きに対応）
@@ -2978,6 +3218,19 @@ function stripAIPreamble_(text) {
 function enforceLineBreaks_(text) {
   var original = text;
   
+  // ★v6.9: 行末絵文字を行頭に移動（「テキスト✅」→「✅テキスト」）
+  var allowedEmojis = ['📕', '📝', '📋', '☕', '💡', '⚠️', '✅'];
+  allowedEmojis.forEach(function(emoji) {
+    // 行末に絵文字があるパターン: テキスト絵文字\n または テキスト絵文字（末尾）
+    var emojiEscaped = emoji.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // 「（絵文字以外の文字）絵文字」が行末にあれば → 行頭に移動
+    text = text.replace(new RegExp('([^\n' + emojiEscaped + '])' + emojiEscaped + '(\n|$)', 'gu'),
+      function(match, before, after) {
+        return emoji + before + after;
+      }
+    );
+  });
+
   // ★v6.0.3: →の前に改行を強制（行頭以外の→は改行して行頭にする）
   // 例: 「☕今夜は米指標ラッシュ→インフレ指標」→「☕今夜は米指標ラッシュ\n→インフレ指標」
   // ただし既に行頭にある→はスキップ
@@ -3265,6 +3518,24 @@ function replaceProhibitedPhrases_(text) {
     changes.push('様子見→静観');
   }
   
+  // ★v5.9: 「静観」がトレード判断として使われる表現を置換
+  // 「様子見→静観」変換の後に実行し、最終的なトレード判断示唆を除去する
+  if (text.indexOf('静観') !== -1) {
+    var beforeSikan = text;
+    // 「無理せず静観〜」パターン
+    text = text.replace(/無理せず静観[^。\n]*/g, '無理せず休んで過去検証する日にしよう');
+    // 「静観ってのもアリ」「静観するのもアリ」「静観が賢明」パターン
+    text = text.replace(/静観(ってのも|するのも)(アリ|良い|いい)[^。\n]*/g, '一歩引いて相場を観察するのも大事');
+    text = text.replace(/静観が賢明[^。\n]*/g, '一歩引いて相場を観察するのが大事');
+    // 「今日は静観〜」「静観しよう」パターン
+    text = text.replace(/今日は静観[^。\n]*/g, '今日は相場の観察に徹しよう');
+    text = text.replace(/静観しよう[^。\n]*/g, '相場の観察に徹しよう');
+    // ★v5.9: 「静観が一番」「無理に〜静観」パターン追加
+    text = text.replace(/静観が一番[^。\n]*/g, '相場の観察に徹するのが大事');
+    text = text.replace(/無理に[^。\n]*静観[^。\n]*/g, '無理せず相場の観察に徹しよう');
+    if (text !== beforeSikan) changes.push('静観トレード判断→観察に置換');
+  }
+
   // 「見送る」「見送り」→ 削除ではなく置換
   // ★v5.5.3: 金融政策の文脈（利上げ/利下げを見送る）は正しい日本語なので置換しない
   if (text.indexOf('見送') !== -1) {
@@ -3418,6 +3689,12 @@ function replaceProhibitedPhrases_(text) {
   text = text.replace(/！\n/g, '\n');
   text = text.replace(/！$/gm, '');
   if (text !== before_excl) changes.push('感嘆符除去');
+  // ★v5.9: 絵文字行と→行の間の空行を除去
+  // 「☕〜ですね。\n\n→分析」→「☕〜ですね。\n→分析」
+  var beforeEmptyArrow = text;
+  text = text.replace(/([\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF。、」])\n\n(→)/g, '$1\n$2');
+  if (text !== beforeEmptyArrow) changes.push('絵文字行→空行除去');
+
   // ★v6.0.1: 「→ 」の半角スペースを除去（Geminiが稀に「→ 重要なのは」と出力する）
   var beforeArrow = text;
   text = text.replace(/→\s+/g, '→');
@@ -3439,6 +3716,22 @@ function replaceProhibitedPhrases_(text) {
   // 文中の孤立「（」「）」（前後が日本語）
   text = text.replace(/([\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF！？])（\s*$/gm, '$1');
   text = text.replace(/^）/gm, '');
+  // ★v5.9: 行内で「（」が開いたまま行末で閉じていない場合、「）」を補完
+  // 例: 「米消費者物価指数（CPI」→「米消費者物価指数（CPI）」
+  //      「カレンダー（3/16〜3/20」→「カレンダー（3/16〜3/20）」
+  var lines = text.split('\n');
+  lines = lines.map(function(line) {
+    var openCount = (line.match(/（/g) || []).length;
+    var closeCount = (line.match(/）/g) || []).length;
+    if (openCount > closeCount) {
+      // 閉じが足りない分だけ末尾に補完
+      for (var i = 0; i < openCount - closeCount; i++) {
+        line = line + '）';
+      }
+    }
+    return line;
+  });
+  text = lines.join('\n');
   if (text !== beforeParen) changes.push('孤立カッコ除去');
   // ★v6.0.2: 通貨ペア英語表記を日本語名に変換
   // プロンプトで指示してもGeminiが英語表記（USD/JPY等）で出力するケースがあるため後処理で確実に変換
@@ -3454,6 +3747,57 @@ function replaceProhibitedPhrases_(text) {
   text = text.replace(/NZD\/JPY/g, 'NZドル円');
   if (text !== beforePairConvert) changes.push('通貨ペア日本語化');
   
+  // ★v5.9: `[: 自動計算]` 系プレースホルダーを除去
+  // Geminiがテンプレートタグをそのまま出力するパターン
+  var beforePlaceholder = text;
+  text = text.replace(/\s*\[:\s*[^\]]+\]/g, '');
+  text = text.replace(/\s*\[:\s*\]/g, '');
+  if (text !== beforePlaceholder) changes.push('プレースホルダー除去');
+
+  // ★v5.9: 数値脱落「 万円」補完
+  // Geminiが「〇〇万円」の数値部分を脱落させて「 万円」にするパターン
+  // 例: 「含み損はあっという間に 万円に」→「含み損はあっという間に数万円に」
+  var beforeManen = text;
+  text = text.replace(/(に|の|で|を|が|は|も)\s+万円/g, '$1数万円');
+  if (text !== beforeManen) changes.push('数値脱落万円補完');
+
+  // ★v5.9: 「静観」連続パターンの解消
+  // 「様子見→静観」置換の副作用で同ブロック内に静観が2回出現するケース
+  // 例: 「静観ムードで終わった\n→静観といったところか」→ 2行目を別表現に
+  var beforeSikanDouble = text;
+  text = text.replace(/静観といったところか/g, '小休止といったところか');
+  text = text.replace(/静観の時間帯だった/g, '落ち着いた時間帯だった');
+  text = text.replace(/静観で終わった/g, '小休止で終わった');
+  if (text !== beforeSikanDouble) changes.push('静観連続→分散');
+
+  // ★v5.9: パーセント表記の小数点脱落を修正
+  // Geminiが「-1.29%」を「-129%」、「-0.35%」を「-035%」と出力するパターン
+  var beforePct = text;
+  // 3桁整数パターン: -129% → -1.29% / -128% → -1.28%
+  text = text.replace(/-([1-9])(\d{2})([%％])/g, '-$1.$2$3');
+  // 0始まり3桁パターン: -035% → -0.35%
+  text = text.replace(/-0(\d{2})([%％])/g, '-0.$1$2');
+  // プラス方向も同様: 129% → 1.29%（本文でのパーセント変動表記）
+  text = text.replace(/\b([1-9])(\d{2})([%％])/g, '$1.$2$3');
+  if (text !== beforePct) changes.push('パーセント小数点修正');
+
+  // ★v5.9: 「静観する」「静観かな」等の未登録パターンを追加
+  // 既存の静観ブロックに追記（「静観」indexOf チェック内で実行）
+  if (text.indexOf('静観') !== -1) {
+    var beforeSikan2 = text;
+    text = text.replace(/静観する[^。\n]*/g, '相場の観察に徹する');
+    text = text.replace(/静観かな[^。\n]*/g, '一歩引いて様子を見ようかな');
+    text = text.replace(/静観の姿勢[^。\n]*/g, '観察の姿勢');
+    text = text.replace(/静観になっ[^。\n]*/g, '慎重になっ');
+    if (text !== beforeSikan2) changes.push('静観追加パターン→置換');
+  }
+
+  // ★v5.9: 行頭の孤立スペースを除去（禁止絵文字除去後に残るパターン）
+  // 例: 「 ホルムズ海峡の封鎖で」→「ホルムズ海峡の封鎖で」
+  var beforeLeadingSpace = text;
+  text = text.replace(/^[ \t]+([^\s])/gm, '$1');
+  if (text !== beforeLeadingSpace) changes.push('行頭スペース除去');
+
   // 連続する空行を整理
   text = text.replace(/\n{3,}/g, '\n\n');
   
@@ -4054,9 +4398,19 @@ function getEconomicCalendar_(scope) {
       var eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
       
       var dateStr = Utilities.formatDate(eventDate, 'Asia/Tokyo', 'M/d（E）');
-      var timeStr = data[i][1] ? String(data[i][1]).trim() : '';
-      // ★v5.5.3: 0:00は表示すると混乱するので非表示にする
-      if (timeStr === '0:00' || timeStr === '00:00') timeStr = '';
+      // ★v6.9: B列はDate型対応（表示用フォーマット）
+      var rawTimeDisp = data[i][1];
+      var timeStr = '';
+      if (rawTimeDisp instanceof Date) {
+        var h = rawTimeDisp.getHours();
+        var m = rawTimeDisp.getMinutes();
+        if (h !== 0 || m !== 0) {
+          timeStr = h + ':' + (m < 10 ? '0' + m : m);
+        }
+      } else {
+        timeStr = rawTimeDisp ? String(rawTimeDisp).trim() : '';
+        if (timeStr === '0:00' || timeStr === '00:00') timeStr = '';
+      }
       var country = String(data[i][2] || '').trim();
       var indicator = String(data[i][3]).trim();
       var previous = String(data[i][4] || '').trim();
@@ -4080,9 +4434,17 @@ function getEconomicCalendar_(scope) {
         // ★v5.8: 投稿時刻との前後関係を判定（発表済み/未発表ラベル）
         var statusLabel = '';
         if (timeStr) {
-          var timeParts = timeStr.split(':');
-          var eventHour = parseInt(timeParts[0], 10);
-          var eventMin = parseInt(timeParts[1] || '0', 10);
+          // ★v6.9: B列はDate型対応
+          var rawTimeEC = data[i][1];
+          var eventHour, eventMin;
+          if (rawTimeEC instanceof Date) {
+            eventHour = rawTimeEC.getHours();
+            eventMin  = rawTimeEC.getMinutes();
+          } else {
+            var timeParts = timeStr.split(':');
+            eventHour = parseInt(timeParts[0], 10);
+            eventMin  = parseInt(timeParts[1] || '0', 10);
+          }
           var nowHour = now.getHours();
           var nowMin = now.getMinutes();
           if (nowHour > eventHour || (nowHour === eventHour && nowMin >= eventMin)) {
@@ -4793,8 +5155,9 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       // ★v6.7: 今日の発表済み指標取得は定期トリガー(refreshTodayIndicatorResults)に移動
       // buildPrompt_からの呼び出しは削除。scheduler.gsで9:05/10:35/14:05/21:35/22:05に実行。
       
-      // ★v5.7 Layer 3: 直近1ヶ月の指標トレンド注入（MORNING, WEEKLY_REVIEW）
-      if (postType === 'MORNING' || postType === 'WEEKLY_REVIEW') {
+      // ★v5.7 Layer 3: 直近1ヶ月の指標トレンド注入（MORNINGのみ）
+      // ★v5.9: WEEKLY_REVIEWは今週サマリーで代替するため除外（プロンプト削減）
+      if (postType === 'MORNING') {
         try {
           var indicatorTrend = formatIndicatorTrend_(keys.SPREADSHEET_ID);
           if (indicatorTrend) {
@@ -4919,11 +5282,14 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       // ★v5.5.3修正: 日曜日は「来週」= 明日からの月〜金（thisWeekEvents）
       var todayDow = new Date().getDay();
       calScope = (todayDow === 0) ? 'this_week_as_next' : 'next_week';
-    } else if (postType === 'WEEKLY_REVIEW' || postType === 'WEEKLY_LEARNING') {
+    } else if (postType === 'WEEKLY_REVIEW') {
+      calScope = null; // ★v5.9: カレンダー不要（formatWeeklyIndicatorSummary_で代替）
+    } else if (postType === 'WEEKLY_LEARNING') {
       calScope = 'this_week';
     }
+    // ★v5.9: WEEKLY_REVIEWはカレンダー不要（formatWeeklyIndicatorSummary_で代替）
     
-    var calendar = getEconomicCalendar_(calScope);
+    var calendar = calScope ? getEconomicCalendar_(calScope) : null;
     if (calendar) {
       prompt += calendar;
     }
@@ -5082,6 +5448,20 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       console.log('⚠️ 週次サマリー注入スキップ: ' + wsErr.message);
     }
   }
+
+  // ★v5.10: WEEKLY_REVIEWに週間レートトレンドを注入（論理矛盾防止）
+  // 日次レートOHLCから曜日ごとの動きを集計し、方向性を事実として渡す
+  if (postType === 'WEEKLY_REVIEW') {
+    try {
+      var weeklyTrend = formatWeeklyRateTrend_(keys.SPREADSHEET_ID, rates);
+      if (weeklyTrend) {
+        prompt += weeklyTrend;
+        console.log('📊 週間レートトレンド注入済み（日次OHLC版）');
+      }
+    } catch (wtErr) {
+      console.log('⚠️ 週間トレンド注入スキップ: ' + wtErr.message);
+    }
+  }
   
   // ②-f 週末系投稿の方針（大衆心理・ストーリー重視）
   var weekendTypes = ['WEEKLY_REVIEW', 'WEEKLY_LEARNING', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
@@ -5132,6 +5512,31 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     prompt += '  例: 「パウエル発言で一瞬で50pips動いた。こういう時に焦ってエントリーすると負ける」\n';
     prompt += '  例: 「トランプ関税でリスクオフ。こんな日に限ってポジション持ってしまうのが人間」\n';
     prompt += '■ 架空のニュース・要人発言は絶対に書くな。【📰市場ニュース】に記載された事実のみ引用可。\n';
+  }
+
+  // ②-h RULE_3専用: 投稿構造の明示（実践テクニック）v2
+  if (postType === 'RULE_3') {
+    prompt += '\n【RULE_3 投稿の構造（絵文字ブロック形式で書け）】\n';
+    prompt += '通常のフォーマット（絵文字行 + →行 + 補足）を守りながら、以下の流れで3ブロック構成にしろ。\n';
+    prompt += '\n';
+    prompt += 'ブロック1（☕または✅）: 実用性を示すフック\n';
+    prompt += '  絵文字行: 「これ知ってるだけで負けが減る」「地味だけど効果絶大」等の実用性ある1行\n';
+    prompt += '  →行: テクニックの概要と、いつ使うかを「〇〇な時は〇〇する」の形で語る\n';
+    prompt += '\n';
+    prompt += 'ブロック2（📝または💡）: 本質（なぜそうするのか）\n';
+    prompt += '  絵文字行: テクニックの核心を短く1行\n';
+    prompt += '  →行: 「なぜそうするのか」の根拠・理由。やり方の説明ではなく根本を語る\n';
+    prompt += '  補足行: 補足や実感があれば→なしで1行続ける\n';
+    prompt += '\n';
+    prompt += 'ブロック3（📕または📋）: 具体例（体験談）\n';
+    prompt += '  絵文字行: 過去の体験談の場面を1行\n';
+    prompt += '  →行: これで助かった / これを知らずに損した経験を実感ある言葉で\n';
+    prompt += '\n';
+    prompt += '締め: 絵文字・→なし。気づきや変化を1〜2行で。「〇〇で変わった」「〇〇だと気づいた」トーン\n';
+    prompt += '\n【RULE_3 TC導線（自然に入る場合のみ）】\n';
+    prompt += '・テーマが「過去検証」「勝率分析」「データ可視化」に関連する時だけ触れてよい\n';
+    prompt += '・OK例: 「手法別の勝率を可視化してみたら、得意だと思ってた手法が実は一番負けてた」\n';
+    prompt += '・NG例: 「Trading Completeの分析タブを使いましょう」（宣伝文句は絶対NG）\n';
   }
 
   // ③ RULE系: テーマシート連動（既存のgetNextTheme処理を維持）
@@ -5200,11 +5605,30 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     }
   }
 
+  // ★v5.10: WEEKLY_HYPOTHESISに今週のレートトレンドを注入（仮説の根拠強化）
+  // 今週の実際の動き（日次OHLC）を渡すことで、事実ベースの来週予測が可能になる
+  if (postType === 'WEEKLY_HYPOTHESIS') {
+    try {
+      var hypoTrend = formatWeeklyRateTrend_(keys.SPREADSHEET_ID, rates);
+      if (hypoTrend) {
+        // WEEKLY_HYPOTHESIS用に見出しを差し替えて注入
+        hypoTrend = hypoTrend.replace(
+          '【今週の主要ペア週間トレンド（事実データ。通貨の方向性を正確に反映せよ）】',
+          '【今週の主要ペア週間トレンド（来週の仮説を立てる際の根拠データとして使え）】'
+        );
+        prompt += hypoTrend;
+        console.log('📊 週間レートトレンド注入済み（WEEKLY_HYPOTHESIS）');
+      }
+    } catch (htErr) {
+      console.log('⚠️ WEEKLY_HYPOTHESIS週間トレンド注入スキップ: ' + htErr.message);
+    }
+  }
+
   // ④-b 学びログ（過去の引き出しを注入）★v5.5: 全タイプに拡張
   var learningMaxMap = {
     'MORNING': 2, 'TOKYO': 1, 'LUNCH': 1, 'LONDON': 1, 'GOLDEN': 2, 'NY': 1,
     'INDICATOR': 1, 'NEXT_WEEK': 2,
-    'WEEKLY_REVIEW': 5, 'WEEKLY_LEARNING': 5, 'WEEKLY_HYPOTHESIS': 3,
+    'WEEKLY_REVIEW': 3, 'WEEKLY_LEARNING': 5, 'WEEKLY_HYPOTHESIS': 3,
     'RULE_1': 3, 'RULE_2': 3, 'RULE_3': 3, 'RULE_4': 3,
     'KNOWLEDGE': 3
   };
@@ -5458,6 +5882,11 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '  × 1ブロック内で話題が変わる（話題ごとに絵文字で区切れ）\n';
   rules += '  × 絵文字0個で文章だけがダラダラ続く（これは最悪。絵文字で区切れ）\n';
   rules += '  × プロンプトのセクション名（【現在のレート】等）やリスト記号（・）を本文に書く\n';
+  rules += '  × 絵文字を行末に置く（「地味だけど効果絶大✅」はNG。「✅地味だけど効果絶大」が正しい）\n';
+  rules += '\n【絵文字の位置（絶対ルール）】\n';
+  rules += '絵文字は必ず行頭に置け。行末・文中への絵文字配置は絶対禁止。\n';
+  rules += 'NG: 「地味だけど効果絶大✅」「テクニックは場面とセットで📝」\n';
+  rules += 'OK: 「✅地味だけど効果絶大」「📝テクニックは場面とセットで」\n';
   
   // === 結論バリエーション ===
   rules += '\n【結論のバリエーション（毎回同じ結論禁止）】\n';
@@ -5502,6 +5931,8 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '・ハッシュタグは書くな（システムが自動付与）。リスト記号（・●1.-）禁止。\n';
   rules += '・ピリオド不可、句点「。」使用。URL禁止。全て日本語で書け。\n';
   rules += '・通貨ペアは日本語名で書け: USD/JPY→ドル円、EUR/USD→ユーロドル、GBP/USD→ポンドドル、EUR/JPY→ユーロ円、GBP/JPY→ポンド円、AUD/JPY→豪ドル円、AUD/USD→豪ドル米ドル\n';
+  rules += '・言及できる通貨ペアは上記7ペアのみ。カナダドル（CAD）・スイスフラン（CHF）・NZドル（NZD）・人民元（CNY）等はデータが存在しないため言及禁止。\n';
+  rules += '・例外: 原油高とCADの関係等、背景説明として通貨名のみ触れるのはOK。レート数値を書くのは禁止。\n';
   rules += '・マークダウン記法（---、**、##）禁止。\n';
   
   // === 禁止事項（圧縮版） ===
@@ -5515,6 +5946,7 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '疑問形「でしょうか」は1投稿につき最大1回。複数の疑問形は断言か別表現に変換せよ。\n';
   rules += 'NG: 「どうでしょうか。東京勢は静観でしょうか？下値は157円台でしょうか。」\n';
   rules += 'OK: 「東京勢は動きにくい展開。下値は157円台が意識される。」\n';
+  rules += '※【末尾に質問を入れよ】の指示がある場合、その質問行が唯一の疑問形。本文中の疑問形は全て断言に変換せよ。\n';
   
   // === TC言及制限 ===
   var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR'];
@@ -5537,11 +5969,130 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '通常指標（GDP,PMI,CPI等）: 予想より高い=上振れ=買い要因、低い=下振れ=売り要因\n';
   rules += '逆指標（失業率等）: 予想より低い=改善=買い要因、高い=悪化=売り要因\n';
   rules += '「上振れ」=数字が大きい。失業率の上振れ＝悪化。注入データの（買い/売り要因）判定をそのまま使え。\n';
+  rules += '\n【リスクセンチメントと円の方向性（絶対に間違えるな）】\n';
+  rules += 'リスクオフ（戦争・地政学リスク・株安・景気悪化）= 安全通貨の円が買われる = 円高方向\n';
+  rules += 'リスクオン（株高・景気回復期待・楽観ムード）= 円が売られる = 円安方向\n';
+  rules += '× 絶対NG: 「リスク回避で円売り」「リスクオフで円安」は真逆。使うな。\n';
+  rules += '✅ OK例: 「地政学リスクでリスクオフ。円が買われ、ドル円は下落」\n';
+  rules += '✅ OK例: 「原油高=資源国通貨（AUD・CAD）の買い要因。円や欧州通貨には逆風」\n';
+  rules += '※ 例外: 日本が輸入国のため原油高は日本の経常収支悪化=円安要因にもなる。文脈で判断せよ。\n';
   
   // === NG例 ===
   rules += '\n【NG例】\n';
-  rules += '× レート羅列 × トレード判断示唆 × 前置き挨拶 × 呼びかけ × 投稿タイプ名 × 架空トレード結果\n';
-  
+  rules += '× レート羅列 × 前置き挨拶 × 呼びかけ × 投稿タイプ名 × 架空トレード結果\n';
+  rules += '× トレード判断示唆（「静観」「様子見」「エントリーを避けたい」「今日は見送り」等は絶対に書くな）\n';
+  rules += '× リスク方向の誤り（「リスク回避=円売り」は致命的な誤り）\n';
+
+  // === リプライ誘発質問（約30%の確率で末尾に挿入） ===
+  // リプライはいいねの150倍の価値がある。質問は投稿の末尾1行に限定し、本文の流れを崩さない
+  if (Math.random() < 0.3) {
+    var replyQuestions = {
+      // 市場系: 今日の相場に絡めた問いかけ
+      'MORNING': [
+        '今日注目してる通貨ペアはありますか？',
+        '今日の相場、どう見てますか？',
+        '今週一番気になってる指標、何ですか？'
+      ],
+      'TOKYO': [
+        '今朝のチャート、もう確認しましたか？',
+        '東京時間、どのペアを追ってますか？',
+        'アジア時間の動き、どう読んでますか？'
+      ],
+      'LUNCH': [
+        '午前中、相場を見る時間ありましたか？',
+        '今日の午前、何か気になった動きはありましたか？',
+        '兼業の人、昼休みにチャート確認してますか？'
+      ],
+      'LONDON': [
+        'ロンドン時間、リアルタイムで見てますか？',
+        '欧州時間の動き、追えてる人いますか？',
+        'ロンドン勢の動き、読めてきましたか？'
+      ],
+      'GOLDEN': [
+        '今日の相場、一言で表すと何ですか？',
+        '今日、印象に残った動きはありましたか？',
+        '今日みたいな相場、どう過ごしましたか？'
+      ],
+      'NY': [
+        '今夜の指標、リアルタイムで追いますか？',
+        'NY時間、起きて見る派ですか？',
+        '今夜の結果、朝に答え合わせしましょう。皆さんはどっちに動くと思いますか？'
+      ],
+      'INDICATOR': [
+        '発表結果、一緒に確認しましょう。予想はどっち方向ですか？',
+        '今回の指標、上振れと下振れどちらを警戒してますか？',
+        'この指標、リアルタイムで見ますか？'
+      ],
+      // 心得系: 読者の体験を引き出す問いかけ
+      'KNOWLEDGE': [
+        'これ、知ったのはいつ頃ですか？',
+        '同じ経験した人いますか？',
+        'これを知る前と後で、何か変わりましたか？'
+      ],
+      'RULE_1': [
+        'この原則、気づくのに何年かかりましたか？',
+        '同じ失敗、した人いますか？',
+        'トレードで一番大事にしてるルール、何ですか？'
+      ],
+      'RULE_2': [
+        'この心理、身に覚えありますか？',
+        'メンタル管理で効果があった方法、何かありますか？',
+        '感情に負けて後悔したトレード、ありますか？'
+      ],
+      'RULE_3': [
+        'このテクニック、使ってる人いますか？',
+        '地味だけど効いてるって習慣、何かありますか？',
+        'これ知る前と後で、成績変わりましたか？'
+      ],
+      'RULE_4': [
+        '同じ失敗、した人いますか？',
+        'FXで一番痛かった経験、何ですか？（聞いてもいいなら）',
+        '今振り返ると「あれが転機だった」って出来事、ありますか？'
+      ],
+      // 週次系
+      'WEEKLY_REVIEW': [
+        '今週の相場、一言で表すと何ですか？',
+        '今週、一番印象に残った動きは何ですか？',
+        '今週の自分のトレード、振り返れましたか？'
+      ],
+      'WEEKLY_LEARNING': [
+        '今週、何か気づきはありましたか？',
+        '今週のトレード、一言で表すと何ですか？',
+        '来週、一つだけ意識することを決めるとしたら何ですか？'
+      ],
+      'WEEKLY_HYPOTHESIS': [
+        '来週の相場、どう見てますか？',
+        '来週一番気になってるイベント、何ですか？',
+        '来週のシナリオ、一緒に考えませんか？'
+      ],
+      'NEXT_WEEK': [
+        '来週、どのイベントが一番気になりますか？',
+        '来週の主役は何だと思いますか？',
+        '来週注目してる通貨ペア、何ですか？'
+      ]
+    };
+
+    var questions = replyQuestions[postType];
+
+    // 対応するタイプがなければ汎用質問
+    if (!questions) {
+      questions = [
+        '皆さんはどう見てますか？',
+        '同じ経験した人いますか？',
+        'これ、どう思いますか？'
+      ];
+    }
+
+    var selectedQuestion = questions[Math.floor(Math.random() * questions.length)];
+
+    rules += '\n【末尾に質問を入れよ（リプライ誘発・必須）】\n';
+    rules += '投稿の末尾の最後の1行に、以下の質問を自然な形で追加せよ。\n';
+    rules += '質問: 「' + selectedQuestion + '」\n';
+    rules += '※この質問行は本文の締めとして機能させる。唐突にならないよう前の文と繋げること。\n';
+    rules += '※本文中の疑問形は全て断言に変換し、質問はこの1行のみにせよ。\n';
+    console.log('💬 リプライ誘発質問を注入: ' + selectedQuestion);
+  }
+
   return rules;
 }
 
@@ -5731,6 +6282,86 @@ function testGenerateAll() {
   // サマリー
   console.log('========================================');
   console.log('📊 テスト結果サマリー');
+  console.log('成功: ' + success + ' / 失敗: ' + fail + ' / 合計: ' + types.length);
+  console.log('');
+  for (var j = 0; j < results.length; j++) {
+    var r = results[j];
+    var charWarning = (r.chars > 700) ? ' ⚠️文字数超過(700超)' : '';
+    console.log(r.status + ' ' + r.type + ': ' + r.chars + '文字' + charWarning);
+  }
+  console.log('========================================');
+}
+
+// ★v5.9: 4分割テスト（testAll1〜4）
+// 16タイプを4つずつに分けて確実にテストするための関数
+// GAS 6分制限対策: 4タイプなら余裕で完了する
+
+function testAll1() {
+  testBatch_(['MORNING', 'TOKYO', 'LUNCH', 'LONDON'], 'グループ1/4');
+}
+function testAll2() {
+  testBatch_(['GOLDEN', 'NY', 'INDICATOR', 'KNOWLEDGE'], 'グループ2/4');
+}
+function testAll3() {
+  testBatch_(['WEEKLY_REVIEW', 'RULE_1', 'RULE_2', 'RULE_3'], 'グループ3/4');
+}
+function testAll4() {
+  testBatch_(['RULE_4', 'WEEKLY_LEARNING', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'], 'グループ4/4');
+}
+
+// 分割テストの共通処理
+function testBatch_(types, label) {
+  var keys = getApiKeys();
+  console.log('=== レート事前取得 ===');
+  var cachedRates = fetchLatestRates_(keys.GEMINI_API_KEY);
+  if (cachedRates) {
+    console.log('📊 キャッシュレート: USD/JPY=' + cachedRates.usdjpy + ' EUR/USD=' + cachedRates.eurusd + ' GBP/USD=' + cachedRates.gbpusd);
+    saveRatesToSheet_(cachedRates, keys.SPREADSHEET_ID);
+  } else {
+    console.log('⚠️ レート取得失敗。レートなしでテスト続行');
+  }
+
+  console.log('');
+  console.log('=== 分割テスト ' + label + '（' + types.length + 'タイプ） ===');
+  console.log('⚠️ レート制限回避のため各3秒間隔で実行');
+  console.log('');
+
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('SKIP_FACT_CHECK', 'true');
+  console.log('⚠️ 一括テスト: ファクトチェックをスキップ（時間制限対策）');
+
+  var success = 0;
+  var fail = 0;
+  var results = [];
+
+  for (var i = 0; i < types.length; i++) {
+    var type = types[i];
+    console.log('--- [' + (i + 1) + '/' + types.length + '] ' + type + ' ---');
+
+    var result = generatePost(type, null, cachedRates);
+
+    if (result) {
+      console.log('✅ ' + result.emoji + ' ' + result.label + ' | 文字数: ' + result.text.length);
+      console.log(result.text);
+      console.log('');
+      results.push({type: type, chars: result.text.length, status: '✅'});
+      success++;
+    } else {
+      console.log('❌ 生成失敗');
+      console.log('');
+      results.push({type: type, chars: 0, status: '❌'});
+      fail++;
+    }
+
+    if (i < types.length - 1) {
+      Utilities.sleep(3000);
+    }
+  }
+
+  props.deleteProperty('SKIP_FACT_CHECK');
+
+  console.log('========================================');
+  console.log('📊 テスト結果サマリー (' + label + ')');
   console.log('成功: ' + success + ' / 失敗: ' + fail + ' / 合計: ' + types.length);
   console.log('');
   for (var j = 0; j < results.length; j++) {
@@ -6000,7 +6631,9 @@ function getLatestIndicators_(spreadsheetId) {
             // 範囲チェック
             var ind = MARKET_INDICATORS[j];
             if (numVal >= ind.min && numVal <= ind.max) {
-              result[ind.key] = numVal;
+              // ★ TNXスケール補正: GOOGLEFINANCE("TNX")は実際の値の10倍で返す
+              var storeVal = ind.tnxScale ? numVal * ind.tnxScale : numVal;
+              result[ind.key] = storeVal;
               validCount++;
             } else {
               console.log('⚠️ ' + label + ' が範囲外: ' + numVal + '（' + ind.min + '〜' + ind.max + '）');
