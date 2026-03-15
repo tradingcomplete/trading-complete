@@ -2069,20 +2069,49 @@ class NoteManagerModule {
                     
                     const range = selection.getRangeAt(0);
                     
-                    // 改行（<br>）を2つ挿入（1つ目は改行、2つ目はカーソル位置確保）
-                    const br1 = document.createElement('br');
-                    const br2 = document.createElement('br');
+                    // font-size付きのspanを探す（親方向に遡る）
+                    let fontSizeSpan = null;
+                    let node = range.startContainer;
+                    while (node && node !== element) {
+                        if (node.nodeType === Node.ELEMENT_NODE && 
+                            node.tagName === 'SPAN' && 
+                            node.style?.fontSize) {
+                            fontSizeSpan = node;
+                            break;
+                        }
+                        node = node.parentNode;
+                    }
                     
-                    // 選択範囲を削除して改行を挿入
-                    range.deleteContents();
-                    range.insertNode(br2);
-                    range.insertNode(br1);
-                    
-                    // カーソルを2つ目のbrの後に移動
-                    range.setStartAfter(br2);
-                    range.setEndAfter(br2);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+                    if (fontSizeSpan) {
+                        // === spanの外に出る処理 ===
+                        // spanの後ろに改行とゼロ幅スペース付きテキストを挿入
+                        const br = document.createElement('br');
+                        const textNode = document.createTextNode('\u200B'); // ゼロ幅スペース
+                        
+                        // spanの後ろに挿入
+                        fontSizeSpan.after(br, textNode);
+                        
+                        // カーソルをテキストノードの末尾に移動
+                        const newRange = document.createRange();
+                        newRange.setStart(textNode, 1);
+                        newRange.setEnd(textNode, 1);
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+                    } else {
+                        // === スタイルなしの場合は通常の改行 ===
+                        const br = document.createElement('br');
+                        const textNode = document.createTextNode('\u200B');
+                        
+                        range.deleteContents();
+                        range.insertNode(textNode);
+                        range.insertNode(br);
+                        
+                        const newRange = document.createRange();
+                        newRange.setStart(textNode, 1);
+                        newRange.setEnd(textNode, 1);
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+                    }
                     
                     // 自動保存トリガー
                     clearTimeout(this.#autoSaveTimer);
