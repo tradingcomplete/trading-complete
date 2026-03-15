@@ -2058,10 +2058,43 @@ class NoteManagerModule {
                 this.autoSaveNoteQuietly();
             });
             
-            // === Ctrl+Shift+V: keydownでインターセプト ===
-            // ブラウザのCtrl+Shift+VはHTMLを除去するため、
-            // keydownの時点で保存済みHTMLを挿入する
+            // === keydownイベント ===
             element.addEventListener('keydown', (e) => {
+                // === Enterキーでスタイルリセット（Shift+Enterは除く）===
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    
+                    const selection = window.getSelection();
+                    if (!selection.rangeCount) return;
+                    
+                    const range = selection.getRangeAt(0);
+                    
+                    // 改行（<br>）を2つ挿入（1つ目は改行、2つ目はカーソル位置確保）
+                    const br1 = document.createElement('br');
+                    const br2 = document.createElement('br');
+                    
+                    // 選択範囲を削除して改行を挿入
+                    range.deleteContents();
+                    range.insertNode(br2);
+                    range.insertNode(br1);
+                    
+                    // カーソルを2つ目のbrの後に移動
+                    range.setStartAfter(br2);
+                    range.setEndAfter(br2);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    // 自動保存トリガー
+                    clearTimeout(this.#autoSaveTimer);
+                    this.#autoSaveTimer = setTimeout(() => {
+                        this.autoSaveNoteQuietly();
+                    }, 2000);
+                    return;
+                }
+                
+                // === Ctrl+Shift+V: 装飾維持ペースト ===
+                // ブラウザのCtrl+Shift+VはHTMLを除去するため、
+                // keydownの時点で保存済みHTMLを挿入する
                 if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
                     if (this.#lastCopiedHTML) {
                         e.preventDefault();
