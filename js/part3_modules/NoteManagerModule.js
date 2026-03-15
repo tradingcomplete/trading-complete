@@ -1835,12 +1835,12 @@ class NoteManagerModule {
         if (!editor) return;
         
         const sizeMap = {
-            'small': '14px',
-            'medium': '18px',
-            'large': '22px'
+            'small': '16px',
+            'medium': '20px',
+            'large': '24px'
         };
         
-        const fontSize = sizeMap[size] || '14px';
+        const fontSize = sizeMap[size] || '16px';
         
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
