@@ -36,6 +36,10 @@ function generatePost(postType, context, cachedRates) {
   var keys = getApiKeys();
   var typeConfig = POST_TYPES[postType];
   
+  // ★v8.8: GAS 6分制限の安全弁（経過時間を監視し、4分超過でリトライをスキップ）
+  var startTime = new Date();
+  var TIME_LIMIT_SEC = 240; // 4分
+  
   if (!typeConfig) {
     console.log('❌ 不明な投稿タイプ: ' + postType);
     return null;
@@ -120,6 +124,11 @@ function generatePost(postType, context, cachedRates) {
         if (bodyOnly.indexOf(hotSymbol) === -1 && bodyOnly.indexOf(hotJpName) === -1) {
           console.log('⚠️ 🔥主役ペア「' + hotJpName + '」が本文に未含。リトライ...');
           
+          // ★v8.8: 経過時間チェック（4分超過でリトライスキップ）
+          var elapsed1 = (new Date() - startTime) / 1000;
+          if (elapsed1 > TIME_LIMIT_SEC) {
+            console.log('⏱️ 経過' + Math.round(elapsed1) + '秒 → 主役ペアリトライをスキップ（時間制限）');
+          } else {
           var retryPrompt = '以下の投稿を少し調整してください。\n\n';
           retryPrompt += '今日一番動いている「' + hotSymbol + '（' + hotJpName + '）」にも触れてほしいです。\n';
           retryPrompt += '文章の自然さ・口調・フォーマットはそのまま維持してください。\n';
@@ -143,6 +152,7 @@ function generatePost(postType, context, cachedRates) {
               console.log('⚠️ リトライでも主役未含。元テキストを使用');
             }
           }
+          } // ★v8.8: 時間チェックのelse閉じ
         } else {
           console.log('✅ 🔥主役ペア「' + hotJpName + '」確認OK');
         }
@@ -164,6 +174,11 @@ function generatePost(postType, context, cachedRates) {
       if (hasRiskOffYenSell) {
         console.log('⚠️ リスクセンチメント誤記を検出（リスクオフ+円売り）。リトライ...');
         
+        // ★v8.8: 経過時間チェック
+        var elapsed2 = (new Date() - startTime) / 1000;
+        if (elapsed2 > TIME_LIMIT_SEC) {
+          console.log('⏱️ 経過' + Math.round(elapsed2) + '秒 → リスクセンチメントリトライをスキップ（時間制限）');
+        } else {
         var riskRetryPrompt = '以下の投稿に重大な誤りがあります。修正してください。\n\n';
         riskRetryPrompt += '【絶対禁止ルール】\n';
         riskRetryPrompt += 'リスクオフ（地政学リスク・株安）= 円高方向（円が買われる）\n';
@@ -190,6 +205,7 @@ function generatePost(postType, context, cachedRates) {
             console.log('⚠️ リスクセンチメント修正失敗。元テキストを使用（要手動確認）');
           }
         }
+        } // ★v8.8: 時間チェックのelse閉じ
       }
     } catch (riskErr) {
       console.log('⚠️ リスクセンチメントチェックエラー（投稿には影響なし）: ' + riskErr.message);
@@ -216,6 +232,11 @@ function generatePost(postType, context, cachedRates) {
     if (currentEmojiCount < 3) {
       console.log('⚠️ 絵文字が' + currentEmojiCount + '個（最低3個必要）。リトライ...');
       
+      // ★v8.8: 経過時間チェック
+      var elapsed3 = (new Date() - startTime) / 1000;
+      if (elapsed3 > TIME_LIMIT_SEC) {
+        console.log('⏱️ 経過' + Math.round(elapsed3) + '秒 → 絵文字リトライをスキップ（時間制限）');
+      } else {
       var emojiRetryPrompt = '以下の投稿を、ノート形式に調整してください。\n\n';
       emojiRetryPrompt += '【ルール】\n';
       emojiRetryPrompt += '・絵文字（☕📕📝📋💡⚠️✅）を使って3〜4ブロックに区切ること。\n';
@@ -246,6 +267,7 @@ function generatePost(postType, context, cachedRates) {
           console.log('⚠️ 絵文字リトライでも' + retryEmojiCount + '個。元テキストを使用');
         }
       }
+      } // ★v8.8: 時間チェックのelse閉じ
     }
   } catch (emojiErr) {
     console.log('⚠️ 絵文字チェックエラー（投稿には影響なし）: ' + emojiErr.message);
@@ -270,6 +292,11 @@ function generatePost(postType, context, cachedRates) {
     if (hasMultiArrowBlock) {
       console.log('⚠️ →が2本以上のブロックを検出。リトライ...');
       
+      // ★v8.8: 経過時間チェック
+      var elapsed4 = (new Date() - startTime) / 1000;
+      if (elapsed4 > TIME_LIMIT_SEC) {
+        console.log('⏱️ 経過' + Math.round(elapsed4) + '秒 → →ブロックリトライをスキップ（時間制限）');
+      } else {
       var arrowRetryPrompt = '以下の投稿を修正してください。\n\n';
       arrowRetryPrompt += '【絶対ルール】\n';
       arrowRetryPrompt += '・絵文字ブロック1つに →（矢印で始まる行）は必ず1行だけ。\n';
@@ -301,6 +328,7 @@ function generatePost(postType, context, cachedRates) {
           console.log('⚠️ →複数ブロック修正失敗。元テキストを使用');
         }
       }
+      } // ★v8.8: 時間チェックのelse閉じ
     }
   } catch (arrowErr) {
     console.log('⚠️ →複数ブロックチェックエラー（投稿には影響なし）: ' + arrowErr.message);

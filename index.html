@@ -2301,50 +2301,37 @@
                     </div>
                     
                     <div style="margin-top: 40px; padding: 20px; background: rgba(70, 130, 180, 0.1); border-radius: 10px; border: 1px solid rgba(70, 130, 180, 0.3);">
-                        <h3 style="color: #4682b4; margin-bottom: 15px;">📚 データの保存について</h3>
-
+                        <h3 style="color: #4682b4; margin-bottom: 15px;">📚 バックアップとアップデート方法</h3>
+                        
                         <div style="margin-bottom: 20px;">
-                            <h4 style="color: #00ff88; margin-bottom: 10px;">💾 現在の保存方式（ローカル保存）</h4>
-                            <p style="line-height: 1.8; color: #ccc;">
-                                現在、データはお使いのブラウザ内（ローカルストレージ）に保存されています。<br>
-                                インターネット接続がなくても使える反面、<strong>ブラウザのキャッシュクリアやデバイスの初期化によってデータが消える可能性</strong>があります。<br>
-                                大切なトレード記録を守るために、定期的な手動バックアップを強くおすすめします。
-                            </p>
-                        </div>
-
-                        <div style="margin-bottom: 20px; padding: 15px; background: rgba(251, 191, 36, 0.08); border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.3);">
-                            <h4 style="color: #fbbf24; margin-bottom: 10px;">☁️ Proプランならデータ消失リスクゼロ</h4>
-                            <p style="line-height: 1.8; color: #ccc;">
-                                Proプランにアップグレードすると、すべてのデータがクラウドに<strong>自動で同期・保存</strong>されます。<br>
-                                手動バックアップは不要になり、スマホ・PC・タブレットどこからでも同じデータにアクセスできます。<br>
-                                デバイスが壊れても、ブラウザをリセットしても、トレード記録は安全に守られます。
-                            </p>
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="color: #00ff88; margin-bottom: 10px;">🔒 手動バックアップ方法</h4>
+                            <h4 style="color: #00ff88; margin-bottom: 10px;">🔒 バックアップ方法（データを守る）</h4>
                             <ol style="margin-left: 20px; line-height: 1.8;">
                                 <li><strong>「📥 全データエクスポート」</strong>ボタンをクリック</li>
                                 <li>JSONファイルがダウンロードされます（例: trade-record-backup-2025-01-01.json）</li>
-                                <li>このファイルをPCやクラウドストレージの安全な場所に保存してください</li>
-                                <li>推奨: 月1回 または 重要なトレード後に実施</li>
+                                <li>このファイルを安全な場所に保存してください</li>
+                                <li>推奨: 月1回または重要なトレード後にバックアップ</li>
                             </ol>
                         </div>
-
+                        
                         <div style="margin-bottom: 20px;">
-                            <h4 style="color: #00ff88; margin-bottom: 10px;">🔄 バックアップから復元する方法</h4>
+                            <h4 style="color: #00ff88; margin-bottom: 10px;">🔄 アップデート方法（安全に更新）</h4>
                             <ol style="margin-left: 20px; line-height: 1.8;">
-                                <li><strong>「📤 全データインポート」</strong>ボタンをクリック</li>
-                                <li>保存しておいたJSONファイルを選択</li>
+                                <li><strong>必ず先にバックアップを取る</strong>（上記手順）</li>
+                                <li>新しいバージョンのHTMLファイルを入手</li>
+                                <li>古いHTMLファイルを別名で保存（例: trade-record-old.html）</li>
+                                <li>新しいHTMLファイルを配置</li>
+                                <li>ブラウザで開いて「📤 全データインポート」からバックアップファイルを選択</li>
                                 <li>データが復元されたことを確認</li>
                             </ol>
                         </div>
-
-                        <div style="margin-bottom: 0;">
-                            <h4 style="color: #ffa500; margin-bottom: 10px;">⚠️ 注意事項</h4>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #ffa500; margin-bottom: 10px;">⚠️ 重要な注意事項</h4>
                             <ul style="margin-left: 20px; line-height: 1.8;">
                                 <li>バックアップファイルは<strong>絶対に編集しない</strong>でください</li>
-                                <li>複数のバックアップを日付付きで保管することを推奨します</li>
+                                <li>複数のバックアップを日付付きで保管することを推奨</li>
+                                <li>ブラウザのキャッシュクリアでもデータが消える可能性があります</li>
+                                <li>大切なデータは定期的にエクスポートして保管してください</li>
                             </ul>
                         </div>
                     </div>
@@ -3572,11 +3559,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <p id="upgradeMessage" style="color:#8a94a6; margin:0 0 24px 0; line-height:1.6;"></p>
         
         <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-            <button onclick="window.PaymentModule?.startCheckout(PaymentModule.PRICE_IDS.pro_monthly)" 
+            <button onclick="window.PaymentModule?.startCheckout(PaymentModule.PLAN_IDS.pro_monthly)" 
                     style="background:linear-gradient(135deg, #00ff88, #00cc6a); color:#0c1018; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1em;">
                 Proプラン 月額1,980円
             </button>
-            <button onclick="window.PaymentModule?.startCheckout(PaymentModule.PRICE_IDS.pro_yearly)" 
+            <button onclick="window.PaymentModule?.startCheckout(PaymentModule.PLAN_IDS.pro_yearly)" 
                     style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1em;">
                 Proプラン 年額19,800円
             </button>
