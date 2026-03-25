@@ -1,7 +1,9 @@
-# T-CAX 設計書 v7.1
+# T-CAX 設計書 v7.3
 
-**更新日**: 2026-03-23
+**更新日**: 2026-03-25
 **方針**: プロンプト公開 + トレードスタイル定義 + 学び自動蓄積 + 7通貨ペア市場データ + 完全自動学習
+**v7.3変更点**: 後処理チェーン共通関数化（applyPostProcessingChain_）、INDICATOR主役ペア除外、GAS 6分タイムガード、メタ自己言及除去、孤立助詞修正、Excel許可、残り時間除去、プロンプトセクション削減（71→53）
+**v7.2変更点**: 確定データシート化（POLICY_RATESハードコード廃止→スプレッドシート一元管理）、要人リスト新設（金利5件+要人12人）
 **v7.1変更点**: プロンプト最適化（キャラクターシート統合9→5行、buildFormatRules_タイプ別条件分岐、レート混同バグ修正、ファクトチェック検証不能即削除）
 **v7.0変更点**: geminiApi.gsファイル分割（9,398行→567行・11ファイル）、政策金利config.gs一元管理化
 **v6.9変更点**: factCheckカレンダースコープ修正、仮説検証ログ全市場系拡張、仮説3要素構造化（設計図v8.4準拠）
@@ -537,9 +539,23 @@ next_week   NEXT_WEEK, WEEKLY_HYPOTHESIS
 ・ハッシュタグは最後に最大2個
 ```
 
-### 後処理チェーン + バリデーション + ファクトチェック ★v5.1
+### 後処理チェーン + バリデーション + ファクトチェック ★v5.1 / ★v8.8共通関数化
 
 ```
+★v8.8: applyPostProcessingChain_(text, postType, rates) 共通関数化
+  geminiApi.gsの7箇所（初回生成後/主役ペアリトライ後/リスクセンチメントリトライ後/
+  絵文字リトライ後/→ブロックリトライ後/ファクトチェック修正後/品質レビュー修正後）を
+  postProcessor.gsの1関数に統合。新しい後処理を追加する場合はこの関数内のみ変更すればOK。
+  TC除去（removeTCMention_）はタイプ別判定があるため呼び出し側で個別に実行。
+
+★v8.8: GAS 6分タイムガード
+  generatePost冒頭にstartTimeタイマーを設置。4つのリトライ（主役ペア/リスクセンチメント/
+  絵文字/→ブロック）の前に経過時間をチェック。4分（240秒）超過でリトライをスキップし
+  現在のテキストで続行。タイムアウトを確実に防止しつつ、通常時は品質を犠牲にしない。
+
+★v8.8: INDICATOR投稿は🔥主役ペアバリデーション対象外
+  指標の通貨ペアが主役であるべきで、通貨強弱の主役ペアとは一致しないことが多いため除外。
+
 9段階後処理 + 2つのバリデーション・リトライ + ファクトチェック自動修正:
 
 【処理の順序】
@@ -784,10 +800,17 @@ buildFormatRules_()で注入。→は使わずに締める:
   「現在の日時」「現在はXXXX年」をプロンプトに動的注入。
   Geminiが時制を見失う問題（「トランプは民間人」等の誤判定）を防止。
 
-■ 要人の役職・地位に関する特別ルール（factCheck.gs）
-  「要人の役職判定は必ずGoogle検索結果を最優先。内部知識だけで❌にするな」
-  検索で否定する証拠がある場合のみ❌。確認できない場合は⚠️。
-  全要人に対応する汎用ルール（個別に名前を追加する必要なし）。
+■ 要人の役職・地位に関する特別ルール（factCheck.gs）★v8.7で根本改修
+  旧（v8.6）: 「Google検索結果を最優先。内部知識だけで❌にするな」→ Geminiが検索しないため機能せず
+  新（v8.7）: スプレッドシート「確定データ」シートから要人リストをLayer 1確定データとして注入
+  「確定データ4に載っている人物の役職は100%正しい。矛盾する知識は無視しろ」と明示
+  → Geminiの古い学習データ（バイデン大統領、石破首相等）による誤判定を完全に防止
+
+■ 確定データシート（config.gs）★v8.7新設
+  スプレッドシート「確定データ」シートに金利5件+要人12人を一元管理
+  setupReferenceDataSheet()でシートを自動作成（カスタムメニューから実行）
+  金利変更・要人交代時はスプレッドシートのセルを書き換えるだけでOK（コード修正不要）
+  旧POLICY_RATESハードコードを完全廃止
 
 ■ Bloomberg最優先検索（marketAnalysis.gs）
   fetchMarketNews_の検索ソースにbloomberg.com/bloomberg.co.jpを最優先指定。
@@ -872,20 +895,25 @@ buildFormatRules_()で注入。→は使わずに締める:
 
 ```
 ★v8.5: geminiApi.gsを11ファイルに分割（9,398行→567行）
-詳細は「geminiApi_ファイル分割_要件定義書_ロードマップ_v1_2_完了版.md」を参照
+★v8.7: POLICY_RATESハードコード廃止→スプレッドシート「確定データ」シートに一元管理
+★v8.8: 後処理チェーン共通関数化、GAS 6分タイムガード、プロンプトセクション削減
+詳細は「geminiApi_ファイル分割_要件定義書_ロードマップ_v1_2_完了版.md」
+　　　「TCAX_品質改善_要件定義書_v1_4.md」を参照
 
 ファイル名                行数    関数数  役割
 ──────────────────────────────────────────────────────────────
-geminiApi.gs              638     3      核: generatePost + callGemini_ + extractTextFromResponse_ ★v8.6: 検証不能❌即削除+品質レビュー統合
-promptBuilder.gs          1,536   10     プロンプト構築: ★v8.6: タイプ別条件分岐+参照ソースバグ修正+ソース元言及ルール
-postProcessor.gs          1,745   19     後処理チェーン: ★v8.6: fixHallucinatedRates_修正+normalizeRateDecimals_+呼びかけ除去
-factCheck.gs              653     5      ファクトチェック: ★v8.6: ❌のremovable/fixable分類+日時注入+要人役職ルール
+geminiApi.gs              537     3      核: generatePost + callGemini_ + extractTextFromResponse_
+                                         ★v8.8: 後処理7箇所→applyPostProcessingChain_共通化、INDICATOR主役除外、4分タイムガード
+promptBuilder.gs          1,539   10     プロンプト構築: ★v8.8: セクション【】整理（71→53）、INDICATOR残り時間禁止、要人リスト注入
+postProcessor.gs          1,836   20     後処理チェーン: ★v8.8: applyPostProcessingChain_新設、メタ自己言及除去、孤立助詞修正、Excel許可、残り時間除去
+factCheck.gs              660     5      ファクトチェック: ★v8.7: 要人リスト確定データ注入、ルール文言変更
 qualityReview.gs          332     7      ★v8.6新規: 品質レビュー（Claude Sonnet 4.6）: qualityReviewPost_ + callClaude_ + cacheTodayPost_ 等
+config.gs                 556     7      設定値+定数: ★v8.7: POLICY_RATES廃止→確定データシート読み取り+setupReferenceDataSheet()新設
 imageGenerator.gs         889     15     AI画像生成: ★v8.6: 再生成時の透かしログ改善
 scheduler.gs              552     13     トリガー管理: ★v8.6: 処理分離（scheduleTodayPosts 5:00 + scheduleDailyMaintenance 5:15）
-marketAnalysis.gs         799     7      市場分析: ★v8.6: Bloomberg最優先検索+ソース欄追加
+marketAnalysis.gs         799     7      市場分析: ★v8.8: ニュース参照【】除去。Bloomberg最優先検索+ソース欄
+main.gs                   605     -      カスタムメニュー: ★v8.7: 「確定データシート作成」追加
 rateManager.gs            811     12     レート管理: fetchLatestRates_ + saveRatesToSheet_ + scheduledFetchRates 等
-marketAnalysis.gs         795     7      市場分析: detectHotPair_ + fetchMarketNews_ + calculateRateDirection_ 等
 indicatorManager.gs       1,191   20     経済指標: fetchIndicatorResults_ + formatIndicatorReview_ 等
 learningManager.gs        859     8      学び・仮説: extractPostInsights_ + verifyPreviousHypothesis_ 等
 priceSummary.gs           642     5      価格集計: updatePriceSummary + aggregateDailyRates 等
@@ -894,16 +922,18 @@ testFunctions.gs          819     22     テスト: testAll1-6 + testBatch_ 等
 
 改善時の対象ファイル早見表:
   禁止表現の追加          → postProcessor.gs（replaceProhibitedPhrases_）
+  後処理ルールの追加      → postProcessor.gs（applyPostProcessingChain_内に自動反映）★v8.8
   ファクトチェック改善     → factCheck.gs（factCheckPost_ / autoFixPost_）
   プロンプトへのデータ注入 → promptBuilder.gs（buildPrompt_）
   プロンプト文字数削減     → promptBuilder.gs（buildPrompt_ + buildFormatRules_）
   キャラクター定義の変更   → スプレッドシート「キャラクター」シート（5行構成・v8.6統合版）
   プロンプトセクション数削減 → キャラクターシート + buildFormatRules_のタイプ別条件分岐
-  政策金利の更新           → config.gs（POLICY_RATES 1箇所のみ）
+  政策金利の更新           → スプレッドシート「確定データ」シート（コード修正不要）★v8.7
+  要人の交代               → スプレッドシート「確定データ」シート（コード修正不要）★v8.7
   品質レビューの改善       → qualityReview.gs（レビュー項目・プロンプト）
   品質レビューのタイプ定義 → qualityReview.gs（TYPE_DESCRIPTIONS）
   仮説・学びの改善         → learningManager.gs
-  新しい後処理ルール追加   → postProcessor.gs
+  新しい後処理ルール追加   → postProcessor.gs（applyPostProcessingChain_に自動反映）★v8.8
 ```
 
 以下は分割前の関数詳細（参考として残す）:
@@ -911,12 +941,12 @@ testFunctions.gs          819     22     テスト: testAll1-6 + testBatch_ 等
 ```
 関数名                      役割
 ──────────────────────────────────────────────────────────────
-【geminiApi.gs - 核（567行・3関数）】
+【geminiApi.gs - 核（537行・3関数）★v8.8: 後処理共通化+タイムガード】
 generatePost()              メイン: 投稿テキスト生成（司令塔。全モジュールを呼び出す）
 callGemini_()               Gemini API呼び出し（リトライ3回）
 extractTextFromResponse_()  レスポンスからテキスト抽出
 
-【promptBuilder.gs - プロンプト構築（1,505行・10関数）】
+【promptBuilder.gs - プロンプト構築（1,539行・10関数）★v8.8: セクション削減+要人注入】
 buildPrompt_()              プロンプト組み立て（メイン・636行）
 buildFormatRules_()         フォーマットルール（ノート形式 ★v5.0更新）
 

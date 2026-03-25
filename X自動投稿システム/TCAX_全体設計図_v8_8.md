@@ -1,8 +1,10 @@
-# T-CAX システム 全体設計図 v8.6
+# T-CAX システム 全体設計図 v8.8
 
 **プロジェクト名**: T-CAX（Trading Complete Auto X）
 **コンセプト**: 「毎回その瞬間の最新情報で作成・即投稿」
-**更新日**: 2026-03-23
+**更新日**: 2026-03-25
+**v8.8変更点**: 後処理チェーン共通関数化（geminiApi.gs 638→537行）、INDICATOR主役ペア除外、GAS 6分タイムガード、メタ自己言及除去、孤立助詞バグ修正、Excel許可リスト、残り時間表現除去、プロンプトセクション数削減（71→53）
+**v8.7変更点**: 確定データシート化（POLICY_RATESハードコード廃止→スプレッドシート一元管理）、要人リスト新設（factCheck/promptBuilderに確定データ注入）
 **v8.6変更点**: プロンプト最適化（キャラクターシート9→5行統合、buildFormatRules_タイプ別条件分岐、セクション数93→68）、レート混同バグ修正（postProcessor.gs）、ファクトチェック検証不能❌即削除（factCheck.gs+geminiApi.gs）、品質レビューシステム新設（Claude Sonnet 4.6によるクロスチェック）、投稿文字数制御改善、scheduler.gs処理順序変更
 **v8.5変更点**: geminiApi.gsファイル分割（9,398行→567行・11ファイル）、政策金利config.gs一元管理化
 **v8.4変更点**: factCheckPost_カレンダースコープ修正、仮説検証ログ登録対象拡張（全市場系）、仮説抽出3要素構造化
@@ -1295,6 +1297,47 @@ GASエディタで有効化が必要:
 *　　　⑫ geminiApi.gs: autoFixPost_にファクトチェック用語混入検出+修正棄却*
 *　　　　 バグ: Geminiが「修正後テキスト」ではなく「ファクトチェック結果の説明文」を返すケース*
 *　　　　 修正: 15パターンの検証用語（「記述は正確です」「検証できません」等）を検出したら修正を棄却し元テキストを使用*
+
+*バージョン: v8.8*
+*v8.8: 品質改善バッチ（2026-03-25）*
+*　　　① 後処理チェーン共通関数化（postProcessor.gs + geminiApi.gs）*
+*　　　　 geminiApi.gsの7箇所にコピペされていた後処理チェーンをapplyPostProcessingChain_(text, postType, rates)に統合*
+*　　　　 geminiApi.gs: 638行→537行（-101行）。今後の後処理追加は1箇所のみ*
+*　　　② メタ的自己言及除去（postProcessor.gs）*
+*　　　　 「投稿を作成します」「アラートの投稿」等7パターンを検出し、該当行を丸ごと除去*
+*　　　③ INDICATOR投稿の主役ペア問題（geminiApi.gs + promptBuilder.gs）*
+*　　　　 🔥主役ペアバリデーション対象からINDICATORを除外。指標の通貨ペアが主役であるべき*
+*　　　　 INDICATOR方針に「あと○分で」残り時間表現禁止ルールを追加*
+*　　　④ 「→もし」→「→し」バグ修正（postProcessor.gs）*
+*　　　　 孤立助詞除去の正規表現を修正。助詞の後にカタカナが来た場合のみ除去するよう限定*
+*　　　⑤ Excel除去バグ修正（postProcessor.gs）*
+*　　　　 removeForeignText_の英単語許可リストにExcelを追加*
+*　　　⑥ 「あと○分で」残り時間表現除去（postProcessor.gs + promptBuilder.gs）*
+*　　　　 プロンプト層（禁止ルール）+ 後処理層（機械的除去）の二重防御*
+*　　　⑦ プロンプトセクション数削減 Phase 1（promptBuilder.gs + marketAnalysis.gs）*
+*　　　　 経済カレンダーの【発表済み】【未発表】→■に変更（セクションカウンター回避）*
+*　　　　 ルール文中の【参照名】→括弧なしテキストに変更*
+*　　　　 実測: MORNING 71→53セクション（-18）、18,252→17,345文字（-907文字）*
+*　　　⑧ GAS 6分制限タイムガード（geminiApi.gs）*
+*　　　　 generatePost冒頭にstartTimeタイマーを設置。4つのリトライ前に経過時間チェック*
+*　　　　 4分（240秒）超過でリトライをスキップし、現在のテキストで続行*
+
+*バージョン: v8.7*
+*v8.7: 確定データシート化 + 要人リスト新設（2026-03-25）*
+*　　　① POLICY_RATESハードコード廃止（config.gs）*
+*　　　　 config.gsのPOLICY_RATES配列+getPolicyRatesText_関数を削除*
+*　　　　 スプレッドシート「確定データ」シートから読み取る方式に変更*
+*　　　　 金利変更時はスプレッドシートのセルを書き換えるだけでOK（コード修正不要）*
+*　　　② 要人リスト新設（config.gs + factCheck.gs + promptBuilder.gs）*
+*　　　　 主要12人（トランプ大統領、高市首相、パウエルFRB議長、植田日銀総裁等）*
+*　　　　 factCheckPost_/autoFixPost_/buildPrompt_に確定データとして注入*
+*　　　　 Geminiの古い学習データ（バイデン大統領）による誤判定を防止*
+*　　　③ setupReferenceDataSheet()新設（config.gs）*
+*　　　　 カスタムメニューからシートを自動作成（金利5件+要人12人の初期データ投入）*
+*　　　④ factCheckPost_の要人役職ルール更新（factCheck.gs）*
+*　　　　 「Google検索を最優先」→「確定データ4のリストを最優先」に変更*
+*　　　　 確定データに載っている人物は確定データが100%正しいと明示*
+*　　　⑤ カスタムメニューに「確定データシート作成」追加（main.gs）*
 
 *バージョン: v8.4*
 *v8.4: factCheckカレンダー修正・仮説検証ログ拡張・仮説3要素構造化（2026-03-22）*
