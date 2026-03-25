@@ -200,6 +200,10 @@ class PaymentModule {
             // 決済完了後に使うプランIDを保存
             this.#pendingPlanId = planId;
 
+            // アップグレードモーダルを閉じる（PAY.JPポップアップと重ならないように）
+            const upgradeModal = document.getElementById('upgradeModal');
+            if (upgradeModal) upgradeModal.style.display = 'none';
+
             // PAY.JP Checkoutボタンが生成されるまで最大5秒待つ
             const payjpBtn = await this.#waitForPayjpButton(5000);
             if (!payjpBtn) {
