@@ -209,6 +209,15 @@ class PaymentModule {
             console.log('PaymentModule: PAY.JP Checkoutボタンをクリック', payjpBtn);
             payjpBtn.click();
 
+            // PAY.JP iframeが前面に来るようz-indexを強制設定
+            setTimeout(() => {
+                const iframe = document.getElementById('payjp-checkout-iframe');
+                if (iframe) {
+                    iframe.style.zIndex = '999999';
+                    iframe.style.position = 'fixed';
+                }
+            }, 300);
+
         } catch (error) {
             console.error('PaymentModule: startCheckout error', error);
             window.showToast?.('決済処理でエラーが発生しました', 'error');
