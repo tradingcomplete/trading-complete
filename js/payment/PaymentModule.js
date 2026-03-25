@@ -1,7 +1,7 @@
 /**
  * @module PaymentModule
  * @description 決済・サブスクリプション管理モジュール
- * @version 2.2.0
+ * @version 2.3.0
  * @date 2026-03-25
  * @important MODULES.md準拠
  *
@@ -200,11 +200,13 @@ class PaymentModule {
             // 決済完了後に使うプランIDを保存
             this.#pendingPlanId = planId;
 
-            // PAY.JP Checkoutの隠しボタンをクリック → 公式ポップアップが開く
-            const payjpBtn = document.querySelector('.payjp_checkout_box input[type="button"], .payjp_checkout_box button');
+            // PAY.JP Checkoutボタンが生成されるまで最大5秒待つ
+            const payjpBtn = await this.#waitForPayjpButton(5000);
             if (!payjpBtn) {
-                throw new Error('PAY.JP Checkoutボタンが見つかりません。index.htmlにscriptタグが追加されているか確認してください。');
+                throw new Error('PAY.JP Checkoutボタンの生成がタイムアウトしました。ページを再読み込みしてお試しください。');
             }
+
+            console.log('PaymentModule: PAY.JP Checkoutボタンをクリック', payjpBtn);
             payjpBtn.click();
 
         } catch (error) {
@@ -290,6 +292,42 @@ class PaymentModule {
     // ================
     // Private Methods
     // ================
+
+    /**
+     * PAY.JP Checkoutボタンが生成されるまで待つ
+     * @param {number} timeoutMs - タイムアウトミリ秒
+     * @returns {Promise<Element|null>}
+     */
+    #waitForPayjpButton(timeoutMs) {
+        return new Promise((resolve) => {
+            const selector = '.payjp_checkout_box button, .payjp_checkout_box input[type="button"]';
+
+            // すでに存在する場合は即返す
+            const existing = document.querySelector(selector);
+            if (existing) {
+                resolve(existing);
+                return;
+            }
+
+            // MutationObserverで生成を監視
+            const observer = new MutationObserver(() => {
+                const btn = document.querySelector(selector);
+                if (btn) {
+                    observer.disconnect();
+                    clearTimeout(timer);
+                    resolve(btn);
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // タイムアウト
+            const timer = setTimeout(() => {
+                observer.disconnect();
+                resolve(null);
+            }, timeoutMs);
+        });
+    }
 
     /**
      * PAY.JP Checkoutのグローバルコールバックを登録
