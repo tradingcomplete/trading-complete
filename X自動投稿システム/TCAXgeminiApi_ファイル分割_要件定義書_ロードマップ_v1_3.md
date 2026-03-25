@@ -1,7 +1,7 @@
-# geminiApi.gs ファイル分割 要件定義書 / ロードマップ v1.2（完了版）
+# geminiApi.gs ファイル分割 要件定義書 / ロードマップ v1.3
 
 作成日: 2026-03-23
-更新日: 2026-03-23（v1.2 全Phase完了・最終確認済み）
+更新日: 2026-03-25（v1.3 v8.7〜v8.8の行数・関数数・改善ガイドを反映）
 対象: geminiApi.gs（9,398行・117関数）→ 11ファイル分割
 
 ---
@@ -13,6 +13,7 @@
 | v1.0 | 2026-03-23 | 初版作成 |
 | v1.1 | 2026-03-23 | 精査結果反映: testGenerateOnly重複問題・REVERSE_INDICATORS対応・行数修正・既存重複関数の記録・外部呼び出し一覧追加 |
 | v1.2 | 2026-03-23 | 全Phase完了。testAll1-6全通過確認済み。実測行数・関数数で更新。今後の改善ガイド追加 |
+| v1.3 | 2026-03-25 | v8.7〜v8.8反映: 行数更新（geminiApi 537行、config 556行、factCheck 660行、postProcessor 1,836行、promptBuilder 1,539行、main 605行）。改善ガイド更新（政策金利→確定データシート、後処理→applyPostProcessingChain_）。依存関係図更新 |
 
 ---
 
@@ -51,17 +52,17 @@ GASプロジェクトの全20ファイル（アルファベット順 = GAS読み
 | 1 | applyPairColors.gs | 225 | - | 既存 | 通貨ペア色分け |
 | 2 | approval.gs | 979 | - | 既存 | 承認フロー+メール送信 |
 | 3 | calendarManager.gs | 802 | 7 | 新規 | 経済カレンダー取得・インポート |
-| 4 | config.gs | 約435 | - | 既存 | 設定値+定数+政策金利 |
-| 5 | factCheck.gs | 442 | 5 | 新規 | ファクトチェック+自動修正 |
-| 6 | geminiApi.gs | 567 | 3 | 既存（縮小） | 核: メイン処理+Gemini API通信 |
+| 4 | config.gs | 556 | 7 | 既存 | 設定値+定数+確定データシート読み取り ★v8.7: POLICY_RATES廃止 |
+| 5 | factCheck.gs | 660 | 5 | 新規 | ファクトチェック+自動修正 ★v8.7: 要人リスト確定データ注入 |
+| 6 | geminiApi.gs | 537 | 3 | 既存（縮小） | 核: メイン処理+Gemini API通信 ★v8.8: 後処理共通化+タイムガード |
 | 7 | imageGenerator.gs | 882 | - | 既存 | AI画像生成+透かし |
 | 8 | indicatorManager.gs | 1,191 | 20 | 新規 | 経済指標の取得・解析・フォーマット |
 | 9 | learningManager.gs | 859 | 8 | 新規 | 学び・仮説の抽出・検証 |
-| 10 | main.gs | 601 | - | 既存 | カスタムメニュー+エントリポイント |
+| 10 | main.gs | 605 | - | 既存 | カスタムメニュー+エントリポイント ★v8.7: 確定データシート作成追加 |
 | 11 | marketAnalysis.gs | 795 | 7 | 新規 | 市場分析（通貨強弱・トレンド・ニュース） |
-| 12 | postProcessor.gs | 1,682 | 17 | 新規 | 後処理チェーン（テキスト整形・検証） |
+| 12 | postProcessor.gs | 1,836 | 20 | 新規 | 後処理チェーン ★v8.8: applyPostProcessingChain_共通関数新設 |
 | 13 | priceSummary.gs | 642 | 5 | 新規 | 価格サマリー集計・日次OHLC |
-| 14 | promptBuilder.gs | 1,505 | 10 | 新規 | プロンプト構築+データ注入 |
+| 14 | promptBuilder.gs | 1,539 | 10 | 新規 | プロンプト構築+データ注入 ★v8.8: セクション削減+要人注入 |
 | 15 | rateManager.gs | 811 | 12 | 新規 | レート取得・保存・検証 |
 | 16 | scheduler.gs | 517 | - | 既存 | トリガー管理+スケジュール |
 | 17 | sheetsManager.gs | 1,038 | - | 既存 | スプレッドシート読み書き |
@@ -78,7 +79,7 @@ GASプロジェクトの全20ファイル（アルファベット順 = GAS読み
 | やりたいこと | 対象ファイル | 備考 |
 |-------------|-------------|------|
 | 禁止表現を追加・修正したい | postProcessor.gs | replaceProhibitedPhrases_ |
-| 新しい後処理ルールを追加したい | postProcessor.gs | 既存チェーンへの影響を検証してから追加 |
+| 新しい後処理ルールを追加したい | postProcessor.gs | applyPostProcessingChain_内に追加するだけでOK（★v8.8共通関数化） |
 | ファクトチェックの判定ルールを調整したい | factCheck.gs | factCheckPost_のL1/L2判定ルール |
 | 自動修正のロジックを改善したい | factCheck.gs | autoFixPost_ |
 | レート取得元を変更・追加したい | rateManager.gs | fetchLatestRates_ |
@@ -90,7 +91,8 @@ GASプロジェクトの全20ファイル（アルファベット順 = GAS読み
 | 仮説3要素構造を改善したい | learningManager.gs | extractPostInsights_ + parseHypothesisDetails_ |
 | Phase 5（プロンプト自動進化）の実装 | learningManager.gs | 既存の学び・仮説機能を拡張 |
 | 投稿タイプを追加したい | config.gs + promptBuilder.gs | POST_TYPES + buildPrompt_ |
-| 政策金利を更新したい | config.gs | POLICY_RATES（1箇所のみ） |
+| 政策金利を更新したい | スプレッドシート「確定データ」シート | コード修正不要。セルを書き換えるだけ（★v8.7） |
+| 要人の交代 | スプレッドシート「確定データ」シート | コード修正不要。セルを書き換えるだけ（★v8.7） |
 | テスト関数を追加したい | testFunctions.gs | 末尾に追加 |
 | generatePostのフロー自体を変えたい | geminiApi.gs | 核ファイル（慎重に） |
 
@@ -114,7 +116,7 @@ GASプロジェクトの全20ファイル（アルファベット順 = GAS読み
 ## 4. 依存関係図（最終版）
 
 ```
-generatePost（geminiApi.gs - 567行 - 司令塔）
+generatePost（geminiApi.gs - 537行 - 司令塔 ★v8.8: 後処理共通化+タイムガード）
   │
   ├── レート取得
   │     fetchLatestRates_（rateManager.gs）
@@ -138,7 +140,8 @@ generatePost（geminiApi.gs - 567行 - 司令塔）
   │       ├── getQualityFeedback_（promptBuilder.gs）
   │       ├── getHypothesisContext_（promptBuilder.gs）
   │       ├── buildFormatRules_（promptBuilder.gs）
-  │       ├── getPolicyRatesText_（config.gs）
+  │       ├── getPolicyRatesText_（config.gs）★v8.7: 確定データシートから読み取り
+  │       ├── getWorldLeadersText_（config.gs）★v8.7新設: 要人リスト
   │       └── getCharacterPrompt()（sheetsManager.gs）
   │
   ├── テキスト生成

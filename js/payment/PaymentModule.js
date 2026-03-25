@@ -344,12 +344,27 @@ class PaymentModule {
 
     /**
      * PAY.JP Checkoutのグローバルコールバックを登録
-     * index.htmlの data-on-created="payjpTokenCallback" と対応
+     * data-on-created と formのsubmitイベント両方で対応
      */
     #setupCheckoutCallback() {
+        // data-on-created コールバック
         window.payjpTokenCallback = async (token) => {
+            console.log('PaymentModule: payjpTokenCallback呼ばれた', token);
             await this.#handlePayjpToken(token);
         };
+
+        // formのsubmitイベントからもトークンを取得（フォールバック）
+        document.addEventListener('submit', async (e) => {
+            const form = document.getElementById('payjp-hidden-form');
+            if (!form || e.target !== form) return;
+            e.preventDefault();
+
+            const tokenInput = form.querySelector('input[name="payjp-token"]');
+            if (!tokenInput) return;
+
+            console.log('PaymentModule: formSubmitからトークン取得', tokenInput.value);
+            await this.#handlePayjpToken({ id: tokenInput.value });
+        });
     }
 
     /**
