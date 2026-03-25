@@ -2401,7 +2401,9 @@ function handlePlanBtnClick() {
     if (plan === 'free') {
         showUpgradeModal('manual');
     } else {
-        window.PaymentModule?.openCustomerPortal();
+        if (confirm('サブスクリプションを解約しますか？\n解約後もご利用期間終了までProプランをお使いいただけます。')) {
+            window.PaymentModule?.cancelSubscription();
+        }
     }
 }
 
