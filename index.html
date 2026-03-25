@@ -3577,5 +3577,18 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 </div>
 
+<!-- PAY.JP Checkout（隠しボタン・PaymentModuleから呼び出す） -->
+<div style="display:none">
+    <script type="text/javascript"
+        src="https://checkout.pay.jp/"
+        class="payjp-button"
+        data-key="pk_test_bfa24c122f461caf9c9edf7b"
+        data-on-created="payjpTokenCallback"
+        data-lang="ja"
+        data-submit-text="決済する"
+        data-name="Trading Complete">
+    </script>
+</div>
+
 </body>
 </html>
