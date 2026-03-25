@@ -197,6 +197,13 @@ function regeneratePostImage(postText, postType, previousArchetype) {
     
     // 透かし合成
     var finalBlob = compositeWithWatermark_(imageBlob);
+    // ★v8.6: 透かし合成の成功/失敗を明確にログ出力
+    if (finalBlob !== imageBlob) {
+      var finalSizeKB = Math.round(finalBlob.getBytes().length / 1024);
+      console.log('✅ 再生成: 透かし合成完了 (' + finalSizeKB + 'KB)');
+    } else {
+      console.log('⚠️ 再生成: 透かし合成スキップまたは失敗（透かしなしの画像を使用）');
+    }
     
     return {
       blob: finalBlob,
@@ -615,7 +622,7 @@ function isImageGenerationType(postType) {
 function compositeWithWatermark_(imageBlob) {
   var watermarkId = PropertiesService.getScriptProperties().getProperty('WATERMARK_IMAGE_ID');
   if (!watermarkId) {
-    Logger.log('⚠️ WATERMARK_IMAGE_ID 未設定 → 透かしなしで続行');
+    console.log('⚠️ WATERMARK_IMAGE_ID 未設定 → 透かしなしで続行');
     return imageBlob;
   }
   
@@ -659,7 +666,7 @@ function compositeWithWatermark_(imageBlob) {
     );
     
     if (presResponse.getResponseCode() !== 200) {
-      Logger.log('⚠️ プレゼンテーション取得失敗: ' + presResponse.getResponseCode());
+      console.log('⚠️ プレゼンテーション取得失敗: ' + presResponse.getResponseCode());
       DriveApp.getFileById(presId).setTrashed(true);
       return imageBlob;
     }
@@ -677,7 +684,7 @@ function compositeWithWatermark_(imageBlob) {
     });
     
     if (response.getResponseCode() !== 200) {
-      Logger.log('⚠️ サムネイルAPI失敗: ' + response.getResponseCode() + ' ' + response.getContentText().substring(0, 200));
+      console.log('⚠️ サムネイルAPI失敗: ' + response.getResponseCode() + ' ' + response.getContentText().substring(0, 200));
       DriveApp.getFileById(presId).setTrashed(true);
       return imageBlob;
     }
@@ -688,7 +695,7 @@ function compositeWithWatermark_(imageBlob) {
     finalBlob.setName('post_image_watermarked.png');
     
     var sizeKB = Math.round(finalBlob.getBytes().length / 1024);
-    Logger.log('✅ 透かし合成完了: ' + sizeKB + 'KB');
+    console.log('✅ 透かし合成完了: ' + sizeKB + 'KB');
     
     // 7. クリーンアップ
     DriveApp.getFileById(presId).setTrashed(true);
@@ -696,8 +703,8 @@ function compositeWithWatermark_(imageBlob) {
     return finalBlob;
     
   } catch (e) {
-    Logger.log('❌ 透かし合成エラー: ' + e.message);
-    Logger.log('→ 透かしなしで続行');
+    console.log('❌ 透かし合成エラー: ' + e.message);
+    console.log('→ 透かしなしで続行');
     return imageBlob;
   }
 }

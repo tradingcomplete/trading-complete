@@ -14,9 +14,11 @@ function formatDate(date, format) {
 
 // ===== ランダム遅延（Bot判定回避） =====
 function addRandomDelay() {
-  var minMs = RANDOM_DELAY_MIN * 60 * 1000;
-  var maxMs = RANDOM_DELAY_MAX * 60 * 1000;
-  var delayMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  // ★v8.0: 投稿処理のsleepは最大60秒に制限（6分制限タイムアウト対策）
+  // config.gsのRANDOM_DELAY_MAXはscheduler.gsのトリガーゆらぎ（分）にも使われるため、
+  // ここでは独立した上限を設定する
+  var maxDelaySec = 60; // 投稿処理の遅延上限（秒）
+  var delayMs = Math.floor(Math.random() * (maxDelaySec * 1000 + 1));
   var delaySec = Math.round(delayMs / 1000);
   
   if (delaySec > 0) {

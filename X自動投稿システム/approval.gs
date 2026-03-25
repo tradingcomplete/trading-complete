@@ -227,45 +227,51 @@ function sendDraftNotification(drafts) {
       if (factCheckJson) {
         var fc = JSON.parse(factCheckJson);
         
-        html += '<div style="margin:10px 0; padding:10px; background:#f0f4ff; border-left:4px solid #1a73e8; border-radius:4px; font-size:0.9rem;">';
-        html += '<div style="font-weight:bold; margin-bottom:6px;">&#x1F4CB; ファクトチェック: ' + emojiToHtmlEntity_(fc.summary) + '</div>';
+        var fcAllOk = fc.summary && fc.summary.indexOf('✅') !== -1 && !fc.wasFixed;
+        var fcHasIssue = fc.summary && (fc.summary.indexOf('❌') !== -1 || fc.summary.indexOf('⚠') !== -1);
         
-        if (fc.details) {
-          var fcDetails = fc.details
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\n/g, '<br>');
-          fcDetails = emojiToHtmlEntity_(fcDetails);
-          html += '<div style="margin:4px 0; line-height:1.6;">' + fcDetails + '</div>';
-        }
-        
-        if (fc.wasFixed) {
-          html += '<div style="margin-top:8px; padding:6px; background:#fff8e1; border-radius:4px;">';
-          html += '<div style="font-weight:bold;">&#x1F527; 自動修正が適用されました</div>';
-          if (fc.fixLog) {
+        if (fcAllOk) {
+          // パターン1: 全て正確 → 緑の1行
+          html += '<div style="margin:10px 0; padding:8px 12px; background:#e8f5e9; border-left:4px solid #00c853; border-radius:4px; font-size:0.9rem; color:#2e7d32;">';
+          html += '&#x2705; ファクトチェック: 全て正確';
+          html += '</div>';
+        } else if (fcHasIssue || fc.wasFixed) {
+          // パターン2/3: 問題あり / 自動修正あり → オレンジ枠で問題項目のみ
+          html += '<div style="margin:10px 0; padding:10px; background:#fff8e1; border-left:4px solid #ff9800; border-radius:4px; font-size:0.9rem;">';
+          html += '<div style="font-weight:bold; margin-bottom:6px; color:#e65100;">&#x26A0;&#xFE0F; ファクトチェック: ' + emojiToHtmlEntity_(fc.summary) + '</div>';
+          
+          // ❌/⚠️の項目のみ抽出して表示（✅は省略）
+          if (fc.details) {
+            var issueLines = fc.details.split('\n').filter(function(line) {
+              return line.indexOf('❌') !== -1 || line.indexOf('⚠') !== -1;
+            });
+            if (issueLines.length > 0) {
+              var issueHtml = issueLines.join('\n')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+              issueHtml = emojiToHtmlEntity_(issueHtml);
+              html += '<div style="margin:4px 0; line-height:1.8;">' + issueHtml + '</div>';
+            }
+          }
+          
+          // 自動修正あり → 修正内容を簡潔に表示（修正前テキストは廃止）
+          if (fc.wasFixed && fc.fixLog) {
             var fixLogHtml = fc.fixLog
               .replace(/&/g, '&amp;')
               .replace(/</g, '&lt;')
               .replace(/>/g, '&gt;')
               .replace(/\n/g, '<br>');
             fixLogHtml = emojiToHtmlEntity_(fixLogHtml);
-            html += '<div style="margin:4px 0; line-height:1.6;">' + fixLogHtml + '</div>';
+            html += '<div style="margin-top:6px; padding:6px; background:#fff3e0; border-radius:4px;">';
+            html += '<span style="font-weight:bold;">&#x1F527; 自動修正済み</span><br>';
+            html += '<div style="margin-top:4px; line-height:1.6;">' + fixLogHtml + '</div>';
+            html += '</div>';
           }
-          if (fc.originalText) {
-            html += '<div style="margin-top:6px; font-weight:bold;">【修正前テキスト（参考）】</div>';
-            var origHtml = fc.originalText.substring(0, 300)
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/\n/g, '<br>');
-            origHtml = emojiToHtmlEntity_(origHtml);
-            html += '<div style="margin:4px 0; color:#666; line-height:1.6;">' + origHtml + '</div>';
-          }
+          
           html += '</div>';
         }
-        
-        html += '</div>';
         
         // 使用後に削除
         props.deleteProperty('LAST_FACT_CHECK_' + draft.postType);
@@ -316,8 +322,12 @@ function sendDraftNotification(drafts) {
   }
   
   // HTML形式で送信（絵文字が正しく表示される）
+  var recipientEmail = Session.getActiveUser().getEmail();
+  console.log('📧 送信先アドレス: [' + recipientEmail + ']');
+  console.log('📧 件名: ' + subject);
+  console.log('📧 HTML長: ' + html.length + '文字');
   GmailApp.sendEmail(
-    Session.getActiveUser().getEmail(),
+    recipientEmail,
     subject,
     plainBody,
     { htmlBody: html }

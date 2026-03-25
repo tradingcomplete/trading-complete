@@ -19,6 +19,7 @@ function onOpen() {
     
     // --- 経済指標 ---
     .addItem('経済指標をインポート（貼り付け→変換）', 'importFromRawSheet')
+    .addItem('📊 指標結果を取得（I列が空の指標を更新）', 'refreshTodayIndicatorResults')
     .addSeparator()
     
     // --- レート ---
@@ -31,8 +32,11 @@ function onOpen() {
     // --- モード切替 ---
     .addItem('現在のモード確認', 'showCurrentMode')
     .addItem('🔄 手動モード（承認して投稿）', 'setModeManual')
-    .addItem('🔄 検証モード（エラーのみ通知）', 'setModeValidate')
     .addItem('🔄 自動モード（即投稿）', 'setModeAuto')
+    .addSeparator()
+    
+    // --- セットアップ ---
+    .addItem('📋 確定データシート作成（金利+要人）', 'setupReferenceDataSheet')
     .addSeparator()
     
     // --- 危険 ---
@@ -91,25 +95,6 @@ function showCurrentMode() {
 function setModeManual() {
   setPostMode_('manual', '手動モード（Gmail承認して投稿）');
 }
-
-/**
- * 検証モードに切り替え（バリデーション通過で自動投稿、NGならメール通知）
- */
-function setModeValidate() {
-  var ui = SpreadsheetApp.getUi();
-  var result = ui.alert(
-    '🔄 検証モードに切り替え',
-    '検証モードでは生成→バリデーション通過で自動投稿されます。\nNGの場合のみGmailに通知が届きます。\nよろしいですか？',
-    ui.ButtonSet.YES_NO
-  );
-  
-  if (result === ui.Button.YES) {
-    setPostMode_('validate', '検証モード（エラーのみ通知）');
-  } else {
-    ui.alert('キャンセルしました。現在のモードのままです。');
-  }
-}
-
 
 /**
  * 自動モードに切り替え（即投稿）
@@ -176,7 +161,9 @@ function executePost(postType) {
 
     var postText = generated.text.trim();
     console.log('生成完了（' + postText.length + '文字）');
-
+    if (generated.imageBlob) {
+      console.log('画像選択済み: ' + generated.imageName);
+    }
     console.log('');
 
     // === POST_MODEで分岐 ===
@@ -326,8 +313,8 @@ function handleValidateMode_(postType, postText, generated) {
 
   // ★ Phase 7: バリデーション後にAI画像を生成（通過/不通過共通）
   var imageResult = generateImageIfNeeded_(postType, postText);
-  var imageBlob = imageResult ? imageResult.blob : null;
-  var archetype = imageResult ? imageResult.archetype : '';
+  var imageBlob = imageResult ? imageResult.blob : (generated.imageBlob || null);
+  var archetype = imageResult ? imageResult.archetype : (generated.imageName || '');
 
   if (validation.passed) {
     console.log('✅ バリデーション通過 → 自動投稿します');
@@ -427,8 +414,8 @@ function handleAutoMode_(postType, postText, generated, startTime) {
 
   // ★ Phase 7: 市場系タイプならAI画像を生成
   var imageResult = generateImageIfNeeded_(postType, postText);
-  var imageBlob = imageResult ? imageResult.blob : null;
-  var archetype = imageResult ? imageResult.archetype : '';
+  var imageBlob = imageResult ? imageResult.blob : (generated.imageBlob || null);
+  var archetype = imageResult ? imageResult.archetype : (generated.imageName || '');
 
   // 画像付き or テキストのみで投稿
   var result = executePostToX_(postText, imageBlob);

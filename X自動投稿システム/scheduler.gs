@@ -13,53 +13,30 @@
 function scheduleTodayPosts() {
   console.log('=== 今日のトリガー設定 ===');
   
-  // レートキャッシュの日次集約（前日分をOHLCに圧縮）
+  // ★v8.6: 前日の投稿キャッシュをクリア（品質レビューの重複チェック用）
   try {
-    aggregateDailyRates();
+    clearTodayPostCache_();
   } catch (e) {
-    console.log('日次集約エラー（続行）: ' + e.message);
+    console.log('投稿キャッシュクリアエラー（続行）: ' + e.message);
   }
   
-  // レートサマリー更新（日次レート+キャッシュから高値安値を計算）
-  try {
-    updatePriceSummary();
-  } catch (e) {
-    console.log('サマリー更新エラー（続行）: ' + e.message);
-  }
-
-  // Phase 2: 月曜日のみ、先週のWEEKLY_HYPOTHESIS仮説を自動検証
-  try {
-    var todayForVerify = new Date();
-    if (todayForVerify.getDay() === 1) { // 1 = 月曜日
-      console.log('📊 月曜日: 先週の仮説を自動検証中...');
-      verifyWeeklyHypotheses_(); // geminiApi.gsに定義
-    }
-  } catch (e) {
-    console.log('仮説検証エラー（続行）: ' + e.message);
-  }
-
-  // Phase 4: 24時間以上前の投稿のエンゲージメントを自動収集
-  try {
-    collectAndSaveMetrics_(); // xApi.gsに定義
-  } catch (e) {
-    console.log('エンゲージメント収集エラー（続行）: ' + e.message);
-  }
+  // ★v8.6: トリガー設定を最優先に実行
+  // 重い処理（サマリー更新等）でタイムアウトしても、トリガーは設定済みで投稿は生成される
+  
+  // 古いトリガーを削除（保護対象以外）★v8.0: 指標トリガー設定より前に実行
+  cleanupPostTriggers_();
 
   // Phase 8: 平日のみ、今日の重要指標の30分前にINDICATOR投稿トリガーを設定
   try {
     var todayForIndicator = new Date();
     var dayForIndicator = todayForIndicator.getDay();
-    // 平日のみ（土日は指標発表なし）
     if (dayForIndicator >= 1 && dayForIndicator <= 5) {
       scheduleIndicatorTriggers_();
-      scheduleResultFetchTriggers_(); // ★v6.7: 発表後5分で結果取得
+      scheduleResultFetchTriggers_();
     }
   } catch (e) {
     console.log('指標連動トリガーエラー（続行）: ' + e.message);
   }
-
-  // 古いトリガーを削除（保護対象以外）
-  cleanupPostTriggers_();
   
   var schedule = getTodaySchedule();
   if (!schedule) {
@@ -114,12 +91,61 @@ function scheduleTodayPosts() {
   
   console.log('');
   console.log('トリガー設定完了: ' + triggersCreated + '/' + schedule.postCount + '件');
+  
+  console.log('=== 全トリガー設定完了 ===');
+}
+
+
+/**
+ * ★v8.6: 日次メンテナンス処理（重い処理を分離）
+ * 
+ * scheduleTodayPosts（5:00）とは別トリガー（5:15）で実行。
+ * タイムアウトしても投稿トリガーには影響なし。
+ * 
+ * initializeScheduler()で毎朝5:15のトリガーを設定済み。
+ */
+function scheduleDailyMaintenance() {
+  console.log('=== 日次メンテナンス処理 ===');
+  
+  // レートキャッシュの日次集約（前日分をOHLCに圧縮）
+  try {
+    aggregateDailyRates();
+  } catch (e) {
+    console.log('日次集約エラー（続行）: ' + e.message);
+  }
+  
+  // レートサマリー更新（日次レート+キャッシュから高値安値を計算）
+  try {
+    updatePriceSummary();
+  } catch (e) {
+    console.log('サマリー更新エラー（続行）: ' + e.message);
+  }
+
+  // Phase 2: 月曜日のみ、先週のWEEKLY_HYPOTHESIS仮説を自動検証
+  try {
+    var todayForVerify = new Date();
+    if (todayForVerify.getDay() === 1) {
+      console.log('📊 月曜日: 先週の仮説を自動検証中...');
+      verifyWeeklyHypotheses_();
+    }
+  } catch (e) {
+    console.log('仮説検証エラー（続行）: ' + e.message);
+  }
+
+  // Phase 4: 24時間以上前の投稿のエンゲージメントを自動収集
+  try {
+    collectAndSaveMetrics_();
+  } catch (e) {
+    console.log('エンゲージメント収集エラー（続行）: ' + e.message);
+  }
+  
+  console.log('=== メンテナンス完了 ===');
 }
 
 // ===== 投稿用トリガーだけ削除（スケジューラ・下書き処理は残す） =====
 function cleanupPostTriggers_() {
   var triggers = ScriptApp.getProjectTriggers();
-  var keepFunctions = ['scheduleTodayPosts', 'initializeScheduler', 'processApprovedDrafts', 'testFetchRates', 'scheduledFetchRates', 'onOpen'];
+  var keepFunctions = ['scheduleTodayPosts', 'scheduleDailyMaintenance', 'initializeScheduler', 'processApprovedDrafts', 'testFetchRates', 'scheduledFetchRates', 'onOpen'];
   var deleted = 0;
   
   for (var i = 0; i < triggers.length; i++) {
@@ -166,19 +192,28 @@ function padZero_(num) {
 
 // ===== 初期設定: 毎朝5:00にスケジューラを実行するトリガー =====
 function initializeScheduler() {
-  // 既存のscheduleTodayPostsとscheduledFetchRatesトリガーを削除
+  // 既存のscheduleTodayPostsとscheduledFetchRatesとscheduleDailyMaintenanceトリガーを削除
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
     var func = triggers[i].getHandlerFunction();
-    if (func === 'scheduleTodayPosts' || func === 'scheduledFetchRates') {
+    if (func === 'scheduleTodayPosts' || func === 'scheduledFetchRates' || func === 'scheduleDailyMaintenance') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
   
-  // 毎朝5:00にscheduleTodayPostsを実行
+  // 毎朝5:00にscheduleTodayPostsを実行（トリガー設定のみ。軽い）
   ScriptApp.newTrigger('scheduleTodayPosts')
     .timeBased()
     .atHour(5)
+    .everyDays(1)
+    .inTimezone('Asia/Tokyo')
+    .create();
+  
+  // ★v8.6: 毎朝5:15にscheduleDailyMaintenanceを実行（重い処理。別トリガーで分離）
+  ScriptApp.newTrigger('scheduleDailyMaintenance')
+    .timeBased()
+    .atHour(5)
+    .nearMinute(15)
     .everyDays(1)
     .inTimezone('Asia/Tokyo')
     .create();
@@ -190,7 +225,8 @@ function initializeScheduler() {
     .create();
   
   console.log('✅ スケジューラを初期化しました');
-  console.log('毎朝5:00に自動でトリガーが設定されます');
+  console.log('毎朝5:00に投稿トリガーが自動設定されます');
+  console.log('毎朝5:15に日次メンテナンス（サマリー更新等）が実行されます');
   console.log('1時間ごとにレートを自動取得します（Twelve Data API）');
   console.log('');
   
@@ -326,7 +362,7 @@ function scheduleResultFetchTriggers_() {
   var today = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd');
   var todayStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
 
-  // 今日の「高」「中」指標の発表時刻を収集（重複排除）
+  // 今日の「高」指標の発表時刻を収集（重複排除）★v8.0: 「中」はscheduledFetchRatesに委譲
   var triggerMinutes = {}; // "HH:MM" → true（重複防止）
   var triggerCount = 0;
 
@@ -338,7 +374,9 @@ function scheduleResultFetchTriggers_() {
     if (eventDateStr !== today) continue;
 
     var importance = String(data[i][6] || '').trim();
-    if (importance !== '高' && importance !== '中') continue;
+    // ★v8.0: 「高」のみに限定（トリガー数上限20件対策）
+    // 「中」の結果はscheduledFetchRates（1時間ごと）のリトライで取得される
+    if (importance !== '高') continue;
 
     // ★v6.8: B列はDate型対応
     var rawTime2 = data[i][1];
@@ -356,8 +394,8 @@ function scheduleResultFetchTriggers_() {
     if (!timeStr || timeStr === '0:00' || timeStr === '00:00') continue;
     if (isNaN(hour) || isNaN(minute)) continue;
 
-    // 発表時刻 + 5分
-    var fetchMinute = minute + 5;
+    // 発表時刻 + 10分（★v8.0: 5分だとGoogle検索に未反映の場合があるため拡大）
+    var fetchMinute = minute + 10;
     var fetchHour = hour;
     if (fetchMinute >= 60) {
       fetchMinute -= 60;
@@ -405,6 +443,7 @@ function scheduleIndicatorTriggers_() {
 
   var now = new Date();
   var today = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd');
+  var todayStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd'); // ★v8.0: Date作成用（ISO形式）
   var candidates = [];
 
   for (var i = 0; i < data.length; i++) {
@@ -445,7 +484,7 @@ function scheduleIndicatorTriggers_() {
     }
 
     // 30分前が既に過ぎていたらスキップ
-    var triggerTime = new Date(today + 'T' + padZero_(triggerHour) + ':' + padZero_(triggerMinute) + ':00');
+    var triggerTime = new Date(todayStr + 'T' + padZero_(triggerHour) + ':' + padZero_(triggerMinute) + ':00');
     if (triggerTime <= now) {
       var indicatorName = String(data[i][3]).trim();
       console.log('  スキップ（過去）: ' + timeStr + ' ' + indicatorName + '（30分前=' + padZero_(triggerHour) + ':' + padZero_(triggerMinute) + '）');
@@ -488,7 +527,7 @@ function scheduleIndicatorTriggers_() {
       actualMinute -= 60;
     }
 
-    var actualTriggerTime = new Date(today + 'T' + padZero_(actualHour) + ':' + padZero_(actualMinute) + ':00');
+    var actualTriggerTime = new Date(todayStr + 'T' + padZero_(actualHour) + ':' + padZero_(actualMinute) + ':00');
 
     // 過去の時刻は再チェック（ランダムゆらぎで超える場合は稀だが安全策）
     if (actualTriggerTime <= now) continue;

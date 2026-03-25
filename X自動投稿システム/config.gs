@@ -27,7 +27,7 @@ var MARKET_INDICATORS = [
   { key: 'nikkei', label: '日経225',       unit: '円',     decimals: 0, min: 20000, max: 80000 },
   { key: 'djia',   label: 'NYダウ',        unit: 'ドル',   decimals: 0, min: 20000, max: 60000 },
   { key: 'sp500',  label: 'S&P500',        unit: '',       decimals: 0, min: 3000,  max: 8000 },
-  { key: 'us10y',  label: '米10年債利回り', unit: '%',      decimals: 3, min: 1.0,   max: 7.0 },
+  { key: 'us10y',  label: '米10年債利回り', unit: '%',      decimals: 3, min: 10,    max: 70,   tnxScale: 0.1 },
   { key: 'vix',    label: 'VIX',           unit: '',       decimals: 2, min: 5,     max: 90 },
   // ゴールド: GOOGLEFINANCEが非対応のためAlpha Vantage（DAILY_COMMODITY_ASSETS）で取得
 ];
@@ -285,23 +285,23 @@ var POST_TYPES = {
 // ===== 曜日別スケジュール（1分単位 + Bot判定回避） =====
 var SCHEDULE = {
   1: { // 月曜
-    times: ['07:33', '09:18', '12:08', '17:22', '20:47', '22:13'],
+    times: ['07:28', '09:18', '12:08', '17:22', '20:47', '22:13'],
     types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
   },
   2: { // 火曜
-    times: ['07:48', '09:33', '12:14', '17:18', '20:53', '22:07'],
+    times: ['07:43', '09:33', '12:14', '17:18', '20:53', '22:07'],
     types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
   },
   3: { // 水曜
-    times: ['07:41', '09:11', '12:06', '17:28', '20:42', '22:18'],
+    times: ['07:35', '09:11', '12:06', '17:28', '20:42', '22:18'],
     types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
   },
   4: { // 木曜
-    times: ['07:56', '09:26', '12:19', '17:14', '20:56', '22:04'],
+    times: ['07:47', '09:26', '12:19', '17:14', '20:56', '22:04'],
     types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
   },
   5: { // 金曜
-    times: ['07:37', '09:38', '12:11', '17:24', '20:49', '22:11'],
+    times: ['07:22', '09:38', '12:11', '17:24', '20:49', '22:11'],
     types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
   },
   6: { // 土曜
@@ -316,10 +316,10 @@ var SCHEDULE = {
 
 // ===== ランダムゆらぎ（分） =====
 var RANDOM_DELAY_MIN = 0;
-var RANDOM_DELAY_MAX = 2; // ★v5.9.4: 5→2に短縮（6分制限タイムアウト対策。scheduler.gsのトリガーゆらぎと合わせて最大4分のランダム性を確保）
+var RANDOM_DELAY_MAX = 3; // ★v8.0: 2→3に拡大（ランダム性を確保しつつ6分制限内に収まる）
 
 // ===== Gemini API設定 =====
-var GEMINI_MODEL = 'gemini-2.0-flash';
+var GEMINI_MODEL = 'gemini-2.5-flash';
 var GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
 // ===== X API設定 =====
@@ -403,4 +403,155 @@ function testConfig() {
   console.log('投稿タイプ数: ' + Object.keys(POST_TYPES).length);
   console.log('POST_MODE: ' + POST_MODE);
   console.log('設定の読み込みテスト完了！');
+}
+
+// ===== 確定データ（スプレッドシート「確定データ」シートから読み取り） =====
+// ★v8.7: config.gsのPOLICY_RATESハードコード廃止 → スプレッドシートに一元化
+// 金利変更・要人交代時はスプレッドシートのセルを書き換えるだけでOK（コード修正不要）
+// 初回セットアップ: カスタムメニュー「確定データシート作成」を実行
+
+/**
+ * 「確定データ」シートから政策金利のテキストを取得する
+ * 呼び出し元: promptBuilder.gs / factCheck.gs（3箇所）
+ * @return {string} プロンプト注入用テキスト
+ */
+function getPolicyRatesText_() {
+  return getRefDataText_('金利');
+}
+
+/**
+ * 「確定データ」シートから要人リストのテキストを取得する
+ * 呼び出し元: promptBuilder.gs / factCheck.gs（3箇所）
+ * @return {string} プロンプト注入用テキスト
+ */
+function getWorldLeadersText_() {
+  return getRefDataText_('要人');
+}
+
+/**
+ * 「確定データ」シートから指定区分のデータを読み取ってテキスト化する
+ * @param {string} category - 区分名（'金利' or '要人'）
+ * @return {string} プロンプト注入用テキスト
+ */
+function getRefDataText_(category) {
+  try {
+    var keys = getApiKeys();
+    var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('確定データ');
+    
+    if (!sheet) {
+      console.log('⚠️ 確定データシートが見つかりません。カスタムメニュー「確定データシート作成」を実行してください');
+      return '';
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    var lines = '';
+    
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === category) {
+        var name = String(data[i][1]).trim();
+        var detail = String(data[i][2]).trim();
+        var note = String(data[i][3]).trim();
+        
+        if (name && detail) {
+          lines += '・' + name + ': ' + detail;
+          if (note) {
+            lines += '（' + note + '）';
+          }
+          lines += '\n';
+        }
+      }
+    }
+    
+    return lines;
+  } catch (e) {
+    console.log('⚠️ 確定データ読み取りエラー（' + category + '）: ' + e.message);
+    return '';
+  }
+}
+
+/**
+ * 「確定データ」シートを新規作成し、初期データを投入する
+ * カスタムメニューから1回だけ実行する
+ */
+function setupReferenceDataSheet() {
+  var keys = getApiKeys();
+  var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+  
+  // 既存シートがあれば確認
+  var existing = ss.getSheetByName('確定データ');
+  if (existing) {
+    var ui = SpreadsheetApp.getUi();
+    var response = ui.alert(
+      '確定データシートは既に存在します',
+      '上書きしますか？（既存データは全て消えます）',
+      ui.ButtonSet.YES_NO
+    );
+    if (response !== ui.Button.YES) {
+      console.log('キャンセルしました');
+      return;
+    }
+    ss.deleteSheet(existing);
+  }
+  
+  var sheet = ss.insertSheet('確定データ');
+  
+  // ヘッダー
+  var headers = ['区分', '名称', '詳細', '備考'];
+  sheet.getRange(1, 1, 1, 4).setValues([headers]);
+  
+  // 初期データ
+  var data = [
+    // 政策金利
+    ['金利', 'FRB（米国）',     '3.50-3.75%',    '2025年12月利下げ後据え置き中'],
+    ['金利', '日銀（日本）',     '0.75%',         '2025年12月利上げ。緩やかな引き締め路線'],
+    ['金利', 'ECB（ユーロ圏）',  '政策金利2.15%', '2025年6月利下げ完了後、据え置き中。2026年3月19日も据え置き決定'],
+    ['金利', 'BOE（英国）',     '3.75%',         '2025年に6回利下げ後、据え置き中。2026年3月20日も据え置き決定'],
+    ['金利', 'RBA（豪州）',     '4.10%',         '2026年3月17日に3.85%→4.10%へ利上げ。連続利上げ'],
+    // 要人: 米国
+    ['要人', 'ドナルド・トランプ',         '米国大統領（第47代）',     '2025年1月就任'],
+    ['要人', 'JD・ヴァンス',              '米国副大統領',            '2025年1月就任'],
+    ['要人', 'スコット・ベッセント',       '米国財務長官',            '2025年1月就任'],
+    ['要人', 'ジェローム・パウエル',       'FRB議長',                '2018年2月就任。任期2026年5月まで'],
+    // 要人: 日本
+    ['要人', '高市早苗',                  '日本国内閣総理大臣（第104代）', '2025年10月就任。初の女性首相'],
+    ['要人', '片山さつき',                '日本国財務大臣兼金融担当相', '2025年10月就任'],
+    ['要人', '茂木敏充',                  '日本国外務大臣',           '2025年10月就任'],
+    ['要人', '植田和男',                  '日銀総裁',                '2023年4月就任'],
+    // 要人: 欧州
+    ['要人', 'クリスティーヌ・ラガルド',   'ECB総裁',                '2019年11月就任'],
+    ['要人', 'アンドリュー・ベイリー',     'BOE総裁',                '2020年3月就任'],
+    // 要人: その他
+    ['要人', 'ミシェル・ブロック',         'RBA総裁',                '2023年9月就任'],
+    ['要人', '習近平',                    '中国国家主席',            '米中貿易摩擦・関税関連で頻出'],
+  ];
+  
+  sheet.getRange(2, 1, data.length, 4).setValues(data);
+  
+  // 書式設定
+  var headerRange = sheet.getRange(1, 1, 1, 4);
+  headerRange.setFontWeight('bold');
+  headerRange.setBackground('#4a86c8');
+  headerRange.setFontColor('white');
+  
+  // 列幅
+  sheet.setColumnWidth(1, 60);
+  sheet.setColumnWidth(2, 220);
+  sheet.setColumnWidth(3, 250);
+  sheet.setColumnWidth(4, 400);
+  
+  // 区分列の色分け
+  for (var i = 0; i < data.length; i++) {
+    var row = i + 2;
+    if (data[i][0] === '金利') {
+      sheet.getRange(row, 1).setBackground('#e8f5e9');
+    } else if (data[i][0] === '要人') {
+      sheet.getRange(row, 1).setBackground('#e3f2fd');
+    }
+  }
+  
+  sheet.getRange(1, 1).setNote('金利変更・要人交代時はこのシートを編集するだけでOK。コード修正不要。');
+  
+  console.log('✅ 確定データシートを作成しました（金利' + data.filter(function(r){ return r[0] === '金利'; }).length + '件 + 要人' + data.filter(function(r){ return r[0] === '要人'; }).length + '件）');
+  SpreadsheetApp.getUi().alert('確定データシートを作成しました');
 }

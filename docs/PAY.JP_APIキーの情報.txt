@@ -1,0 +1,11 @@
+APIキーの情報
+テスト秘密鍵
+sk_test_74438d44f68a3517256b5e74
+
+
+テスト公開鍵
+pk_test_bfa24c122f461caf9c9edf7b
+
+発信元トークン
+トークン
+whook_bca5c20e018f6e4e9eb52cd361

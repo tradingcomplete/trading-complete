@@ -1,21 +1,22 @@
 /**
  * @module PaymentModule
  * @description 決済・サブスクリプション管理モジュール
- * @version 1.0.0
- * @date 2026-03-08
+ * @version 2.0.0
+ * @date 2026-03-25
  * @important MODULES.md準拠
- * 
+ *
  * 【責務】
  * - 現在のプラン状態管理
  * - プラン制限チェック（トレード件数、クラウド同期、AI機能）
- * - Stripe Checkout起動
- * - Customer Portal起動
+ * - PAY.JP Checkout起動（トークン取得 → Edge Function呼び出し）
+ * - サブスクリプション解約（cancel-subscription呼び出し）
  * - サブスクリプション情報の取得・更新
- * 
+ *
  * 【依存関係】
  * - supabaseClient.js（必須）getSupabase()
  * - EventBus.js（必須）
- * 
+ * - PAY.JP Checkout.js（動的ロード）
+ *
  * 【EventBus】
  * - 発火: payment:initialized, payment:planChanged
  */
@@ -30,14 +31,26 @@ class PaymentModule {
     #initialized = false;
 
     // ================
-    // Static: Stripe Price IDs（テスト環境）
+    // Static: PAY.JP 公開鍵
     // 本番切替時にここを差替え
     // ================
-    static PRICE_IDS = {
-        pro_monthly: 'price_1T8MBRGRDglt4xkODaqhswBT',
-        pro_yearly: 'price_1T8MDKGRDglt4xkO4YnLbeiV',
-        premium_monthly: 'price_1T8MGTGRDglt4xkOWis6kg3p',   // 将来提供予定（UIで非表示）
-        premium_yearly: 'price_1T8MHrGRDglt4xkOLqvHG7K4',    // 将来提供予定（UIで非表示）
+    static PAYJP_PUBLIC_KEY = 'pk_test_bfa24c122f461caf9c9edf7b';
+
+    // ================
+    // Static: PAY.JP プランID
+    // 本番切替時にここを差替え
+    // ================
+    static PLAN_IDS = {
+        pro_monthly: 'pro_monthly',
+        pro_yearly: 'pro_yearly',
+    };
+
+    // ================
+    // Static: プラン表示情報（Checkout表示用）
+    // ================
+    static PLAN_INFO = {
+        pro_monthly: { name: 'Proプラン（月額）', amount: 1980 },
+        pro_yearly:  { name: 'Proプラン（年額）', amount: 19800 },
     };
 
     // ================
@@ -94,6 +107,9 @@ class PaymentModule {
 
             // サブスクリプション情報を取得
             await this.#fetchSubscription();
+
+            // PAY.JP Checkout.js を事前ロード
+            await this.#loadPayjpScript();
 
             this.#initialized = true;
             console.log('PaymentModule: 初期化完了', { plan: this.#currentPlan });
@@ -164,10 +180,10 @@ class PaymentModule {
     }
 
     /**
-     * Stripe Checkoutを開始
-     * @param {string} priceId - Stripe Price ID
+     * PAY.JP Checkoutを開始
+     * @param {string} planId - PAY.JP プランID（例: 'pro_monthly'）
      */
-    async startCheckout(priceId) {
+    async startCheckout(planId) {
         try {
             if (!this.#supabase) {
                 window.showToast?.('ログインが必要です', 'error');
@@ -180,6 +196,24 @@ class PaymentModule {
                 return;
             }
 
+            // PAY.JP Checkout.js が読み込まれているか確認
+            await this.#loadPayjpScript();
+
+            const planInfo = PaymentModule.PLAN_INFO[planId];
+            if (!planInfo) {
+                throw new Error('不明なプランIDです: ' + planId);
+            }
+
+            // PAY.JP Checkout モーダルを開いてトークンを取得
+            const token = await this.#openPayjpCheckout(planInfo);
+            if (!token) {
+                // ユーザーがキャンセルした場合は何もしない
+                return;
+            }
+
+            window.showToast?.('決済処理中...', 'info');
+
+            // トークン + プランID を Edge Function に送信
             const response = await fetch(
                 `${this.#supabase.supabaseUrl}/functions/v1/create-checkout-session`,
                 {
@@ -188,17 +222,19 @@ class PaymentModule {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${session.access_token}`,
                     },
-                    body: JSON.stringify({ priceId }),
+                    body: JSON.stringify({ token, planId }),
                 }
             );
 
             const data = await response.json();
 
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                throw new Error(data.error || 'Checkout作成に失敗しました');
+            if (data.error) {
+                throw new Error(data.error);
             }
+
+            // 決済成功 → プラン情報を再取得してUIに反映
+            await this.refreshSubscription();
+            window.showToast?.('Proプランへのアップグレードが完了しました！', 'success');
 
         } catch (error) {
             console.error('PaymentModule: Checkout error', error);
@@ -207,9 +243,10 @@ class PaymentModule {
     }
 
     /**
-     * Customer Portal（プラン管理画面）を開く
+     * サブスクリプションを解約する
+     * （期間終了時に自動解約。即時解約ではない）
      */
-    async openCustomerPortal() {
+    async cancelSubscription() {
         try {
             if (!this.#supabase) {
                 window.showToast?.('ログインが必要です', 'error');
@@ -223,7 +260,7 @@ class PaymentModule {
             }
 
             const response = await fetch(
-                `${this.#supabase.supabaseUrl}/functions/v1/customer-portal`,
+                `${this.#supabase.supabaseUrl}/functions/v1/cancel-subscription`,
                 {
                     method: 'POST',
                     headers: {
@@ -235,15 +272,15 @@ class PaymentModule {
 
             const data = await response.json();
 
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                throw new Error(data.error || 'Portal作成に失敗しました');
+            if (data.error) {
+                throw new Error(data.error);
             }
 
+            window.showToast?.('解約手続きが完了しました。ご利用期間終了までProプランをお使いいただけます。', 'success');
+
         } catch (error) {
-            console.error('PaymentModule: Portal error', error);
-            window.showToast?.('プラン管理画面を開けませんでした', 'error');
+            console.error('PaymentModule: cancelSubscription error', error);
+            window.showToast?.('解約処理でエラーが発生しました', 'error');
         }
     }
 
@@ -281,6 +318,52 @@ class PaymentModule {
     // ================
     // Private Methods
     // ================
+
+    /**
+     * PAY.JP Checkout.js を動的ロード
+     */
+    async #loadPayjpScript() {
+        if (window.Payjp) return;
+
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.pay.jp/';
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('PAY.JP スクリプトの読み込みに失敗しました'));
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * PAY.JP Checkout モーダルを開いてトークンを取得
+     * @param {{ name: string, amount: number }} planInfo
+     * @returns {Promise<string|null>} トークンID または null（キャンセル時）
+     */
+    #openPayjpCheckout(planInfo) {
+        return new Promise((resolve) => {
+            const handler = window.Payjp.Checkout.configure({
+                key: PaymentModule.PAYJP_PUBLIC_KEY,
+                callback: function(response) {
+                    if (response.error) {
+                        console.error('PaymentModule: PAY.JP token error', response.error);
+                        resolve(null);
+                        return;
+                    }
+                    resolve(response.id);
+                },
+            });
+
+            handler.open({
+                name: 'Trading Complete',
+                description: planInfo.name,
+                amount: planInfo.amount,
+                currency: 'jpy',
+            });
+
+            // モーダルが閉じられた（キャンセル）場合の検知
+            window.addEventListener('payjp:close', () => resolve(null), { once: true });
+        });
+    }
 
     /**
      * subscriptionsテーブルからサブスクリプション情報を取得
