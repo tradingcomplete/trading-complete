@@ -344,26 +344,24 @@ class PaymentModule {
 
     /**
      * PAY.JP Checkoutのグローバルコールバックを登録
-     * data-on-created と formのsubmitイベント両方で対応
+     * PAY.JPはpostMessageでトークンを送信するため、messageイベントで受け取る
      */
     #setupCheckoutCallback() {
-        // data-on-created コールバック
-        window.payjpTokenCallback = async (token) => {
-            console.log('PaymentModule: payjpTokenCallback呼ばれた', token);
-            await this.#handlePayjpToken(token);
-        };
+        window.addEventListener('message', async (e) => {
+            if (e.origin !== 'https://checkout.pay.jp') return;
 
-        // formのsubmitイベントからもトークンを取得（フォールバック）
-        document.addEventListener('submit', async (e) => {
-            const form = document.getElementById('payjp-hidden-form');
-            if (!form || e.target !== form) return;
-            e.preventDefault();
+            let data;
+            try {
+                data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+            } catch {
+                return;
+            }
 
-            const tokenInput = form.querySelector('input[name="payjp-token"]');
-            if (!tokenInput) return;
+            if (data.action !== 'applyResponse') return;
+            if (!data.response || !data.response.id) return;
 
-            console.log('PaymentModule: formSubmitからトークン取得', tokenInput.value);
-            await this.#handlePayjpToken({ id: tokenInput.value });
+            console.log('PaymentModule: postMessageからトークン取得', data.response.id);
+            await this.#handlePayjpToken({ id: data.response.id });
         });
     }
 
