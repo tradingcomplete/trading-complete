@@ -300,7 +300,7 @@ class PaymentModule {
      */
     #waitForPayjpButton(timeoutMs) {
         return new Promise((resolve) => {
-            const selector = '.payjp_checkout_box button, .payjp_checkout_box input[type="button"]';
+            const selector = '#payjp_checkout_box button, #payjp_checkout_box input[type="button"]';
 
             // すでに存在する場合は即返す
             const existing = document.querySelector(selector);
