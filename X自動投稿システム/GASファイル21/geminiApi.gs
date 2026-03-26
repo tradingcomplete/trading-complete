@@ -29,6 +29,7 @@
  *   - API失敗時にレートキャッシュの最新値をフォールバック取得（rates=null回避）
  *   - buildPrompt_に直近レート（小数3桁）を常に注入（サマリーとの混同防止）
  *   - 「数値使うな」警告をキャッシュ有無で分岐（矛盾指示の解消）
+ * ★ v8.8.1: リトライパターン共通化（executeRetry_で4つのリトライを統合）
  */
 
 // ===== メイン: 投稿テキスト生成 =====
@@ -109,6 +110,16 @@ function generatePost(postType, context, cachedRates) {
     console.log('✂️ 700文字ハードカット: ' + bodyForCap.length + '文字→' + cutBody.trim().length + '文字');
   }
   
+  // ★v8.8.1: リトライ共通パラメータ（4つのリトライで共有）
+  var retryBase = {
+    apiKey: keys.GEMINI_API_KEY,
+    postType: postType,
+    rates: rates,
+    startTime: startTime,
+    timeLimitSec: TIME_LIMIT_SEC,
+    tcAllowedInPost: tcAllowedInPost
+  };
+  
   // ★v5.9.4: 🔥主役ペアのバリデーション（市場系投稿のみ）
   // 通貨強弱で算出した主役ペアが本文に含まれていなければリトライ
   // ★v8.8: INDICATORを除外（指標の通貨ペアが主役であるべきで、通貨強弱の主役とは一致しないことが多い）
@@ -124,35 +135,23 @@ function generatePost(postType, context, cachedRates) {
         if (bodyOnly.indexOf(hotSymbol) === -1 && bodyOnly.indexOf(hotJpName) === -1) {
           console.log('⚠️ 🔥主役ペア「' + hotJpName + '」が本文に未含。リトライ...');
           
-          // ★v8.8: 経過時間チェック（4分超過でリトライスキップ）
-          var elapsed1 = (new Date() - startTime) / 1000;
-          if (elapsed1 > TIME_LIMIT_SEC) {
-            console.log('⏱️ 経過' + Math.round(elapsed1) + '秒 → 主役ペアリトライをスキップ（時間制限）');
-          } else {
-          var retryPrompt = '以下の投稿を少し調整してください。\n\n';
-          retryPrompt += '今日一番動いている「' + hotSymbol + '（' + hotJpName + '）」にも触れてほしいです。\n';
-          retryPrompt += '文章の自然さ・口調・フォーマットはそのまま維持してください。\n';
-          retryPrompt += '無理に全体を書き換えず、自然に「' + hotJpName + '」を組み込む程度でOK。\n\n';
-          retryPrompt += '【元の投稿】\n' + cleanedText;
+          var hotPrompt = '以下の投稿を少し調整してください。\n\n';
+          hotPrompt += '今日一番動いている「' + hotSymbol + '（' + hotJpName + '）」にも触れてほしいです。\n';
+          hotPrompt += '文章の自然さ・口調・フォーマットはそのまま維持してください。\n';
+          hotPrompt += '無理に全体を書き換えず、自然に「' + hotJpName + '」を組み込む程度でOK。\n\n';
+          hotPrompt += '【元の投稿】\n' + cleanedText;
           
-          var retryResult = callGemini_(retryPrompt, keys.GEMINI_API_KEY, true);
-          if (retryResult && retryResult.text) {
-            var retryText = applyPostProcessingChain_(retryResult.text, postType, rates);
-          // ★v7.6: TC言及除去をリトライにも適用
-          if (tcAllowedInPost.indexOf(postType) === -1) {
-            retryText = removeTCMention_(retryText);
-          }
-            
-            // リトライ版に主役が含まれているか最終確認
-            var retryBody = retryText.split(/\n\n#/)[0];
-            if (retryBody.indexOf(hotSymbol) !== -1 || retryBody.indexOf(hotJpName) !== -1) {
-              cleanedText = retryText;
-              console.log('✅ リトライ成功: 🔥主役「' + hotJpName + '」を反映');
-            } else {
-              console.log('⚠️ リトライでも主役未含。元テキストを使用');
+          var hotResult = executeRetry_({
+            name: '🔥主役ペア「' + hotJpName + '」',
+            prompt: hotPrompt,
+            useGrounding: true,
+            applyTCRemoval: true,
+            verifyFn: function(retryText) {
+              var retryBody = retryText.split(/\n\n#/)[0];
+              return retryBody.indexOf(hotSymbol) !== -1 || retryBody.indexOf(hotJpName) !== -1;
             }
-          }
-          } // ★v8.8: 時間チェックのelse閉じ
+          }, retryBase);
+          if (hotResult) cleanedText = hotResult;
         } else {
           console.log('✅ 🔥主役ペア「' + hotJpName + '」確認OK');
         }
@@ -174,38 +173,26 @@ function generatePost(postType, context, cachedRates) {
       if (hasRiskOffYenSell) {
         console.log('⚠️ リスクセンチメント誤記を検出（リスクオフ+円売り）。リトライ...');
         
-        // ★v8.8: 経過時間チェック
-        var elapsed2 = (new Date() - startTime) / 1000;
-        if (elapsed2 > TIME_LIMIT_SEC) {
-          console.log('⏱️ 経過' + Math.round(elapsed2) + '秒 → リスクセンチメントリトライをスキップ（時間制限）');
-        } else {
-        var riskRetryPrompt = '以下の投稿に重大な誤りがあります。修正してください。\n\n';
-        riskRetryPrompt += '【絶対禁止ルール】\n';
-        riskRetryPrompt += 'リスクオフ（地政学リスク・株安）= 円高方向（円が買われる）\n';
-        riskRetryPrompt += '「リスクオフで円売り」「リスク回避で円売り」は完全に間違い。必ず削除または修正すること。\n\n';
-        riskRetryPrompt += '口調・フォーマット・絵文字はそのまま維持。リスクセンチメントの方向性だけ修正。\n\n';
-        riskRetryPrompt += '【修正前の投稿】\n' + cleanedText;
+        var riskPrompt = '以下の投稿に重大な誤りがあります。修正してください。\n\n';
+        riskPrompt += '【絶対禁止ルール】\n';
+        riskPrompt += 'リスクオフ（地政学リスク・株安）= 円高方向（円が買われる）\n';
+        riskPrompt += '「リスクオフで円売り」「リスク回避で円売り」は完全に間違い。必ず削除または修正すること。\n\n';
+        riskPrompt += '口調・フォーマット・絵文字はそのまま維持。リスクセンチメントの方向性だけ修正。\n\n';
+        riskPrompt += '【修正前の投稿】\n' + cleanedText;
         
-        var riskRetryResult = callGemini_(riskRetryPrompt, keys.GEMINI_API_KEY, true);
-        if (riskRetryResult && riskRetryResult.text) {
-          var riskRetryText = applyPostProcessingChain_(riskRetryResult.text, postType, rates);
-          // ★v7.6: TC言及除去をリトライにも適用
-          if (tcAllowedInPost.indexOf(postType) === -1) {
-            riskRetryText = removeTCMention_(riskRetryText);
+        var riskResult = executeRetry_({
+          name: 'リスクセンチメント',
+          prompt: riskPrompt,
+          useGrounding: true,
+          applyTCRemoval: true,
+          verifyFn: function(retryText) {
+            var retryBody = retryText.split(/\n\n#/)[0];
+            var stillHasError = (retryBody.indexOf('リスクオフ') !== -1 || retryBody.indexOf('リスク回避') !== -1)
+                             && retryBody.indexOf('円売り') !== -1;
+            return !stillHasError;
           }
-          
-          // リトライ後も誤記が残っていないか確認
-          var riskRetryBody = riskRetryText.split(/\n\n#/)[0];
-          var stillHasError = (riskRetryBody.indexOf('リスクオフ') !== -1 || riskRetryBody.indexOf('リスク回避') !== -1)
-                           && riskRetryBody.indexOf('円売り') !== -1;
-          if (!stillHasError) {
-            cleanedText = riskRetryText;
-            console.log('✅ リスクセンチメント修正成功');
-          } else {
-            console.log('⚠️ リスクセンチメント修正失敗。元テキストを使用（要手動確認）');
-          }
-        }
-        } // ★v8.8: 時間チェックのelse閉じ
+        }, retryBase);
+        if (riskResult) cleanedText = riskResult;
       }
     } catch (riskErr) {
       console.log('⚠️ リスクセンチメントチェックエラー（投稿には影響なし）: ' + riskErr.message);
@@ -214,60 +201,34 @@ function generatePost(postType, context, cachedRates) {
 
   // ★v6.0.2: 絵文字最低3個のバリデーション（全投稿タイプ共通）
   // プロンプトで指示しても絵文字0〜2個の投稿が生成されるケースがあるためリトライで補完
+  var emojiList = ['\u2615', '\uD83D\uDCD5', '\uD83D\uDCDD', '\uD83D\uDCCB', '\uD83D\uDCA1', '\u26A0\uFE0F', '\u2705'];
+  // ☕=\u2615, 📕=\uD83D\uDCD5, 📝=\uD83D\uDCDD, 📋=\uD83D\uDCCB, 💡=\uD83D\uDCA1, ⚠️=\u26A0\uFE0F, ✅=\u2705
   try {
-    var bodyForEmojiCheck = cleanedText.split(/\n\n#/)[0]; // ハッシュタグ前の本文
-    
-    // サロゲートペア対応: indexOf で各絵文字の出現回数をカウント
-    var emojiList = ['\u2615', '\uD83D\uDCD5', '\uD83D\uDCDD', '\uD83D\uDCCB', '\uD83D\uDCA1', '\u26A0\uFE0F', '\u2705'];
-    // ☕=\u2615, 📕=\uD83D\uDCD5, 📝=\uD83D\uDCDD, 📋=\uD83D\uDCCB, 💡=\uD83D\uDCA1, ⚠️=\u26A0\uFE0F, ✅=\u2705
-    var currentEmojiCount = 0;
-    for (var ei = 0; ei < emojiList.length; ei++) {
-      var searchIdx = 0;
-      while ((searchIdx = bodyForEmojiCheck.indexOf(emojiList[ei], searchIdx)) !== -1) {
-        currentEmojiCount++;
-        searchIdx += emojiList[ei].length;
-      }
-    }
+    var bodyForEmojiCheck = cleanedText.split(/\n\n#/)[0];
+    var currentEmojiCount = countEmojis_(bodyForEmojiCheck, emojiList);
     
     if (currentEmojiCount < 3) {
       console.log('⚠️ 絵文字が' + currentEmojiCount + '個（最低3個必要）。リトライ...');
       
-      // ★v8.8: 経過時間チェック
-      var elapsed3 = (new Date() - startTime) / 1000;
-      if (elapsed3 > TIME_LIMIT_SEC) {
-        console.log('⏱️ 経過' + Math.round(elapsed3) + '秒 → 絵文字リトライをスキップ（時間制限）');
-      } else {
-      var emojiRetryPrompt = '以下の投稿を、ノート形式に調整してください。\n\n';
-      emojiRetryPrompt += '【ルール】\n';
-      emojiRetryPrompt += '・絵文字（☕📕📝📋💡⚠️✅）を使って3〜4ブロックに区切ること。\n';
-      emojiRetryPrompt += '・各ブロック: 絵文字+事実（1行）→分析（→1つだけ）の構造。\n';
-      emojiRetryPrompt += '・内容・口調・文字数はそのまま維持。構造だけ変える。\n';
-      emojiRetryPrompt += '・最後は絵文字なし・→なしの感想で締める。\n\n';
-      emojiRetryPrompt += '【元の投稿】\n' + cleanedText;
+      var emojiPrompt = '以下の投稿を、ノート形式に調整してください。\n\n';
+      emojiPrompt += '【ルール】\n';
+      emojiPrompt += '・絵文字（☕📕📝📋💡⚠️✅）を使って3〜4ブロックに区切ること。\n';
+      emojiPrompt += '・各ブロック: 絵文字+事実（1行）→分析（→1つだけ）の構造。\n';
+      emojiPrompt += '・内容・口調・文字数はそのまま維持。構造だけ変える。\n';
+      emojiPrompt += '・最後は絵文字なし・→なしの感想で締める。\n\n';
+      emojiPrompt += '【元の投稿】\n' + cleanedText;
       
-      var emojiRetryResult = callGemini_(emojiRetryPrompt, keys.GEMINI_API_KEY, false);
-      if (emojiRetryResult && emojiRetryResult.text) {
-        var emojiRetryText = applyPostProcessingChain_(emojiRetryResult.text, postType, rates);
-        
-        // リトライ版の絵文字数を確認（同じ方法でカウント）
-        var retryBodyEmoji = emojiRetryText.split(/\n\n#/)[0];
-        var retryEmojiCount = 0;
-        for (var rei = 0; rei < emojiList.length; rei++) {
-          var rSearchIdx = 0;
-          while ((rSearchIdx = retryBodyEmoji.indexOf(emojiList[rei], rSearchIdx)) !== -1) {
-            retryEmojiCount++;
-            rSearchIdx += emojiList[rei].length;
-          }
+      var emojiResult = executeRetry_({
+        name: '絵文字',
+        prompt: emojiPrompt,
+        useGrounding: false,
+        applyTCRemoval: false,
+        verifyFn: function(retryText) {
+          var retryBody = retryText.split(/\n\n#/)[0];
+          return countEmojis_(retryBody, emojiList) >= 3;
         }
-        
-        if (retryEmojiCount >= 3) {
-          cleanedText = emojiRetryText;
-          console.log('✅ 絵文字リトライ成功: ' + currentEmojiCount + '個→' + retryEmojiCount + '個');
-        } else {
-          console.log('⚠️ 絵文字リトライでも' + retryEmojiCount + '個。元テキストを使用');
-        }
-      }
-      } // ★v8.8: 時間チェックのelse閉じ
+      }, retryBase);
+      if (emojiResult) cleanedText = emojiResult;
     }
   } catch (emojiErr) {
     console.log('⚠️ 絵文字チェックエラー（投稿には影響なし）: ' + emojiErr.message);
@@ -276,59 +237,31 @@ function generatePost(postType, context, cachedRates) {
   // ★v5.9: →が1ブロックに2本以上あるブロックを検出してリトライ
   // 「1ブロックに→は1つだけ」ルールの後処理による担保
   try {
-    var bodyForArrowCheck = cleanedText.split(/\n\n#/)[0]; // ハッシュタグ前の本文
-    var hasMultiArrowBlock = false;
+    var bodyForArrowCheck = cleanedText.split(/\n\n#/)[0];
     
-    // 空行で分割してブロックを取得し、→の数をカウント
-    var blocks = bodyForArrowCheck.split(/\n\n+/);
-    for (var bi = 0; bi < blocks.length; bi++) {
-      var arrowCount = (blocks[bi].match(/^→/gm) || []).length;
-      if (arrowCount >= 2) {
-        hasMultiArrowBlock = true;
-        break;
-      }
-    }
-    
-    if (hasMultiArrowBlock) {
+    if (checkMultiArrowBlocks_(bodyForArrowCheck)) {
       console.log('⚠️ →が2本以上のブロックを検出。リトライ...');
       
-      // ★v8.8: 経過時間チェック
-      var elapsed4 = (new Date() - startTime) / 1000;
-      if (elapsed4 > TIME_LIMIT_SEC) {
-        console.log('⏱️ 経過' + Math.round(elapsed4) + '秒 → →ブロックリトライをスキップ（時間制限）');
-      } else {
-      var arrowRetryPrompt = '以下の投稿を修正してください。\n\n';
-      arrowRetryPrompt += '【絶対ルール】\n';
-      arrowRetryPrompt += '・絵文字ブロック1つに →（矢印で始まる行）は必ず1行だけ。\n';
-      arrowRetryPrompt += '・2本目以降の→は、→を外して普通の補足文として書き直せ。\n';
-      arrowRetryPrompt += '・例(NG): 「→上振れ \\n→インフレ懸念 \\n→ドル買い」\n';
-      arrowRetryPrompt += '・例(OK): 「→上振れはインフレ懸念につながり、ドル買いが加速する」\n';
-      arrowRetryPrompt += '・内容・口調・絵文字・文字数はそのまま維持。→の本数だけ直す。\n\n';
-      arrowRetryPrompt += '【元の投稿】\n' + cleanedText;
+      var arrowPrompt = '以下の投稿を修正してください。\n\n';
+      arrowPrompt += '【絶対ルール】\n';
+      arrowPrompt += '・絵文字ブロック1つに →（矢印で始まる行）は必ず1行だけ。\n';
+      arrowPrompt += '・2本目以降の→は、→を外して普通の補足文として書き直せ。\n';
+      arrowPrompt += '・例(NG): 「→上振れ \\n→インフレ懸念 \\n→ドル買い」\n';
+      arrowPrompt += '・例(OK): 「→上振れはインフレ懸念につながり、ドル買いが加速する」\n';
+      arrowPrompt += '・内容・口調・絵文字・文字数はそのまま維持。→の本数だけ直す。\n\n';
+      arrowPrompt += '【元の投稿】\n' + cleanedText;
       
-      var arrowRetryResult = callGemini_(arrowRetryPrompt, keys.GEMINI_API_KEY, false);
-      if (arrowRetryResult && arrowRetryResult.text) {
-        var arrowRetryText = applyPostProcessingChain_(arrowRetryResult.text, postType, rates);
-        
-        // リトライ後も違反が残っていないか確認
-        var retryBodyArrow = arrowRetryText.split(/\n\n#/)[0];
-        var retryBlocks = retryBodyArrow.split(/\n\n+/);
-        var stillHasMultiArrow = false;
-        for (var rbi = 0; rbi < retryBlocks.length; rbi++) {
-          if ((retryBlocks[rbi].match(/^→/gm) || []).length >= 2) {
-            stillHasMultiArrow = true;
-            break;
-          }
+      var arrowResult = executeRetry_({
+        name: '→複数ブロック',
+        prompt: arrowPrompt,
+        useGrounding: false,
+        applyTCRemoval: false,
+        verifyFn: function(retryText) {
+          var retryBody = retryText.split(/\n\n#/)[0];
+          return !checkMultiArrowBlocks_(retryBody);
         }
-        
-        if (!stillHasMultiArrow) {
-          cleanedText = arrowRetryText;
-          console.log('✅ →複数ブロック修正成功');
-        } else {
-          console.log('⚠️ →複数ブロック修正失敗。元テキストを使用');
-        }
-      }
-      } // ★v8.8: 時間チェックのelse閉じ
+      }, retryBase);
+      if (arrowResult) cleanedText = arrowResult;
     }
   } catch (arrowErr) {
     console.log('⚠️ →複数ブロックチェックエラー（投稿には影響なし）: ' + arrowErr.message);
@@ -378,16 +311,16 @@ function generatePost(postType, context, cachedRates) {
             for (var ri = 0; ri < remainingIssues.length; ri++) {
               console.log('  残存: ' + remainingIssues[ri].claim);
             }
-            var retryResult = autoFixPost_(fixResult.text, remainingIssues, postType, keys.GEMINI_API_KEY, rates);
-            if (retryResult.fixed) {
-              var stillRemaining = verifyAutoFix_(retryResult.text, remainingIssues);
+            var retryFixResult = autoFixPost_(fixResult.text, remainingIssues, postType, keys.GEMINI_API_KEY, rates);
+            if (retryFixResult.fixed) {
+              var stillRemaining = verifyAutoFix_(retryFixResult.text, remainingIssues);
               if (stillRemaining.length > 0) {
                 console.log('⚠️ リトライ後も' + stillRemaining.length + '件残存（強制削除で対応）');
-                var forcedText = forceRemoveIssueLines_(retryResult.text, stillRemaining);
-                fixResult = { text: forcedText, fixed: true, fixLog: retryResult.fixLog + '\n⚠️ 残存問題を強制削除' };
+                var forcedText = forceRemoveIssueLines_(retryFixResult.text, stillRemaining);
+                fixResult = { text: forcedText, fixed: true, fixLog: retryFixResult.fixLog + '\n⚠️ 残存問題を強制削除' };
               } else {
                 console.log('✅ リトライで全件修正完了');
-                fixResult = retryResult;
+                fixResult = retryFixResult;
               }
             }
           }
@@ -453,6 +386,102 @@ function generatePost(postType, context, cachedRates) {
     emoji: typeConfig.emoji
   };
 }
+
+
+// ===== リトライ共通処理 =====
+/**
+ * ★v8.8.1: 4つのリトライパターン（主役ペア/リスクセンチメント/絵文字/→ブロック）を共通化
+ * 
+ * 処理フロー: 経過時間チェック → Gemini API呼び出し → 後処理チェーン → TC言及除去 → 検証
+ * 
+ * @param {Object} config - リトライ固有の設定
+ * @param {string} config.name - リトライ名（ログ表示用）
+ * @param {string} config.prompt - Geminiに渡すリトライプロンプト
+ * @param {boolean} config.useGrounding - Grounding使用有無
+ * @param {boolean} config.applyTCRemoval - TC言及除去を適用するか
+ * @param {Function} config.verifyFn - 検証関数（retryText => boolean: trueで修正成功）
+ * @param {Object} base - generatePostから引き継ぐ共通パラメータ
+ * @param {string} base.apiKey - Gemini APIキー
+ * @param {string} base.postType - 投稿タイプ
+ * @param {Object} base.rates - レートデータ
+ * @param {Date} base.startTime - generatePost開始時刻
+ * @param {number} base.timeLimitSec - 時間制限（秒）
+ * @param {Array} base.tcAllowedInPost - TC言及許可タイプリスト
+ * @return {string|null} 成功時は修正テキスト、失敗・スキップ時はnull
+ */
+function executeRetry_(config, base) {
+  // 経過時間チェック（★v8.8 タイムガード）
+  var elapsed = (new Date() - base.startTime) / 1000;
+  if (elapsed > base.timeLimitSec) {
+    console.log('⏱️ 経過' + Math.round(elapsed) + '秒 → ' + config.name + 'リトライをスキップ（時間制限）');
+    return null;
+  }
+  
+  // Gemini API呼び出し
+  var retryResult = callGemini_(config.prompt, base.apiKey, config.useGrounding);
+  if (!retryResult || !retryResult.text) return null;
+  
+  // 後処理チェーン適用
+  var retryText = applyPostProcessingChain_(retryResult.text, base.postType, base.rates);
+  
+  // TC言及除去（主役ペア・リスクセンチメントのリトライで必要）
+  if (config.applyTCRemoval && base.tcAllowedInPost.indexOf(base.postType) === -1) {
+    retryText = removeTCMention_(retryText);
+  }
+  
+  // 検証（呼び出し元が定義した判定ロジック）
+  if (config.verifyFn(retryText)) {
+    console.log('✅ ' + config.name + '修正成功');
+    return retryText;
+  } else {
+    console.log('⚠️ ' + config.name + '修正失敗。元テキストを使用');
+    return null;
+  }
+}
+
+
+// ===== 絵文字カウント =====
+/**
+ * ★v8.8.1: 絵文字バリデーション用カウント関数を分離
+ * サロゲートペア対応: indexOf で各絵文字の出現回数をカウント
+ * 
+ * @param {string} text - カウント対象テキスト
+ * @param {Array} emojiList - 絵文字のユニコード配列
+ * @return {number} 絵文字の出現回数
+ */
+function countEmojis_(text, emojiList) {
+  var count = 0;
+  for (var i = 0; i < emojiList.length; i++) {
+    var searchIdx = 0;
+    while ((searchIdx = text.indexOf(emojiList[i], searchIdx)) !== -1) {
+      count++;
+      searchIdx += emojiList[i].length;
+    }
+  }
+  return count;
+}
+
+
+// ===== →複数ブロック検出 =====
+/**
+ * ★v8.8.1: →ブロックバリデーション用検出関数を分離
+ * 空行で分割してブロックを取得し、→の数をカウント
+ * 
+ * @param {string} text - 検出対象テキスト（ハッシュタグ前の本文）
+ * @return {boolean} →が2本以上のブロックが存在するか
+ */
+function checkMultiArrowBlocks_(text) {
+  var blocks = text.split(/\n\n+/);
+  for (var i = 0; i < blocks.length; i++) {
+    if ((blocks[i].match(/^→/gm) || []).length >= 2) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+// ===== Gemini API呼び出し =====
 function callGemini_(prompt, apiKey, useGrounding) {
   var url = GEMINI_API_URL + GEMINI_MODEL + ':generateContent?key=' + apiKey;
   

@@ -34,7 +34,8 @@ function removeForeignText_(text) {
   // 許可: USD, JPY, EUR, GBP, AUD, CPI, GDP, FOMC, FRB, ECB, BOE, BOJ, RBA, PPI, PCE, FX, TC, PF, CSV, OHLC
   // 許可: Trading, Complete, Fed, S&P, RSI, ADP, MBA, NFP, MACD, NZD, CHF, CAD, WTI, Excel
   // 3文字以上の英単語で許可リストにないものを除去
-  text = text.replace(/\b(?!USD|JPY|EUR|GBP|AUD|NZD|CHF|CAD|CPI|GDP|FOMC|FRB|ECB|BOE|BOJ|RBA|PPI|PCE|FX|TC|PF|CSV|HICP|NY|Fed|ETF|ISM|PMI|RSI|ADP|MBA|NFP|MACD|WTI|Trading|Complete|SNS|OHLC|API|Excel)[A-Za-z]{3,}\b/g, '');
+  // ★v8.8.1: \b → 明示的な非英字境界に変更（設計の鉄則準拠）
+  text = text.replace(/(^|[^A-Za-z])(?!USD|JPY|EUR|GBP|AUD|NZD|CHF|CAD|CPI|GDP|FOMC|FRB|ECB|BOE|BOJ|RBA|PPI|PCE|FX|TC|PF|CSV|HICP|NY|Fed|ETF|ISM|PMI|RSI|ADP|MBA|NFP|MACD|WTI|Trading|Complete|SNS|OHLC|API|Excel)[A-Za-z]{3,}(?=[^A-Za-z]|$)/g, '$1');
   
   // ③ 外国語文字のパターン（キリル、ベンガル、アラビア、デーヴァナーガリー、タイ、タミル、テルグ等）
   var foreignPattern = /[\u0400-\u04FF\u0980-\u09FF\u0600-\u06FF\u0900-\u097F\u0E00-\u0E7F\u0530-\u058F\u10A0-\u10FF\u1100-\u11FF\uAC00-\uD7AF\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/g;

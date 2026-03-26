@@ -1,7 +1,8 @@
-# T-CAX 設計書 v7.3
+# T-CAX 設計書 v7.4
 
-**更新日**: 2026-03-25
+**更新日**: 2026-03-26
 **方針**: プロンプト公開 + トレードスタイル定義 + 学び自動蓄積 + 7通貨ペア市場データ + 完全自動学習
+**v7.4変更点**: Geminiモデル gemini-2.5-flash→gemini-2.5-pro（文字数遵守・指示追従の大幅改善）、リトライ4パターンexecuteRetry_共通化（geminiApi.gs 537→566行・3→6関数）、postProcessor.gs \b除去（設計の鉄則準拠）、testFunctions.gs再構成（819→225行・testAll1-6廃止→testPro_*/testRULE/testWEEK）、★投稿構造根本改革: 仮説サイクル型+ファンダ重視+レート数字禁止（promptBuilder.gs 1,539→1,581行・投稿プロンプトシートv3書き換え）
 **v7.3変更点**: 後処理チェーン共通関数化（applyPostProcessingChain_）、INDICATOR主役ペア除外、GAS 6分タイムガード、メタ自己言及除去、孤立助詞修正、Excel許可、残り時間除去、プロンプトセクション削減（71→53）
 **v7.2変更点**: 確定データシート化（POLICY_RATESハードコード廃止→スプレッドシート一元管理）、要人リスト新設（金利5件+要人12人）
 **v7.1変更点**: プロンプト最適化（キャラクターシート統合9→5行、buildFormatRules_タイプ別条件分岐、レート混同バグ修正、ファクトチェック検証不能即削除）
@@ -902,9 +903,9 @@ buildFormatRules_()で注入。→は使わずに締める:
 
 ファイル名                行数    関数数  役割
 ──────────────────────────────────────────────────────────────
-geminiApi.gs              537     3      核: generatePost + callGemini_ + extractTextFromResponse_
+geminiApi.gs              566     6      核: generatePost + executeRetry_ + countEmojis_ + checkMultiArrowBlocks_ + callGemini_ + extractTextFromResponse_ ★v8.8.1: リトライ共通化+Pro変更
                                          ★v8.8: 後処理7箇所→applyPostProcessingChain_共通化、INDICATOR主役除外、4分タイムガード
-promptBuilder.gs          1,539   10     プロンプト構築: ★v8.8: セクション【】整理（71→53）、INDICATOR残り時間禁止、要人リスト注入
+promptBuilder.gs          1,581   10     プロンプト構築: ★v8.8.1: 仮説ベース投稿構造+ファンダ重視+レート数字禁止+上書き宣言
 postProcessor.gs          1,836   20     後処理チェーン: ★v8.8: applyPostProcessingChain_新設、メタ自己言及除去、孤立助詞修正、Excel許可、残り時間除去
 factCheck.gs              660     5      ファクトチェック: ★v8.7: 要人リスト確定データ注入、ルール文言変更
 qualityReview.gs          332     7      ★v8.6新規: 品質レビュー（Claude Sonnet 4.6）: qualityReviewPost_ + callClaude_ + cacheTodayPost_ 等
@@ -918,7 +919,7 @@ indicatorManager.gs       1,191   20     経済指標: fetchIndicatorResults_ + 
 learningManager.gs        859     8      学び・仮説: extractPostInsights_ + verifyPreviousHypothesis_ 等
 priceSummary.gs           642     5      価格集計: updatePriceSummary + aggregateDailyRates 等
 calendarManager.gs        802     7      経済カレンダー: fetchEconomicCalendar + importFromRawSheet 等
-testFunctions.gs          819     22     テスト: testAll1-6 + testBatch_ 等
+testFunctions.gs          225     19     テスト: testPro_*12個 + testRULE/testWEEK + testBatch_ 等 ★v8.8.1再構成
 
 改善時の対象ファイル早見表:
   禁止表現の追加          → postProcessor.gs（replaceProhibitedPhrases_）
@@ -941,12 +942,12 @@ testFunctions.gs          819     22     テスト: testAll1-6 + testBatch_ 等
 ```
 関数名                      役割
 ──────────────────────────────────────────────────────────────
-【geminiApi.gs - 核（537行・3関数）★v8.8: 後処理共通化+タイムガード】
+【geminiApi.gs - 核（566行・6関数）★v8.8.1: リトライ共通化+Pro変更】
 generatePost()              メイン: 投稿テキスト生成（司令塔。全モジュールを呼び出す）
 callGemini_()               Gemini API呼び出し（リトライ3回）
 extractTextFromResponse_()  レスポンスからテキスト抽出
 
-【promptBuilder.gs - プロンプト構築（1,539行・10関数）★v8.8: セクション削減+要人注入】
+【promptBuilder.gs - プロンプト構築（1,581行・10関数）★v8.8.1: 仮説ベース投稿構造+ファンダ重視】
 buildPrompt_()              プロンプト組み立て（メイン・636行）
 buildFormatRules_()         フォーマットルール（ノート形式 ★v5.0更新）
 
@@ -1182,7 +1183,7 @@ testImageAllTypes()         全6タイプ画像生成テスト
 項目                             状態
 ─────────────────────────────────────────
 geminiApi.gs（核）               ✅ 完成（567行）★v8.5で11ファイルに分割
-promptBuilder.gs                 ✅ 完成（1,505行）★v8.5分割
+promptBuilder.gs                 ✅ 完成（1,581行）★v8.8.1: 仮説ベース投稿構造
 postProcessor.gs                 ✅ 完成（1,682行）★v8.5分割
 factCheck.gs                     ✅ 完成（442行）★v8.5分割
 rateManager.gs                   ✅ 完成（811行）★v8.5分割
@@ -1191,7 +1192,7 @@ indicatorManager.gs              ✅ 完成（1,191行）★v8.5分割
 learningManager.gs               ✅ 完成（859行）★v8.5分割
 priceSummary.gs                  ✅ 完成（642行）★v8.5分割
 calendarManager.gs               ✅ 完成（802行）★v8.5分割
-testFunctions.gs                 ✅ 完成（819行）★v8.5分割
+testFunctions.gs                 ✅ 完成（225行）★v8.8.1再構成
 imageGenerator.gs                ✅ 完成（Phase 7）
 キャラクターシート               ✅ 既存
 TC概要シート                     ✅ 作成済み
@@ -1273,6 +1274,38 @@ Grounding二重チェック                ✅ APIデータ基準値＋リアル
 B列Date型対応（トリガー0件修正）     ✅ instanceof Dateでの分岐追加・getHours/getMinutes使用 ★v5.8
 指標データシートF列追加              ✅ GAS読み取り日時をF1に書き込む（setupIndicatorSheet更新） ★v5.7
 ```
+
+---
+
+*バージョン: v7.4（= 全体設計図v8.8.1に対応）*
+
+*v7.4: Gemini 2.5 Pro変更 + リトライ共通化 + テスト再構成（2026-03-26）*
+*　　　① Geminiモデル変更: gemini-2.5-flash → gemini-2.5-pro（config.gs）*
+*　　　　 Flash: 文字数2,069文字暴走、ハードカット発動、絵文字0個崩壊、リスクセンチメント誤記が頻発*
+*　　　　 Pro: 文字数制限をほぼ遵守。Claudeが「文字数は問題なし」と判定するレベルに改善*
+*　　　　 Free Tier（100RPD/5RPM）で運用可能。月額コスト変更なし*
+*　　　② リトライ4パターン共通化（geminiApi.gs: 537→566行・3→6関数）*
+*　　　　 executeRetry_(config, base): 経過時間チェック→API→後処理→TC除去→検証の共通処理*
+*　　　　 countEmojis_(text, emojiList): 絵文字カウント重複コード解消*
+*　　　　 checkMultiArrowBlocks_(text): →複数ブロック検出重複コード解消*
+*　　　③ postProcessor.gs \b除去（1,836→1,837行）*
+*　　　　 37行目の英単語除去正規表現の\bを明示的非英字境界に変更。設計の鉄則準拠*
+*　　　④ testFunctions.gs再構成（819→225行）*
+*　　　　 testAll1〜6廃止（Proの推論速度で3タイプ同時が6分超え）*
+*　　　　 testPro_MORNING()等12個: 1タイプずつファクトチェック込み*
+*　　　　 testRULE1_3()/testRULE4()/testWEEK(): RULE系・週間系まとめ*
+*　　　　 不要テスト12個削除（testGenerateAll/testGenerateWeekend等）*
+*　　　⑤ 投稿構造の根本改革（promptBuilder.gs 1,539→1,581行）*
+*　　　　 ニュース要約型→「仮説の提示→答え合わせ→次の仮説」のサイクル型に全面変更*
+*　　　　 【★仮説ベースの投稿構造】セクション新設: 非自明な仮説を要求、当たり前の仮説禁止*
+*　　　　 【レートデータの使い方】セクション新設: 数字羅列禁止、方向感で語れ*
+*　　　　 MORNING/TOKYO/GOLDEN/NY各構造指示を仮説ベースに書き換え*
+*　　　　 仮説振り返り指示を「触れてよい」→「必ず1ブロック使え。省略禁止」に変更*
+*　　　　 学び指示を「織り込んでもよい」→「根拠や反省材料として活用せよ」に変更*
+*　　　　 禁止事項から「トレード判断示唆禁止」を撤廃、シナリオ分析OKに変更*
+*　　　　 ただし「エントリーした」「利確した」は禁止（実際にトレードしていない）*
+*　　　　 スプレッドシート投稿プロンプト市場系6タイプをv3に全面書き換え*
+*　　　　 スプレッドシートの旧構造指示がコード側を上書きする問題を解消（上書き宣言追加）*
 
 ---
 

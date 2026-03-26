@@ -319,7 +319,7 @@ var RANDOM_DELAY_MIN = 0;
 var RANDOM_DELAY_MAX = 3; // ★v8.0: 2→3に拡大（ランダム性を確保しつつ6分制限内に収まる）
 
 // ===== Gemini API設定 =====
-var GEMINI_MODEL = 'gemini-2.5-flash';
+var GEMINI_MODEL = 'gemini-2.5-pro';  // ★v8.8.1: Flash→Pro変更（指示追従・文字数遵守の改善）
 var GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
 // ===== X API設定 =====
