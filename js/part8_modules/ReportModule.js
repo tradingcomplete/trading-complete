@@ -859,6 +859,12 @@ class ReportModule {
         ${this.#generatePrintRuleRiskAnalysis(monthlyTrades)}
     </div>
     
+    <!-- 感情別分析 -->
+    <div class="emotion-analysis-section">
+        <h2>😌 感情別分析</h2>
+        ${this.#generatePrintEmotionAnalysis(monthlyTrades)}
+    </div>
+    
     <div class="recent-trades trade-history-section">
         <h4 style="color: #00ff88; margin-bottom: 15px;">📈 トレード履歴</h4>
         <table class="trades-table">
@@ -3585,6 +3591,178 @@ class ReportModule {
                     </thead>
                     <tbody>
                         ${methodRows || '<tr><td colspan="7" style="text-align: center; color: #999;">データがありません</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    /**
+     * 印刷用感情別分析HTMLを生成
+     * @private
+     * @param {Array} trades - 対象トレード配列
+     * @returns {string} HTML文字列
+     */
+    #generatePrintEmotionAnalysis(trades) {
+        const emotions = window.EMOTION_OPTIONS;
+        if (!emotions) return '';
+        
+        // 感情別統計の初期化
+        const byEmotion = {};
+        emotions.forEach(opt => {
+            byEmotion[opt.key] = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
+        });
+        const positiveTotal = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
+        const negativeTotal = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
+        
+        // 集計
+        trades.forEach(trade => {
+            const normalized = window.normalizeEmotion(trade.entryEmotion);
+            if (!normalized.selection) return;
+            
+            const opt = emotions.find(e => e.key === normalized.selection);
+            if (!opt) return;
+            
+            const pips = this.#calculateTradePips(trade);
+            const isWin = pips > 0;
+            const yenProfit = trade.yenProfitLoss?.netProfit || 0;
+            const hasYen = trade.yenProfitLoss?.netProfit !== undefined;
+            
+            byEmotion[opt.key].count++;
+            byEmotion[opt.key].pips += pips;
+            if (hasYen) {
+                byEmotion[opt.key].yen += yenProfit;
+                byEmotion[opt.key].yenCount++;
+            }
+            if (isWin) byEmotion[opt.key].wins++;
+            else if (pips < 0) byEmotion[opt.key].losses++;
+            
+            const group = opt.category === 'positive' ? positiveTotal : negativeTotal;
+            group.count++;
+            group.pips += pips;
+            if (hasYen) {
+                group.yen += yenProfit;
+                group.yenCount++;
+            }
+            if (isWin) group.wins++;
+            else if (pips < 0) group.losses++;
+        });
+        
+        const totalCount = positiveTotal.count + negativeTotal.count;
+        if (totalCount === 0) {
+            return '<p style="text-align: center; color: #999;">感情データがありません</p>';
+        }
+        
+        // ヘルパー関数
+        const calcWinRate = (wins, losses) => {
+            const total = wins + losses;
+            return total > 0 ? ((wins / total) * 100).toFixed(1) : '-';
+        };
+        const formatWinLoss = (wins, losses) => {
+            if (wins === 0 && losses === 0) return '-';
+            return `${wins}勝${losses}敗`;
+        };
+        const calcExpectedPips = (pips, count) => {
+            if (count === 0) return '-';
+            const ev = pips / count;
+            return `${ev >= 0 ? '+' : ''}${ev.toFixed(1)}p`;
+        };
+        const calcExpectedYen = (yen, yenCount) => {
+            if (yenCount === 0) return '-';
+            const ev = yen / yenCount;
+            return `${ev >= 0 ? '+' : ''}¥${Math.round(ev).toLocaleString()}`;
+        };
+        
+        const generateRow = (badge, stats) => {
+            if (stats.count === 0) {
+                return `<tr>
+                    <td style="text-align: center;">${badge}</td>
+                    <td style="text-align: center;">0件</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                </tr>`;
+            }
+            const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
+            const evPips = stats.pips / stats.count;
+            const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
+            const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+            const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
+            return `<tr>
+                <td style="text-align: center;">${badge}</td>
+                <td style="text-align: center;">${stats.count}件</td>
+                <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
+                <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
+                <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
+            </tr>`;
+        };
+        
+        // 詳細テーブル行（0件除外、pips降順）
+        const detailRows = emotions
+            .filter(opt => byEmotion[opt.key].count > 0)
+            .sort((a, b) => byEmotion[b.key].pips - byEmotion[a.key].pips)
+            .map(opt => {
+                const stats = byEmotion[opt.key];
+                const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
+                const evPips = stats.count > 0 ? stats.pips / stats.count : 0;
+                const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
+                const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+                const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
+                return `<tr>
+                    <td style="text-align: left;">${opt.emoji} ${opt.label}</td>
+                    <td style="text-align: center;">${stats.count}件</td>
+                    <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
+                    <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
+                    <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                    <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                    <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
+                </tr>`;
+            }).join('');
+        
+        return `
+            <!-- ポジティブ vs ネガティブ -->
+            <div style="margin-bottom: 25px;">
+                <h4 style="color: #7a8599; margin-bottom: 10px; font-size: 14px;">📊 ポジティブ vs ネガティブ</h4>
+                <table class="trades-table" style="font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;"></th>
+                            <th>件数</th>
+                            <th>勝敗</th>
+                            <th>勝率</th>
+                            <th>Pips</th>
+                            <th>期待値(p)</th>
+                            <th>期待値(¥)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${generateRow('😌 ポジティブ', positiveTotal)}
+                        ${generateRow('⚡ ネガティブ', negativeTotal)}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 感情別 詳細 -->
+            <div>
+                <h4 style="color: #7a8599; margin-bottom: 10px; font-size: 14px;">📋 感情別 詳細</h4>
+                <table class="trades-table" style="font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th>感情</th>
+                            <th>件数</th>
+                            <th>勝敗</th>
+                            <th>勝率</th>
+                            <th>Pips</th>
+                            <th>期待値(p)</th>
+                            <th>期待値(¥)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${detailRows || '<tr><td colspan="7" style="text-align: center; color: #999;">データがありません</td></tr>'}
                     </tbody>
                 </table>
             </div>
