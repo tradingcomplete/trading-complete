@@ -126,15 +126,14 @@ class TradeEdit {
             stopLoss: parseFloat(this.#getFieldValue('editStopLoss')) || trade.stopLoss,
             takeProfit: parseFloat(this.#getFieldValue('editTakeProfit')) || trade.takeProfit,
             scenario: this.#getFieldValue('editScenario') || trade.scenario,
-            entryEmotion: (() => {
-                const emotionData = window.getEmotionFromSelector('editEmotionSelector', 'editEmotionMemo');
-                // 何も選択されず、メモも空なら既存値を維持
-                if (!emotionData.selection && !emotionData.memo) {
-                    return trade.entryEmotion;
-                }
-                return emotionData;
-            })()
+            entryEmotion: window.getEmotionFromSelector('editEmotionSelector', 'editEmotionMemo')
         };
+        
+        // 感情選択バリデーション（必須）
+        if (!updates.entryEmotion.selection) {
+            alert('エントリー時の感情を選択してください');
+            return;
+        }
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, updates)
         

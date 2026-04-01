@@ -501,6 +501,13 @@ class TradeEntry {
             return false;
         }
         
+        // 感情選択バリデーション（必須）
+        const emotionCheck = getEmotionFromSelector('emotionSelector', 'entryEmotionMemo');
+        if (!emotionCheck.selection) {
+            alert('エントリー時の感情を選択してください');
+            return false;
+        }
+        
         // TradeValidatorを使用した詳細バリデーション
         // if (this.#validator) {
         //     const validationResult = this.#validator.validateTrade(data);

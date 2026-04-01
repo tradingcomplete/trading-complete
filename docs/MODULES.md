@@ -58,6 +58,22 @@ window.XxxModule = new XxxModule();
 - API: setYenProfitLoss(), getYenProfitLoss(), calculateTotal()
 - データ: trade.yenProfitLoss = {profitLoss, swap, commission, netProfit}
 
+### 感情記録（グローバル定数・関数）
+
+TradeEntry.js の先頭で定義、window に公開:
+
+| 定数/関数 | 説明 |
+|----------|------|
+| EMOTION_OPTIONS | 8感情カテゴリ定数（calm/confident/focused/cautious/rushed/anxious/excited/uncertain） |
+| normalizeEmotion(raw) | 新旧形式の感情データを正規化。戻り値: { selection, memo } |
+| toggleEmotion(btn) | 感情ボタンの単一選択トグル |
+| getEmotionFromSelector(selectorId, memoId) | セレクターから選択状態を取得 |
+| setEmotionToSelector(selectorId, memoId, data) | セレクターに既存データを反映 |
+
+データ形式:
+- 新形式: `{ selection: "calm", memo: "補足テキスト" }`
+- 旧形式: `"冷静に分析できていた"`（プレーンテキスト、normalizeEmotionで変換）
+
 ---
 
 ## Part 3（相場ノート）- 完成 (2025-11-27)
@@ -221,6 +237,7 @@ const text = AISummaryModule.generateTextSummary('monthly', 2026, 1);
 - ruleCompliance: 遵守率、遵守時/非遵守時の成績
 - riskManagement: 許容内率、ステータス別成績
 - methodStats: 手法別の成績
+- emotionStats: 感情別の成績（byEmotion, positiveTotal, negativeTotal, untagged）
 
 ---
 

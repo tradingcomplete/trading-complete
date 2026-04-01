@@ -25,6 +25,7 @@ class ReportModule {
         sessionAnalysis: false,  // セッション別分析（v2.0追加）
         tradeHistory: false,  // 初期状態は閉じている
         ruleRiskAnalysis: false,  // ルール遵守・リスク分析（Phase 5追加）
+        emotionAnalysis: false,  // 感情別分析
         reflectionList: false
     };
     
@@ -1797,6 +1798,10 @@ class ReportModule {
         const ruleRiskAnalysisHTML = this.#generateRuleRiskAnalysis(sortedTrades);
         content.innerHTML += ruleRiskAnalysisHTML;
         
+        // 感情別分析セクションを追加
+        const emotionAnalysisHTML = this.#generateEmotionAnalysis(sortedTrades);
+        content.innerHTML += emotionAnalysisHTML;
+        
         // 振り返り一覧を追加（アコーディオン化）
         const reflectionHTML = this.#generateReflectionList(data);
         const accordionReflection = `
@@ -3151,6 +3156,217 @@ class ReportModule {
                         </tbody>
                     </table>
                     
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * 感情別分析HTMLを生成
+     * @private
+     * @param {Array} trades - 対象トレード配列
+     * @returns {string} アコーディオンHTML文字列
+     */
+    #generateEmotionAnalysis(trades) {
+        const emotions = window.EMOTION_OPTIONS;
+        if (!emotions) return '';
+        
+        // 感情別統計の初期化
+        const byEmotion = {};
+        emotions.forEach(opt => {
+            byEmotion[opt.key] = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
+        });
+        const positiveTotal = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
+        const negativeTotal = { count: 0, wins: 0, losses: 0, pips: 0, yen: 0, yenCount: 0 };
+        
+        // 集計
+        trades.forEach(trade => {
+            const normalized = window.normalizeEmotion(trade.entryEmotion);
+            if (!normalized.selection) return;  // 未選択はスキップ
+            
+            const opt = emotions.find(e => e.key === normalized.selection);
+            if (!opt) return;
+            
+            const pips = this.#calculateTradePips(trade);
+            const isWin = pips > 0;
+            const yenProfit = trade.yenProfitLoss?.netProfit || 0;
+            const hasYen = trade.yenProfitLoss?.netProfit !== undefined;
+            
+            // 感情別
+            byEmotion[opt.key].count++;
+            byEmotion[opt.key].pips += pips;
+            if (hasYen) {
+                byEmotion[opt.key].yen += yenProfit;
+                byEmotion[opt.key].yenCount++;
+            }
+            if (isWin) byEmotion[opt.key].wins++;
+            else if (pips < 0) byEmotion[opt.key].losses++;
+            
+            // グループ別
+            const group = opt.category === 'positive' ? positiveTotal : negativeTotal;
+            group.count++;
+            group.pips += pips;
+            if (hasYen) {
+                group.yen += yenProfit;
+                group.yenCount++;
+            }
+            if (isWin) group.wins++;
+            else if (pips < 0) group.losses++;
+        });
+        
+        // データが1件もない場合
+        const totalCount = positiveTotal.count + negativeTotal.count;
+        
+        // ヘルパー関数
+        const calcWinRate = (wins, losses) => {
+            const total = wins + losses;
+            return total > 0 ? ((wins / total) * 100).toFixed(1) : '-';
+        };
+        const formatWinLoss = (wins, losses) => {
+            if (wins === 0 && losses === 0) return '-';
+            return `${wins}勝${losses}敗`;
+        };
+        const calcExpectedPips = (pips, count) => {
+            if (count === 0) return '-';
+            const ev = pips / count;
+            return `${ev >= 0 ? '+' : ''}${ev.toFixed(1)}p`;
+        };
+        const calcExpectedYen = (yen, yenCount) => {
+            if (yenCount === 0) return '-';
+            const ev = yen / yenCount;
+            return `${ev >= 0 ? '+' : ''}¥${Math.round(ev).toLocaleString()}`;
+        };
+        
+        // テーブル行生成
+        const generateRow = (badge, stats) => {
+            if (stats.count === 0) {
+                return `<tr>
+                    <td style="text-align: center;">${badge}</td>
+                    <td style="text-align: center;">0件</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center;">-</td>
+                </tr>`;
+            }
+            const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
+            const evPips = stats.pips / stats.count;
+            const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
+            const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+            const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
+            return `<tr>
+                <td style="text-align: center;">${badge}</td>
+                <td style="text-align: center;">${stats.count}件</td>
+                <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
+                <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
+                <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
+            </tr>`;
+        };
+        
+        // 詳細テーブル行生成（0件は非表示、pips降順ソート）
+        const detailRows = emotions
+            .filter(opt => byEmotion[opt.key].count > 0)
+            .sort((a, b) => byEmotion[b.key].pips - byEmotion[a.key].pips)
+            .map(opt => {
+                const stats = byEmotion[opt.key];
+                const badge = `${opt.emoji} ${opt.label}`;
+                const pipsColor = stats.pips >= 0 ? '#00ff88' : '#ff4466';
+                const evPips = stats.count > 0 ? stats.pips / stats.count : 0;
+                const evPipsColor = evPips >= 0 ? '#00ff88' : '#ff4466';
+                const evYen = stats.yenCount > 0 ? stats.yen / stats.yenCount : 0;
+                const evYenColor = evYen >= 0 ? '#00ff88' : '#ff4466';
+                return `<tr>
+                    <td style="text-align: left; padding-left: 10px;">${badge}</td>
+                    <td style="text-align: center;">${stats.count}件</td>
+                    <td style="text-align: center;">${formatWinLoss(stats.wins, stats.losses)}</td>
+                    <td style="text-align: center;">${calcWinRate(stats.wins, stats.losses)}%</td>
+                    <td style="text-align: center; color: ${pipsColor};">${stats.pips >= 0 ? '+' : ''}${stats.pips.toFixed(1)}</td>
+                    <td style="text-align: center; color: ${evPipsColor};">${calcExpectedPips(stats.pips, stats.count)}</td>
+                    <td style="text-align: center; color: ${evYenColor};">${calcExpectedYen(stats.yen, stats.yenCount)}</td>
+                </tr>`;
+            }).join('');
+        
+        // テーブル共通スタイル
+        const tableStyle = `
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        `;
+        const thStyle = `
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            padding: 10px 5px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+        `;
+        
+        // コンテンツ部分
+        const contentHTML = totalCount === 0
+            ? '<p style="text-align: center; color: #9ca3af; padding: 20px;">感情データがありません</p>'
+            : `
+                <!-- ポジティブ vs ネガティブ サマリー -->
+                <h5 style="color: #9ca3af; margin: 15px 0 10px 0; font-size: 0.85rem;">📊 ポジティブ vs ネガティブ</h5>
+                <table style="${tableStyle}">
+                    <thead>
+                        <tr>
+                            <th style="${thStyle}"></th>
+                            <th style="${thStyle}">件数</th>
+                            <th style="${thStyle}">勝敗</th>
+                            <th style="${thStyle}">勝率</th>
+                            <th style="${thStyle}">Pips</th>
+                            <th style="${thStyle}">期待値(p)</th>
+                            <th style="${thStyle}">期待値(¥)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${generateRow('😌 ポジティブ', positiveTotal)}
+                        ${generateRow('⚡ ネガティブ', negativeTotal)}
+                    </tbody>
+                </table>
+                
+                <!-- 感情別 詳細 -->
+                <h5 style="color: #9ca3af; margin: 20px 0 10px 0; font-size: 0.85rem;">📋 感情別 詳細</h5>
+                <table style="${tableStyle}">
+                    <thead>
+                        <tr>
+                            <th style="${thStyle}">感情</th>
+                            <th style="${thStyle}">件数</th>
+                            <th style="${thStyle}">勝敗</th>
+                            <th style="${thStyle}">勝率</th>
+                            <th style="${thStyle}">Pips</th>
+                            <th style="${thStyle}">期待値(p)</th>
+                            <th style="${thStyle}">期待値(¥)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${detailRows || '<tr><td colspan="7" style="text-align: center; color: #9ca3af; padding: 20px;">データがありません</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        
+        return `
+            <div class="report-accordion" style="margin-top: 30px;">
+                <div class="accordion-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                    <h4 style="color: #00ff88; margin: 0;">
+                        <span id="emotionAnalysis-icon" 
+                              onclick="window.ReportModule.toggleAccordion('emotionAnalysis')" 
+                              style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease;"
+                              onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                              onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                        😌 感情別分析
+                    </h4>
+                    <span id="emotionAnalysis-icon-right"
+                          onclick="window.ReportModule.toggleAccordion('emotionAnalysis')" 
+                          style="cursor: pointer; display: inline-block; padding: 6px 10px; background: rgba(0, 255, 136, 0.15); border-radius: 50%; box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15); transition: all 0.3s ease; color: #00ff88; font-size: 16px;"
+                          onmouseover="this.style.boxShadow='0 0 12px rgba(0, 255, 136, 0.5), 0 0 24px rgba(0, 255, 136, 0.35), 0 0 36px rgba(0, 255, 136, 0.2)'; this.style.transform='scale(1.1)';"
+                          onmouseout="this.style.boxShadow='0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.25), 0 0 24px rgba(0, 255, 136, 0.15)'; this.style.transform='scale(1)';">▼</span>
+                </div>
+                <div id="emotionAnalysis-content" style="display: none;">
+                    ${contentHTML}
                 </div>
             </div>
         `;

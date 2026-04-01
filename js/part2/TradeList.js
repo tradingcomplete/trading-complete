@@ -433,6 +433,27 @@ class TradeList {
             pairContainer.appendChild(ruleBadge);
         }
         
+        // 感情バッジを追加
+        const emotionNormalized = window.normalizeEmotion ? window.normalizeEmotion(trade.entryEmotion) : null;
+        if (emotionNormalized && emotionNormalized.selection) {
+            const emotionOpt = (window.EMOTION_OPTIONS || []).find(e => e.key === emotionNormalized.selection);
+            if (emotionOpt) {
+                const emotionBadge = document.createElement('span');
+                emotionBadge.className = 'emotion-badge';
+                emotionBadge.textContent = emotionOpt.emoji;
+                emotionBadge.title = emotionOpt.label;
+                const isPositive = emotionOpt.category === 'positive';
+                emotionBadge.style.cssText = `
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.85rem;
+                    background: ${isPositive ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)'};
+                    border: 1px solid ${isPositive ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'};
+                `;
+                pairContainer.appendChild(emotionBadge);
+            }
+        }
+        
         headerLeft.appendChild(pairContainer);
         
         // 右上（結果バッジと編集・削除ボタン）
