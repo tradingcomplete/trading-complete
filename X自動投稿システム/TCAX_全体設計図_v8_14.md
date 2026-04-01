@@ -1,8 +1,14 @@
-# T-CAX システム 全体設計図 v8.8.1
+# T-CAX システム 全体設計図 v8.14
 
 **プロジェクト名**: T-CAX（Trading Complete Auto X）
 **コンセプト**: 「毎回その瞬間の最新情報で作成・即投稿」
 **更新日**: 2026-03-26
+**v8.14変更点**: 壊れた句点パターン修復+孤立variation selector修復+Claude API 529対策。品質修正（Gemini）で文が壊れる問題に三重対策。対策A: fixBrokenSentenceEndings_新設（「。ですね。」等の壊れた句点パターンを汎用修復）。対策B: replaceProhibitedPhrases_に「ここからが本番。」壊れパターン除去を追加。対策C: fixOrphanedVariationSelector_新設（⚠️のベース文字欠落でU+FE0Fだけ残る問題を修復）。根本原因修正: miReplacements配列から「ここからが本番」を撤去→「ここが勝負どころ」に変更。対策D: callClaude_改修（指数バックオフ5→10→20秒、リトライ2→3回、エラー詳細ログ）。postProcessor.gs 1,898→1,977行、qualityReview.gs 411→427行
+**v8.13変更点**: ニュース主軸ルール追加（3箇所）。投稿の主軸を「レート・指標」→「ニュース」に転換。buildMarketTypePolicy_+buildFormatRules_で「世界で何が起きているか→為替への影響」の構造を明記。promptBuilder.gs 1,749→1,759行
+**v8.12変更点**: charMax緩和（300→380/350→420/450→550）、答え合わせ重複防止（getHypothesisContext_にキャッシュ照合追加）、品質レビュー全面改修（Claude指摘のみ→Gemini修正→trimToCharMax_文字数保証）、孤立短文除去（removeOrphanedLines_新設）。config.gs charMax更新、promptBuilder.gs 1,722→1,749行、qualityReview.gs 332→411行、postProcessor.gs 1,832→1,898行
+**v8.11変更点**: 条件分岐型仮説ルール追加（6箇所）。一方向の賭け仮説を禁止し「もしAならB、もしCならD」の読み解き型を推奨。promptBuilder.gs 1,709→1,722行
+**v8.10変更点**: buildPrompt_分割リファクタリング（636行→391行）。投稿タイプ別の方針指示を5つのヘルパー関数に切り出し（buildMarketTypePolicy_/buildKnowledgePolicy_/buildIndicatorPolicy_/buildWeekendPolicy_/buildRulePolicy_）。promptBuilder.gs 1,650→1,722行・17関数
+**v8.9変更点**: 未発表指標の仮説答え合わせ防止（二重防御）。対策A: GOLDEN/NY構造指示に未発表指標ルール追加。対策B: getUnreleasedIndicatorNames_新設（経済カレンダー照合→答え合わせ禁止警告注入）。重複コメント6箇所除去。postProcessor.gs 1,837→1,832行、promptBuilder.gs 1,581→1,650行
 **v8.8.1変更点**: Geminiモデル gemini-2.5-flash→gemini-2.5-pro変更（文字数遵守・指示追従の大幅改善）、リトライ4パターンをexecuteRetry_共通化（geminiApi.gs 537→566行）、countEmojis_/checkMultiArrowBlocks_分離、postProcessor.gsの\b除去（設計の鉄則準拠）、testFunctions.gs再構成（819→225行・testAll1-6廃止→testPro_*/testRULE/testWEEK）、★投稿構造の根本改革: ニュース要約型→仮説サイクル型（promptBuilder.gs 1,539→1,581行・投稿プロンプトシート市場系6タイプ書き換え）
 **v8.8変更点**: 後処理チェーン共通関数化（geminiApi.gs 638→537行）、INDICATOR主役ペア除外、GAS 6分タイムガード、メタ自己言及除去、孤立助詞バグ修正、Excel許可リスト、残り時間表現除去、プロンプトセクション数削減（71→53）
 **v8.7変更点**: 確定データシート化（POLICY_RATESハードコード廃止→スプレッドシート一元管理）、要人リスト新設（factCheck/promptBuilderに確定データ注入）
@@ -573,22 +579,30 @@ CompanaFXAutoPost/
 │   ├── callGemini_()        Gemini API呼び出し（3回リトライ）★v8.0: maxOutputTokens 8192 + thinkingConfig
 │   └── extractTextFromResponse_() レスポンスからテキスト抽出
 │
-├── promptBuilder.gs      ← プロンプト構築+データ注入    ✅実装済み（1,581行）★v8.8.1: 仮説ベース投稿構造+ファンダ重視+レート数字禁止
-│   ├── buildPrompt_()       プロンプト組み立て（システム最大の関数・636行）
+├── promptBuilder.gs      ← プロンプト構築+データ注入    ✅実装済み（1,759行）★v8.13: ニュース主軸ルール追加
+│   ├── buildPrompt_()       プロンプト組み立て（★v8.10: 636行→391行に縮小）
+│   ├── buildMarketTypePolicy_()  市場系方針（MORNING〜INDICATOR+月曜コンテキスト）★v8.10新設
+│   ├── buildKnowledgePolicy_()   KNOWLEDGE方針 ★v8.10新設
+│   ├── buildIndicatorPolicy_()   INDICATOR方針+データ注入 ★v8.10新設
+│   ├── buildWeekendPolicy_()     週末系方針（WEEKLY_*+NEXT_WEEK）★v8.10新設
+│   ├── buildRulePolicy_()        RULE系方針 ★v8.10新設
+│   ├── getUnreleasedIndicatorNames_() 未発表指標名取得（仮説答え合わせ防止）★v8.9新設
 │   ├── buildFormatRules_()  フォーマットルール生成（投稿タイプ別）
 │   ├── getEconomicCalendar_() 経済カレンダー取得（scope別）
 │   ├── getLearningLog_()    学びログ取得（スコア上位+ランダム選出）
-│   ├── getHypothesisContext_() 仮説コンテキスト取得
+│   ├── getHypothesisContext_() 仮説コンテキスト取得（★v8.9: 未発表指標チェック追加）
 │   ├── getQualityFeedback_() 品質フィードバック取得（ER平均値）
 │   ├── getPostPrompt_()     投稿プロンプト取得（Sheets）
 │   ├── getTCOverview()      TC概要取得（Sheets）
 │   ├── getTradeStyle_()     トレードスタイル取得
 │   └── getReferenceSources_() 情報ソース一覧取得
 │
-├── postProcessor.gs      ← 後処理チェーン              ✅実装済み（1,837行）★v8.8.1: \b除去（設計の鉄則準拠）
+├── postProcessor.gs      ← 後処理チェーン              ✅実装済み（1,977行）★v8.14: fixBrokenSentenceEndings_+fixOrphanedVariationSelector_新設
 │   ├── removeForeignText_() / stripAIPreamble_() / enforceLineBreaks_()
-│   ├── removeDisallowedEmoji_() / removeMarkdown_() / replaceProhibitedPhrases_()
-│   ├── fixMondayYesterday_() / removeDuplicateBlocks_() / truncateAfterHashtag_()
+│   ├── removeDisallowedEmoji_() / fixOrphanedVariationSelector_() / removeMarkdown_()
+│   ├── replaceProhibitedPhrases_()
+│   ├── fixMondayYesterday_() / removeDuplicateBlocks_() / removeOrphanedLines_()
+│   ├── fixBrokenSentenceEndings_() / truncateAfterHashtag_()
 │   ├── fixMissingDecimalPoint_() / fixHallucinatedRates_() / validateFinalFormat_()
 │   ├── generateDynamicHashtags_() / removeTCMention_()
 │   └── （主役ペア・絵文字・リスクセンチメントのリトライはgeminiApi.gsのgeneratePost内）
@@ -646,7 +660,7 @@ CompanaFXAutoPost/
 │   └── setupEconomicCalendarSheet() / setupIndicatorResultColumns()
 │
 ├── testFunctions.gs      ← テスト関数                  ✅実装済み（225行）★v8.8.1再構成
-├── qualityReview.gs      ← 品質レビュー（Claude API）   ✅実装済み（332行）★v8.6新規追加
+├── qualityReview.gs      ← 品質レビュー（Claude API）   ✅実装済み（427行）★v8.14: callClaude_指数バックオフ+エラー詳細ログ
 │   ├── testPro_MORNING()等  1タイプずつテスト（Pro用・ファクトチェック込み）★v8.8.1新設
 │   ├── testRULE1_3() / testRULE4() / testWEEK()  まとめテスト ★v8.8.1新設
 │   ├── testBatch_()         バッチテスト実行エンジン
@@ -1332,6 +1346,88 @@ GASエディタで有効化が必要:
 *　　　　 GOLDEN: 仮説スコアカード→今日の学び→明日への視点*
 *　　　　 NY: 仮説進捗→今夜の仮説（翌朝答え合わせ用）*
 *　　　　 スプレッドシートの旧構造指示がコード側を上書きする問題を解消（上書き宣言追加）*
+
+*バージョン: v8.9*
+*v8.9: 未発表指標の答え合わせ防止 + 重複コメント除去（2026-03-26）*
+*　　　① 対策A: GOLDEN/NY構造指示に未発表指標ルール追加（promptBuilder.gs）*
+*　　　　 「仮説の条件に含まれる経済指標がまだ■未発表なら、答え合わせは保留」ルールを追加*
+*　　　② 対策B: getUnreleasedIndicatorNames_()新設（promptBuilder.gs）*
+*　　　　 経済カレンダーの未発表指標名を取得し、仮説テキストと照合*
+*　　　　 マッチしたら「⚠️この指標はまだ未発表。答え合わせ禁止」警告をプロンプトに注入*
+*　　　　 部分一致チェック: 「新規」等の接頭辞を除去して4文字以上でマッチ*
+*　　　③ getHypothesisContext_()内に未発表指標チェック追加（promptBuilder.gs）*
+*　　　　 仮説振り返りブロック生成時に上記②を呼び出し、警告文を注入*
+*　　　④ 重複コメント除去（postProcessor.gs: 1箇所、promptBuilder.gs: 5箇所）*
+*　　　　 postProcessor.gs: 1,837→1,832行、promptBuilder.gs: 1,581→1,650行*
+*　　　問題の原因: GOLDEN（20:57生成）が21:30発表の失業保険件数を条件にした仮説について、*
+*　　　　 レート差分だけで「外れ」と判定し、未発表指標の答え合わせをしてしまった*
+
+*バージョン: v8.10*
+*v8.10: buildPrompt_分割リファクタリング（2026-03-26）*
+*　　　① buildPrompt_を636行→391行に縮小（promptBuilder.gs: 1,650→1,709行）*
+*　　　　 投稿タイプ別の方針指示を5つのヘルパー関数に切り出し*
+*　　　　 ロジックの変更はゼロ（prompt += を text += に変えて return text するだけ）*
+*　　　② 5つのヘルパー関数を新設:*
+*　　　　 buildMarketTypePolicy_(postType, now): 市場系方針+タイプ別指示+月曜コンテキスト*
+*　　　　 buildKnowledgePolicy_(postType): KNOWLEDGE方針*
+*　　　　 buildIndicatorPolicy_(postType, keys): INDICATOR方針+データ注入*
+*　　　　 buildWeekendPolicy_(postType, keys, rates): 週末系方針+データ注入*
+*　　　　 buildRulePolicy_(postType, isRuleType): RULE系方針*
+*　　　③ 今後の方針変更は対応するヘルパー関数内を修正するだけ（buildPrompt_本体を触らない）*
+
+*バージョン: v8.11*
+*v8.11: 条件分岐型仮説ルール追加（2026-03-26）*
+*　　　① 仮説を「条件分岐型」に変更（promptBuilder.gs: 1,709→1,722行）*
+*　　　　 一方向の賭け仮説（「○○なら○○円割れ」）を禁止*
+*　　　　 「結果に対する市場の反応」を読む仮説を推奨（「もしAならB、もしCならD」構造）*
+*　　　② 6箇所のプロンプト指示を更新:*
+*　　　　 buildFormatRules_: 基本の流れに「条件分岐型」明記 + NG例に「一方向の賭け禁止」追加*
+*　　　　 buildMarketTypePolicy_: 条件分岐型仮説の詳細ルール+OK/NG例（10行追加）*
+*　　　　 buildMarketTypePolicy_: MORNING「条件分岐型で」/ NY「条件分岐型で残せ」に変更*
+*　　　　 getHypothesisContext_: 答え合わせOK例3追加（条件分岐パターン）*
+
+*バージョン: v8.12*
+*v8.12: 品質管理の全面改善（2026-03-27）*
+*　　　① charMax緩和（config.gs）*
+*　　　　 300→380 / 350→420 / 450→550（全16タイプ）*
+*　　　　 文字数上限が厳しすぎて品質レビュー修正時に文が壊れる問題を解消*
+*　　　② 答え合わせ重複防止（promptBuilder.gs: 1,722→1,749行）*
+*　　　　 getHypothesisContext_内でgetTodayPreviousPosts_を照合*
+*　　　　 同じ仮説が過去投稿に含まれていたら「答え合わせ済み。状況の変化を1文で」に切り替え*
+*　　　③ 品質レビュー全面改修（qualityReview.gs: 332→411行）*
+*　　　　 Before: Claudeが指摘+修正テキストを1回のJSON出力で全部やる → 修正が雑、文が壊れる*
+*　　　　 After: Step1 Claude→指摘のみ / Step2 Gemini→指摘に基づいて修正 / Step3 コード→文字数保証*
+*　　　　 parseClaudeReviewResponse_新設（指摘のみパース）*
+*　　　　 trimToCharMax_新設（charMax超過時の末尾行削除。絵文字行は保護）*
+*　　　④ 孤立短文除去（postProcessor.gs: 1,832→1,898行）*
+*　　　　 removeOrphanedLines_新設。10文字以下の孤立行（「です。」等）を自動除去*
+*　　　　 後処理チェーンのremoveDuplicateBlocks_とtruncateAfterHashtag_の間に配置*
+
+*バージョン: v8.14*
+*v8.14: 壊れた句点パターン修復+孤立variation selector修復（2026-03-31）*
+*　　　① fixBrokenSentenceEndings_新設（postProcessor.gs: 1,898→1,977行）*
+*　　　　 品質修正（Gemini）で「。ですね。」「。です。」等の壊れた句点パターンを汎用修復*
+*　　　　 後処理チェーンのremoveOrphanedLines_とtruncateAfterHashtag_の間に配置*
+*　　　② replaceProhibitedPhrases_に「ここからが本番。」壊れパターン除去を追加*
+*　　　　 句点付きの壊れケースのみ対象。正常な「ここからが本番ですね。」は素通し*
+*　　　③ 根本原因修正: miReplacements配列（「見極めたい」置換先）から「ここからが本番」を撤去*
+*　　　　 postProcessor自身が壊れやすいフレーズを生成していた問題を解消*
+*　　　　 「、ここからが本番。」→「、ここが勝負どころ。」に変更*
+*　　　④ fixOrphanedVariationSelector_新設*
+*　　　　 Geminiが品質修正時に⚠️のベース文字(U+26A0)を落としU+FE0Fだけ残す問題を修復*
+*　　　　 行頭の孤立U+FE0F→⚠️に復元。文中の孤立U+FE0F→除去*
+*　　　　 後処理チェーンのremoveDisallowedEmoji_の直後に配置*
+*　　　⑤ callClaude_改修（qualityReview.gs: 411→427行）*
+*　　　　 529エラー対策: 指数バックオフ（5→10→20秒）、リトライ2→3回*
+*　　　　 エラー詳細ログ出力（error.type + error.message）で原因特定を容易に*
+
+*バージョン: v8.13*
+*v8.13: ニュース主軸ルール追加（2026-03-28）*
+*　　　① 投稿の主軸を「レート・指標」→「ニュース」に転換（promptBuilder.gs: 1,749→1,759行）*
+*　　　　 buildMarketTypePolicy_: 「投稿の主軸はニュース。レートは裏付け」ルール+OK/NG例追加*
+*　　　　 「世界で今何が起きているか→為替にどう影響しているか」の順で語る構造に変更*
+*　　　② buildFormatRules_題材選定: 「ニュースTOP5から最もインパクトのある話題を核にしろ」に強化*
+*　　　③ buildFormatRules_投稿構造: 「ニュース→為替への影響→仮説」の順に変更。「レートで始めるな」を明記*
 
 *バージョン: v8.8*
 *v8.8: 品質改善バッチ（2026-03-25）*

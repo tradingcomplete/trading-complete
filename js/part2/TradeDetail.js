@@ -373,7 +373,16 @@ class TradeDetail {
                 <p>ロット: ${trade.lotSize} Lot</p>
                 <p>SL: ${trade.stopLoss || '-'} / TP: ${trade.takeProfit || '-'}</p>
                 <p>シナリオ: ${trade.scenario || '-'}</p>
-                <p>感情: ${trade.entryEmotion || '-'}</p>
+                <p>感情: ${(() => {
+                    const em = window.normalizeEmotion(trade.entryEmotion);
+                    if (!em.selection && !em.memo) return '-';
+                    const opt = window.EMOTION_OPTIONS.find(o => o.key === em.selection);
+                    const label = opt ? opt.emoji + opt.label : '';
+                    const parts = [];
+                    if (label) parts.push(label);
+                    if (em.memo) parts.push(em.memo);
+                    return parts.join(' / ');
+                })()}</p>
             </div>
             
             <div class="trade-detail-section subsection-box">

@@ -376,7 +376,18 @@
 
                         <div class="input-group">
                             <label>エントリー時の感情・心理状態</label>
-                            <textarea id="entryEmotion" placeholder="例: 冷静に分析できていた / 少し焦りがあった / 確信を持ってエントリー など" rows="4"></textarea>
+                            <p class="emotion-hint">今、一番強い感情を選択</p>
+                            <div id="emotionSelector" class="emotion-selector">
+                                <button type="button" class="emotion-btn positive" data-emotion="calm" onclick="toggleEmotion(this)">😌 冷静</button>
+                                <button type="button" class="emotion-btn positive" data-emotion="confident" onclick="toggleEmotion(this)">💪 自信あり</button>
+                                <button type="button" class="emotion-btn positive" data-emotion="focused" onclick="toggleEmotion(this)">🎯 集中</button>
+                                <button type="button" class="emotion-btn positive" data-emotion="cautious" onclick="toggleEmotion(this)">🛡️ 慎重</button>
+                                <button type="button" class="emotion-btn negative" data-emotion="rushed" onclick="toggleEmotion(this)">⚡ 焦り</button>
+                                <button type="button" class="emotion-btn negative" data-emotion="anxious" onclick="toggleEmotion(this)">😟 不安</button>
+                                <button type="button" class="emotion-btn negative" data-emotion="excited" onclick="toggleEmotion(this)">🔥 興奮</button>
+                                <button type="button" class="emotion-btn negative" data-emotion="uncertain" onclick="toggleEmotion(this)">🤔 迷い</button>
+                            </div>
+                            <textarea id="entryEmotionMemo" placeholder="補足メモ（任意）" rows="2"></textarea>
                         </div>
                     </div>
                 </div>
@@ -2673,8 +2684,19 @@
                     <textarea id="editScenario" class="form-control" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>感情</label>
-                    <textarea id="editEmotion" class="form-control" rows="3" placeholder="例: 冷静に分析できていた / 少し焦りがあった / 確信を持ってエントリー など"></textarea>
+                    <label>感情・心理状態</label>
+                    <p class="emotion-hint">今、一番強い感情を選択</p>
+                    <div id="editEmotionSelector" class="emotion-selector">
+                        <button type="button" class="emotion-btn positive" data-emotion="calm" onclick="toggleEmotion(this)">😌 冷静</button>
+                        <button type="button" class="emotion-btn positive" data-emotion="confident" onclick="toggleEmotion(this)">💪 自信あり</button>
+                        <button type="button" class="emotion-btn positive" data-emotion="focused" onclick="toggleEmotion(this)">🎯 集中</button>
+                        <button type="button" class="emotion-btn positive" data-emotion="cautious" onclick="toggleEmotion(this)">🛡️ 慎重</button>
+                        <button type="button" class="emotion-btn negative" data-emotion="rushed" onclick="toggleEmotion(this)">⚡ 焦り</button>
+                        <button type="button" class="emotion-btn negative" data-emotion="anxious" onclick="toggleEmotion(this)">😟 不安</button>
+                        <button type="button" class="emotion-btn negative" data-emotion="excited" onclick="toggleEmotion(this)">🔥 興奮</button>
+                        <button type="button" class="emotion-btn negative" data-emotion="uncertain" onclick="toggleEmotion(this)">🤔 迷い</button>
+                    </div>
+                    <textarea id="editEmotionMemo" class="form-control" rows="2" placeholder="補足メモ（任意）"></textarea>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-primary" onclick="saveBasicInfo()">保存</button>

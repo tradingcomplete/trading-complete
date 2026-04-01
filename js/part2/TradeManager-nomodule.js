@@ -58,7 +58,7 @@
                 
                 // テキストフィールド
                 scenario: '',
-                entryEmotion: '',
+                entryEmotion: { selection: '', memo: '' },
                 reflection: '',
                 
                 // メタ情報

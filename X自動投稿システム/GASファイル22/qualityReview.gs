@@ -3,6 +3,7 @@
  * 投稿品質レビュー（Claude API）
  * 
  * v8.6: 新規作成
+ * ★v8.14: callClaude_改修 — 529対策（指数バックオフ5→10→20秒、リトライ2→3回、エラー詳細ログ）
  * 
  * Geminiが生成した投稿を、Claude（別モデル）がクロスチェックする。
  * 「正確か？」はfactCheckPost_（Gemini）が担当。
@@ -66,71 +67,59 @@ function qualityReviewPost_(postText, postType, typeConfig) {
     
     // 文字数情報
     var charMin = typeConfig.charMin || 200;
-    var charMax = typeConfig.charMax || 350;
+    var charMax = typeConfig.charMax || 420;
     var bodyText = postText.split(/\n\n#/)[0]; // ハッシュタグ前の本文
     var currentLength = bodyText.length;
     
-    // プロンプト構築
-    var prompt = 'あなたはFX関連X投稿の品質レビュアーです。\n';
-    prompt += '以下の投稿を5つの観点でレビューし、問題があれば修正してください。\n\n';
+    // ===== Step 1: Claude → 指摘のみ（修正テキストは要求しない） =====
+    var reviewPrompt = 'あなたはFX関連X投稿の品質レビュアーです。\n';
+    reviewPrompt += '以下の投稿を5つの観点でレビューし、問題点のみを指摘してください。\n';
+    reviewPrompt += '★修正テキストは不要。問題点の指摘だけに集中せよ。\n\n';
     
-    prompt += '【投稿タイプ】' + postType + '（' + (typeConfig.label || '') + '）\n';
-    prompt += '【投稿タイプの時間帯と役割】' + typeDesc + '\n';
-    prompt += '【文字数制限】' + charMin + '〜' + charMax + '文字（現在: ' + currentLength + '文字）\n\n';
+    reviewPrompt += '【投稿タイプ】' + postType + '（' + (typeConfig.label || '') + '）\n';
+    reviewPrompt += '【投稿タイプの時間帯と役割】' + typeDesc + '\n';
+    reviewPrompt += '【文字数制限】' + charMin + '〜' + charMax + '文字（現在: ' + currentLength + '文字）\n\n';
     
-    prompt += '【レビュー対象の投稿テキスト】\n';
-    prompt += postText + '\n\n';
+    reviewPrompt += '【レビュー対象の投稿テキスト】\n';
+    reviewPrompt += postText + '\n\n';
     
     if (previousPosts && previousPosts.length > 0) {
-      prompt += '【今日の過去投稿（重複チェック用）】\n';
+      reviewPrompt += '【今日の過去投稿（重複チェック用）】\n';
       for (var i = 0; i < previousPosts.length; i++) {
-        prompt += '--- ' + previousPosts[i].type + ' ---\n';
-        prompt += previousPosts[i].text + '\n\n';
+        reviewPrompt += '--- ' + previousPosts[i].type + ' ---\n';
+        reviewPrompt += previousPosts[i].text + '\n\n';
       }
     }
     
-    prompt += '【レビュー項目】\n';
-    prompt += 'Q1. タイプ整合: この投稿の冒頭・トーンは「' + postType + '」の時間帯と合っているか？\n';
-    prompt += '    上記の【時間帯と役割】に基づいて判定せよ。\n';
-    prompt += 'Q2. 表現重複: 今日の過去投稿と同じ締め文・フレーズ（「休む勇気」「検証日和」等）が使われていないか？\n';
-    prompt += '    同じフレーズが既に使われていたら別表現に変更せよ。\n';
-    prompt += 'Q3. 文の完成度: 体言止めで文が完結していない箇所、文脈が飛躍している箇所はないか？\n';
-    prompt += 'Q4. 文字数: ' + charMin + '〜' + charMax + '文字に収まっているか？（現在' + currentLength + '文字）\n';
-    prompt += '    超過している場合は、冗長な補足説明を削って範囲内に収めよ。\n';
-    prompt += 'Q5. 口調の一貫性: コンパナの口調（ですね/かなと/なんですよ/って感じ）が維持されているか？\n';
-    prompt += '    アナリスト調（〜である/〜と見られる）になっていたら修正せよ。\n\n';
+    reviewPrompt += '【レビュー項目】\n';
+    reviewPrompt += 'Q1. タイプ整合: この投稿の冒頭・トーンは「' + postType + '」の時間帯と合っているか？\n';
+    reviewPrompt += '    上記の【時間帯と役割】に基づいて判定せよ。\n';
+    reviewPrompt += 'Q2. 表現重複: 今日の過去投稿と同じ締め文・フレーズ（「休む勇気」「検証日和」等）が使われていないか？\n';
+    reviewPrompt += 'Q3. 文の完成度: 体言止めで文が完結していない箇所、孤立した短文（「です。」だけ等）、文脈が飛躍している箇所はないか？\n';
+    reviewPrompt += 'Q4. 文字数: ' + charMin + '〜' + charMax + '文字に収まっているか？（現在' + currentLength + '文字）\n';
+    reviewPrompt += '    超過している場合、どの部分が冗長で削れるかを具体的に指摘せよ。\n';
+    reviewPrompt += 'Q5. 口調の一貫性: コンパナの口調（ですね/かなと/なんですよ/って感じ）が維持されているか？\n';
+    reviewPrompt += '    アナリスト調（〜である/〜と見られる）になっていたら指摘せよ。\n\n';
     
-    prompt += '【修正時の絶対ルール】\n';
-    prompt += '・絵文字構造（📕📝💡☕⚠️✅で始まるブロック）は絶対に変えるな。\n';
-    prompt += '・→行の構造も変えるな。\n';
-    prompt += '・ハッシュタグ行はそのまま残せ。\n';
-    prompt += '・修正は最小限に。問題のある箇所だけ直して、それ以外は一切触るな。\n';
-    prompt += '・事実やレートの数値は変更するな（事実検証は別の仕組みが担当）。\n\n';
+    reviewPrompt += '【出力形式】JSON形式のみ出力。修正テキストは不要。\n';
+    reviewPrompt += '{\n';
+    reviewPrompt += '  "passed": true/false,\n';
+    reviewPrompt += '  "issues": [\n';
+    reviewPrompt += '    {"id": "Q1〜Q5", "problem": "問題の説明", "suggestion": "どう直すべきかの具体的指示"}\n';
+    reviewPrompt += '  ]\n';
+    reviewPrompt += '}\n';
+    reviewPrompt += '問題がなければ {"passed": true, "issues": []} を返せ。\n';
     
-    prompt += '【出力形式】JSON形式のみ出力。それ以外のテキストは不要。\n';
-    prompt += '{\n';
-    prompt += '  "passed": true/false,\n';
-    prompt += '  "issues": [\n';
-    prompt += '    {\n';
-    prompt += '      "id": "Q1〜Q5のどれか",\n';
-    prompt += '      "problem": "問題の説明（日本語）",\n';
-    prompt += '      "fix": "どう修正したか（日本語）"\n';
-    prompt += '    }\n';
-    prompt += '  ],\n';
-    prompt += '  "revisedText": "問題があった場合の修正済みテキスト（問題なければ空文字）"\n';
-    prompt += '}\n';
-    prompt += '問題がなければ {"passed": true, "issues": [], "revisedText": ""} を返せ。\n';
+    // Claude API呼び出し（指摘のみ）
+    var reviewResult = callClaude_(reviewPrompt, apiKey);
     
-    // Claude API呼び出し
-    var result = callClaude_(prompt, apiKey);
-    
-    if (!result) {
+    if (!reviewResult) {
       console.log('⚠️ Claude API呼び出し失敗 → 品質レビューをスキップ');
       return { passed: true, issues: [], revisedText: '' };
     }
     
     // JSONパース
-    var parsed = parseClaudeResponse_(result);
+    var parsed = parseClaudeReviewResponse_(reviewResult);
     
     if (!parsed) {
       console.log('⚠️ Claude品質レビュー応答のパース失敗 → スキップ');
@@ -140,15 +129,58 @@ function qualityReviewPost_(postText, postType, typeConfig) {
     // ログ出力
     if (parsed.passed) {
       console.log('✅ 品質レビュー（Claude）: 合格');
-    } else {
-      console.log('📝 品質レビュー（Claude）: ' + parsed.issues.length + '件の改善');
-      for (var j = 0; j < parsed.issues.length; j++) {
-        var issue = parsed.issues[j];
-        console.log('  ' + issue.id + ': ' + issue.problem);
-      }
+      return { passed: true, issues: [], revisedText: '' };
     }
     
-    return parsed;
+    console.log('📝 品質レビュー（Claude）: ' + parsed.issues.length + '件の改善');
+    for (var j = 0; j < parsed.issues.length; j++) {
+      console.log('  ' + parsed.issues[j].id + ': ' + parsed.issues[j].problem);
+    }
+    
+    // ===== Step 2: Gemini → Claudeの指摘に基づいて修正 =====
+    var geminiApiKey = getApiKeys().GEMINI_API_KEY;
+    var fixPrompt = '以下のFX投稿テキストを、品質レビューの指摘に基づいて修正してください。\n\n';
+    fixPrompt += '【元の投稿テキスト】\n' + postText + '\n\n';
+    fixPrompt += '【品質レビューの指摘】\n';
+    for (var k = 0; k < parsed.issues.length; k++) {
+      fixPrompt += '・' + parsed.issues[k].id + ': ' + parsed.issues[k].problem + '\n';
+      if (parsed.issues[k].suggestion) {
+        fixPrompt += '  → 修正指示: ' + parsed.issues[k].suggestion + '\n';
+      }
+    }
+    fixPrompt += '\n【修正時の絶対ルール】\n';
+    fixPrompt += '・絵文字構造（📕📝💡☕⚠️✅で始まるブロック）は絶対に変えるな。\n';
+    fixPrompt += '・→行の構造も変えるな。\n';
+    fixPrompt += '・ハッシュタグ行はそのまま残せ。\n';
+    fixPrompt += '・指摘された箇所だけ直して、それ以外は一切触るな。\n';
+    fixPrompt += '・事実やレートの数値は変更するな。\n';
+    fixPrompt += '・口調はコンパナのまま（ですね/かなと/なんですよ/って感じ）。\n';
+    fixPrompt += '・文字数は' + charMin + '〜' + charMax + '文字に収めろ（ハッシュタグ除く）。\n';
+    fixPrompt += '・孤立した短文（「です。」だけ等）を残すな。\n\n';
+    fixPrompt += '修正後の投稿テキストのみを出力せよ。説明やJSON形式は不要。\n';
+    
+    var fixResult = callGemini_(fixPrompt, geminiApiKey, false);
+    
+    if (!fixResult || !fixResult.text) {
+      console.log('⚠️ Gemini修正失敗 → Claudeの指摘のみ返却');
+      return { passed: false, issues: parsed.issues, revisedText: '' };
+    }
+    
+    var revisedText = fixResult.text;
+    
+    // ===== Step 3: コード側で文字数最終保証 =====
+    var revisedBody = revisedText.split(/\n\n#/)[0];
+    var revisedLength = revisedBody.length;
+    
+    if (revisedLength > charMax) {
+      console.log('⚠️ Gemini修正後も文字数超過（' + revisedLength + '/' + charMax + '）→ コード側で圧縮');
+      // 末尾から文単位で削って範囲内に収める
+      revisedText = trimToCharMax_(revisedText, charMax);
+    }
+    
+    console.log('✅ 品質修正完了（Claude指摘→Gemini修正→文字数保証）');
+    
+    return { passed: false, issues: parsed.issues, revisedText: revisedText };
     
   } catch (e) {
     console.log('⚠️ 品質レビューエラー: ' + e.message + ' → スキップ');
@@ -160,6 +192,7 @@ function qualityReviewPost_(postText, postType, typeConfig) {
 // ===== Claude API呼び出し =====
 /**
  * Anthropic Messages APIを呼び出す
+ * ★v8.14: 529対策 — 指数バックオフ(5→10→20秒) + リトライ3回 + エラー詳細ログ
  * 
  * @param {string} prompt - プロンプト
  * @param {string} apiKey - Anthropic APIキー
@@ -167,6 +200,7 @@ function qualityReviewPost_(postText, postType, typeConfig) {
  */
 function callClaude_(prompt, apiKey) {
   var url = 'https://api.anthropic.com/v1/messages';
+  var MAX_RETRIES = 3;
   
   var requestBody = {
     model: 'claude-sonnet-4-6',
@@ -187,7 +221,7 @@ function callClaude_(prompt, apiKey) {
     muteHttpExceptions: true
   };
   
-  for (var attempt = 1; attempt <= 2; attempt++) {
+  for (var attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       var response = UrlFetchApp.fetch(url, options);
       var code = response.getResponseCode();
@@ -200,15 +234,28 @@ function callClaude_(prompt, apiKey) {
         }
       }
       
-      console.log('⚠️ Claude API失敗 (' + code + ') 試行' + attempt + '/2');
-      if (code === 429) {
-        Utilities.sleep(5000);
+      // ★v8.14: エラー詳細をログ出力（原因特定用）
+      var errorDetail = '';
+      try {
+        var errorBody = JSON.parse(response.getContentText());
+        errorDetail = ' → ' + (errorBody.error ? errorBody.error.type + ': ' + errorBody.error.message : response.getContentText().substring(0, 200));
+      } catch (parseErr) {
+        errorDetail = ' → ' + response.getContentText().substring(0, 200);
+      }
+      console.log('⚠️ Claude API失敗 (' + code + ') 試行' + attempt + '/' + MAX_RETRIES + errorDetail);
+      
+      // ★v8.14: 指数バックオフ（429/529は長め、その他は短め）
+      if (code === 429 || code === 529) {
+        // 5秒 → 10秒 → 20秒（指数バックオフ）
+        var waitSec = 5 * Math.pow(2, attempt - 1);
+        console.log('⏱️ ' + waitSec + '秒待機中...');
+        Utilities.sleep(waitSec * 1000);
       } else {
         Utilities.sleep(2000);
       }
     } catch (e) {
-      console.log('⚠️ Claude APIエラー: ' + e.message + ' 試行' + attempt + '/2');
-      Utilities.sleep(2000);
+      console.log('⚠️ Claude APIエラー: ' + e.message + ' 試行' + attempt + '/' + MAX_RETRIES);
+      Utilities.sleep(3000);
     }
   }
   
@@ -216,8 +263,8 @@ function callClaude_(prompt, apiKey) {
 }
 
 
-// ===== Claudeレスポンスのパース =====
-function parseClaudeResponse_(text) {
+// ===== Claudeレビュー応答のパース（指摘のみ版） =====
+function parseClaudeReviewResponse_(text) {
   try {
     // ```json ... ``` を除去
     var cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -225,14 +272,62 @@ function parseClaudeResponse_(text) {
     
     return {
       passed: !!parsed.passed,
-      issues: parsed.issues || [],
-      revisedText: parsed.revisedText || ''
+      issues: parsed.issues || []
     };
   } catch (e) {
     console.log('⚠️ Claude応答JSON解析失敗: ' + e.message);
     console.log('  応答冒頭: ' + text.substring(0, 200));
     return null;
   }
+}
+
+
+// ===== 文字数超過時のコード側圧縮 =====
+/**
+ * ★v8.12: 文字数がcharMaxを超えている場合、末尾から文単位で削る
+ * ハッシュタグは保持。絵文字ブロック構造は壊さない。
+ * 
+ * @param {string} text - 投稿テキスト全体（ハッシュタグ含む）
+ * @param {number} charMax - 本文の文字数上限
+ * @return {string} 圧縮後のテキスト
+ */
+function trimToCharMax_(text, charMax) {
+  // ハッシュタグ部分を分離
+  var hashtagMatch = text.match(/\n\n(#[^\n]+)$/);
+  var body = hashtagMatch ? text.slice(0, hashtagMatch.index) : text;
+  var hashtagPart = hashtagMatch ? hashtagMatch[0] : '';
+  
+  // 本文を行に分割
+  var lines = body.split('\n');
+  
+  // 末尾から行を削って範囲内に収める（絵文字行は削らない）
+  while (lines.join('\n').length > charMax && lines.length > 3) {
+    var lastLine = lines[lines.length - 1];
+    
+    // 空行は無条件で削除
+    if (lastLine.trim() === '') {
+      lines.pop();
+      continue;
+    }
+    
+    // 絵文字行（ブロック先頭）は削らない
+    if (/^[☕📕📝📋💡⚠️✅]/.test(lastLine)) {
+      break;
+    }
+    
+    // 孤立短文（10文字以下）は優先的に削除
+    if (lastLine.trim().length <= 10) {
+      lines.pop();
+      continue;
+    }
+    
+    // 通常の行を末尾から削除
+    lines.pop();
+  }
+  
+  var trimmed = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  console.log('✂️ 文字数圧縮: ' + body.length + '→' + trimmed.length + '文字');
+  return trimmed + hashtagPart;
 }
 
 

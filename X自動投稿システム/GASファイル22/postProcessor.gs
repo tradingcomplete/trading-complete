@@ -6,8 +6,11 @@
  * 
  * generatePost内で生成テキストに対して順番に適用される:
  *   removeForeignText_ → stripAIPreamble_ → enforceLineBreaks_
- *   → removeDisallowedEmoji_ → removeMarkdown_ → replaceProhibitedPhrases_
+ *   → removeDisallowedEmoji_ → fixOrphanedVariationSelector_（★v8.14: 孤立U+FE0F修復）
+ *   → removeMarkdown_ → replaceProhibitedPhrases_
  *   → fixMondayYesterday_（月曜のみ） → removeDuplicateBlocks_
+ *   → removeOrphanedLines_（★v8.12: 孤立短文除去）
+ *   → fixBrokenSentenceEndings_（★v8.14: 壊れた句点修復）
  *   → truncateAfterHashtag_ → generateDynamicHashtags_
  *   → fixMissingDecimalPoint_ → fixHallucinatedRates_
  *   → validateFinalFormat_（安全網）
@@ -70,11 +73,6 @@ function removeForeignText_(text) {
   
   return text;
 }
-
-/**
- * AI前置きを自動除去する
- * Geminiがプロンプト指示を無視して出力する「はい、承知しました」等の前置きを除去
- */
 
 /**
  * AI前置きを自動除去する
@@ -423,10 +421,53 @@ function removeDisallowedEmoji_(text) {
   return result;
 }
 
+
 /**
- * Markdown記法を後処理で除去
- * Geminiが稀にMarkdown記法を混入するため、機械的に除去する
+ * ★v8.14: 孤立したvariation selector (U+FE0F) を修復する
+ * Geminiが品質修正でテキストを書き直す際に、⚠️のベース文字 ⚠(U+26A0) を
+ * 落としてU+FE0Fだけ残すパターンへの対策。
+ * 
+ * - 行頭の孤立U+FE0F → ⚠️に復元（絵文字ブロックヘッダーだった可能性が高い）
+ * - 文中の孤立U+FE0F → 除去（残骸）
  */
+function fixOrphanedVariationSelector_(text) {
+  var before = text;
+  var lines = text.split('\n');
+  var fixed = [];
+  
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    
+    // 行頭の孤立U+FE0F → ⚠️に復元
+    if (line.length > 0 && line.charCodeAt(0) === 0xFE0F) {
+      line = '\u26A0\uFE0F' + line.substring(1);
+    }
+    
+    // 行中の孤立U+FE0Fを除去（前の文字がベース絵文字でない場合）
+    var result = '';
+    for (var j = 0; j < line.length; j++) {
+      if (line.charCodeAt(j) === 0xFE0F) {
+        var prev = j > 0 ? line.charCodeAt(j - 1) : 0;
+        // 正常なベース文字の後のU+FE0Fは保持
+        if (prev === 0x26A0 || prev === 0x2615 || prev === 0x2705 ||
+            prev === 0x2764 || prev === 0x2B50 || prev === 0x203C || prev === 0x2049) {
+          result += line.charAt(j);
+        }
+        // それ以外は孤立→除去（何も追加しない）
+      } else {
+        result += line.charAt(j);
+      }
+    }
+    fixed.push(result);
+  }
+  
+  text = fixed.join('\n');
+  if (text !== before) {
+    console.log('📌 孤立variation selectorを修復しました');
+  }
+  return text;
+}
+
 
 /**
  * Markdown記法を後処理で除去
@@ -526,6 +567,18 @@ function replaceProhibitedPhrases_(text) {
     text = text.replace(/フォロワーの皆様[、,]?[ \t]*/g, '');
     text = text.replace(/フォロワーの皆さん[、,]?[ \t]*/g, '');
     if (text !== beforeMinasan) changes.push('呼びかけ除去');
+  }
+  
+  // ★v8.14: 「ここからが本番」壊れパターン除去（Geminiが好む定型句。品質修正で壊れやすい）
+  // 「、ここからが本番。ですね。」のように句点が不自然に入るケースのみ対象
+  // 正常な「ここからが本番ですね。」は壊れていないのでそのまま通す
+  if (text.indexOf('ここからが本番') !== -1) {
+    var beforeHonban = text;
+    // 読点の後 + 句点で終わる壊れパターン: 「、ここからが本番。」→「。」
+    text = text.replace(/[、,][ \t]*ここからが本番[。.]/g, '。');
+    // 行頭・文頭 + 句点で終わる壊れパターン: 「ここからが本番。」→ 除去
+    text = text.replace(/ここからが本番[。.][ \t]*/g, '');
+    if (text !== beforeHonban) changes.push('「ここからが本番」除去');
   }
   
   // ★v8.8: メタ的自己言及を含む文を除去（システムの裏側を暴露する表現）
@@ -628,7 +681,7 @@ function replaceProhibitedPhrases_(text) {
   if (text.indexOf('見極めたい') !== -1) {
     var miCount = 0;
     var miReplacements = [
-      '、ここからが本番。',
+      '、ここが勝負どころ。',
       'の答え合わせはこれから。',
       '、結果を見届けよう。',
       '次第で景色が変わるかも。'
@@ -1135,11 +1188,95 @@ function removeDuplicateBlocks_(text) {
   return text;
 }
 
+
 /**
- * ハッシュタグ行以降のテキストを切り落とす
- * Geminiが1回のレスポンスで2投稿分を出力するケースへの対策
- * 例: 「FX #ドル円\n現在の時刻は...」→「FX #ドル円」で終了
+ * ★v8.12: 品質修正で壊れた孤立短文を除去する
+ * Geminiが文字数圧縮時に前半を削除し、「です。」「ですね。」だけが残るケースへの対策
+ * 
+ * 除去対象:
+ *   - 10文字以下の孤立行（絵文字行・→行・ハッシュタグ行は除く）
+ *   - 空行に挟まれた短い断片
  */
+function removeOrphanedLines_(text) {
+  var lines = text.split('\n');
+  var cleaned = [];
+  var removed = 0;
+  
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    var trimmed = line.trim();
+    
+    // 空行はそのまま保持
+    if (trimmed === '') {
+      cleaned.push(line);
+      continue;
+    }
+    
+    // 絵文字行（ブロック先頭）は保持
+    if (/^[☕📕📝📋💡⚠️✅]/.test(trimmed)) {
+      cleaned.push(line);
+      continue;
+    }
+    
+    // →行は保持
+    if (trimmed.indexOf('→') === 0) {
+      cleaned.push(line);
+      continue;
+    }
+    
+    // ハッシュタグ行は保持
+    if (/^#/.test(trimmed)) {
+      cleaned.push(line);
+      continue;
+    }
+    
+    // 10文字以下の孤立行を検出
+    if (trimmed.length <= 10) {
+      // 前の行が空行（または先頭）かチェック
+      var prevEmpty = (i === 0) || (lines[i - 1].trim() === '');
+      // 次の行が空行（または末尾）かチェック
+      var nextEmpty = (i === lines.length - 1) || (lines[i + 1].trim() === '');
+      
+      if (prevEmpty || nextEmpty) {
+        console.log('🗑️ 孤立短文を除去: 「' + trimmed + '」');
+        removed++;
+        continue;
+      }
+    }
+    
+    cleaned.push(line);
+  }
+  
+  if (removed > 0) {
+    // 連続空行の整理
+    var result = cleaned.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    return result;
+  }
+  
+  return text;
+}
+
+
+/**
+ * ★v8.14: 壊れた句点パターンを修復する
+ * 品質修正（Gemini）が文を切り貼りした際に、「。ですね。」「。です。」のように
+ * 句点の直後に短い文末表現が孤立するパターンを修復。
+ * 
+ * 例:
+ *   「しっかり。ですね。」→「しっかりですね。」
+ *   「本番。です。」→「本番です。」
+ */
+function fixBrokenSentenceEndings_(text) {
+  var before = text;
+  // 「。」の直後に短い文末表現が続くパターン → 不要な「。」を除去して接続
+  text = text.replace(/。(ですね。|です。|でした。|ました。|ましたね。|ですよ。|ですよね。|かなと。|って感じです。|って感じですね。|ますね。|ますよ。|んですよ。|んですよね。|かもですね。)/g, '$1');
+  
+  if (text !== before) {
+    console.log('📌 壊れた句点を修復しました');
+  }
+  return text;
+}
+
 
 /**
  * ハッシュタグ行以降のテキストを切り落とす
@@ -1805,6 +1942,7 @@ function applyPostProcessingChain_(text, postType, rates) {
   text = stripAIPreamble_(text);
   text = enforceLineBreaks_(text);
   text = removeDisallowedEmoji_(text);
+  text = fixOrphanedVariationSelector_(text);  // ★v8.14: 孤立U+FE0F修復
   text = removeMarkdown_(text);
   text = replaceProhibitedPhrases_(text);
   
@@ -1815,6 +1953,8 @@ function applyPostProcessingChain_(text, postType, rates) {
   }
   
   text = removeDuplicateBlocks_(text);
+  text = removeOrphanedLines_(text);  // ★v8.12: 品質修正で壊れた孤立短文を除去
+  text = fixBrokenSentenceEndings_(text);  // ★v8.14: 壊れた句点パターン修復
   text = truncateAfterHashtag_(text);
   text = generateDynamicHashtags_(text, postType);
   

@@ -353,6 +353,91 @@ class AISummaryModule {
         return stats;
     }
     
+    /**
+     * 感情別統計を計算（単一選択版）
+     * @private
+     * @param {Array} trades - トレード配列（closedのみ）
+     * @returns {Object} 感情別統計
+     */
+    #calculateEmotionStats(trades) {
+        const EMOTIONS = window.EMOTION_OPTIONS || [];
+        const normalize = window.normalizeEmotion || ((v) => ({ selection: '', memo: '' }));
+        
+        const byEmotion = {};
+        let positiveCount = 0, positiveWins = 0, positivePips = 0;
+        let negativeCount = 0, negativeWins = 0, negativePips = 0;
+        let untaggedCount = 0, untaggedWins = 0, untaggedPips = 0;
+        
+        // 各感情の初期化
+        EMOTIONS.forEach(opt => {
+            byEmotion[opt.key] = { count: 0, wins: 0, totalPips: 0 };
+        });
+        
+        trades.forEach(trade => {
+            const pips = parseFloat(trade.pips) || 0;
+            const isWin = pips > 0;
+            const em = normalize(trade.entryEmotion);
+            
+            // 未選択（旧データ含む）
+            if (!em.selection) {
+                untaggedCount++;
+                if (isWin) untaggedWins++;
+                untaggedPips += pips;
+                return;
+            }
+            
+            // 感情別に集計
+            if (byEmotion[em.selection]) {
+                byEmotion[em.selection].count++;
+                if (isWin) byEmotion[em.selection].wins++;
+                byEmotion[em.selection].totalPips += pips;
+            }
+            
+            // ポジティブ/ネガティブ集計
+            const opt = EMOTIONS.find(o => o.key === em.selection);
+            if (opt?.category === 'positive') {
+                positiveCount++;
+                if (isWin) positiveWins++;
+                positivePips += pips;
+            } else if (opt?.category === 'negative') {
+                negativeCount++;
+                if (isWin) negativeWins++;
+                negativePips += pips;
+            }
+        });
+        
+        // 勝率計算ヘルパー
+        const calcRate = (wins, count) => count > 0 ? Math.round((wins / count) * 1000) / 10 : 0;
+        const calcAvg = (total, count) => count > 0 ? Math.round((total / count) * 10) / 10 : 0;
+        
+        // byEmotion に勝率・平均pipsを追加
+        Object.keys(byEmotion).forEach(key => {
+            const e = byEmotion[key];
+            e.winRate = calcRate(e.wins, e.count);
+            e.avgPips = calcAvg(e.totalPips, e.count);
+            e.totalPips = Math.round(e.totalPips * 10) / 10;
+        });
+        
+        return {
+            byEmotion: byEmotion,
+            positiveTotal: {
+                count: positiveCount,
+                winRate: calcRate(positiveWins, positiveCount),
+                avgPips: calcAvg(positivePips, positiveCount)
+            },
+            negativeTotal: {
+                count: negativeCount,
+                winRate: calcRate(negativeWins, negativeCount),
+                avgPips: calcAvg(negativePips, negativeCount)
+            },
+            untagged: {
+                count: untaggedCount,
+                winRate: calcRate(untaggedWins, untaggedCount),
+                avgPips: calcAvg(untaggedPips, untaggedCount)
+            }
+        };
+    }
+    
     // ================
     // Public API
     // ================
@@ -404,7 +489,8 @@ class AISummaryModule {
                 basic: this.#calculateBasicStats(trades),
                 ruleCompliance: this.#calculateRuleCompliance(trades),
                 riskManagement: this.#calculateRiskManagement(trades),
-                methodStats: this.#calculateMethodStats(trades)
+                methodStats: this.#calculateMethodStats(trades),
+                emotionStats: this.#calculateEmotionStats(trades)
             };
             
             console.log('AISummaryModule.generateSummary:', summary);
@@ -470,6 +556,27 @@ class AISummaryModule {
                 const m = methodStats[key];
                 text += `- ${m.methodName}: ${m.winRate}% (${m.count}件, ${m.totalPips > 0 ? '+' : ''}${m.totalPips}pips)\n`;
             });
+            text += `\n`;
+        }
+        
+        // 感情別
+        const { emotionStats } = summary;
+        if (emotionStats && (emotionStats.positiveTotal.count > 0 || emotionStats.negativeTotal.count > 0)) {
+            text += `### 感情別分析\n`;
+            text += `- ポジティブ感情時: 勝率${emotionStats.positiveTotal.winRate}% (${emotionStats.positiveTotal.count}件, 平均${emotionStats.positiveTotal.avgPips > 0 ? '+' : ''}${emotionStats.positiveTotal.avgPips}pips)\n`;
+            text += `- ネガティブ感情時: 勝率${emotionStats.negativeTotal.winRate}% (${emotionStats.negativeTotal.count}件, 平均${emotionStats.negativeTotal.avgPips > 0 ? '+' : ''}${emotionStats.negativeTotal.avgPips}pips)\n`;
+            
+            const EMOTIONS = window.EMOTION_OPTIONS || [];
+            EMOTIONS.forEach(opt => {
+                const e = emotionStats.byEmotion[opt.key];
+                if (e && e.count > 0) {
+                    text += `  - ${opt.emoji}${opt.label}: 勝率${e.winRate}% (${e.count}件, ${e.avgPips > 0 ? '+' : ''}${e.avgPips}pips)\n`;
+                }
+            });
+            
+            if (emotionStats.untagged.count > 0) {
+                text += `- 未選択: 勝率${emotionStats.untagged.winRate}% (${emotionStats.untagged.count}件)\n`;
+            }
         }
         
         return text;

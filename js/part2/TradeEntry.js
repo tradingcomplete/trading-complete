@@ -2,6 +2,109 @@
 // Part 2 モジュール化 第3段階 - 新規エントリー機能の分離
 // 作成日: 2025/09/15
 // 更新日: 2026/01/14 - セキュリティ適用（サニタイズ追加）
+// 更新日: 2026/04/01 - 感情記録の選択式化（単一選択・AI分析基盤）
+
+// ===== 感情カテゴリ定数（グローバル公開） =====
+const EMOTION_OPTIONS = [
+    { key: 'calm',      label: '冷静',     emoji: '😌', category: 'positive' },
+    { key: 'confident', label: '自信あり',  emoji: '💪', category: 'positive' },
+    { key: 'focused',   label: '集中',     emoji: '🎯', category: 'positive' },
+    { key: 'cautious',  label: '慎重',     emoji: '🛡️', category: 'positive' },
+    { key: 'rushed',    label: '焦り',     emoji: '⚡', category: 'negative' },
+    { key: 'anxious',   label: '不安',     emoji: '😟', category: 'negative' },
+    { key: 'excited',   label: '興奮',     emoji: '🔥', category: 'negative' },
+    { key: 'uncertain', label: '迷い',     emoji: '🤔', category: 'negative' },
+];
+window.EMOTION_OPTIONS = EMOTION_OPTIONS;
+
+/**
+ * 感情データを正規化（新旧形式の両対応）
+ * @param {string|Object} raw - 保存されたデータ
+ * @returns {Object} { selection: string, memo: string }
+ */
+function normalizeEmotion(raw) {
+    if (!raw) return { selection: '', memo: '' };
+    
+    // 新形式（オブジェクト）
+    if (typeof raw === 'object' && raw.selection !== undefined) {
+        return { selection: raw.selection || '', memo: raw.memo || '' };
+    }
+    
+    // JSON文字列（Supabaseから取得した場合）
+    if (typeof raw === 'string' && raw.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed.selection !== undefined) return { selection: parsed.selection, memo: parsed.memo || '' };
+        } catch (e) { /* パース失敗 → 旧形式として扱う */ }
+    }
+    
+    // 旧形式（プレーンテキスト）→ メモとして保持
+    return { selection: '', memo: String(raw) };
+}
+window.normalizeEmotion = normalizeEmotion;
+
+/**
+ * 感情ボタンのトグル（単一選択: 同じボタン→解除、別ボタン→切替）
+ * @param {HTMLElement} btn - クリックされたボタン
+ */
+function toggleEmotion(btn) {
+    const container = btn.parentElement;
+    const wasActive = btn.classList.contains('active');
+    
+    // 同じコンテナ内の全ボタンをOFF
+    container.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
+    
+    // クリックしたボタンが未選択だった場合のみON（選択済みなら解除）
+    if (!wasActive) {
+        btn.classList.add('active');
+    }
+}
+window.toggleEmotion = toggleEmotion;
+
+/**
+ * 感情セレクターから選択状態を取得
+ * @param {string} selectorId - セレクターのコンテナID
+ * @param {string} memoId - メモテキストエリアのID
+ * @returns {Object} { selection: string, memo: string }
+ */
+function getEmotionFromSelector(selectorId, memoId) {
+    const container = document.getElementById(selectorId);
+    const memoEl = document.getElementById(memoId);
+    const activeBtn = container?.querySelector('.emotion-btn.active');
+    return {
+        selection: activeBtn?.dataset.emotion || '',
+        memo: memoEl?.value?.trim() || ''
+    };
+}
+window.getEmotionFromSelector = getEmotionFromSelector;
+
+/**
+ * 感情セレクターに既存データを反映
+ * @param {string} selectorId - セレクターのコンテナID
+ * @param {string} memoId - メモテキストエリアのID
+ * @param {string|Object} emotionData - 感情データ（新旧形式両対応）
+ */
+function setEmotionToSelector(selectorId, memoId, emotionData) {
+    const normalized = normalizeEmotion(emotionData);
+    const container = document.getElementById(selectorId);
+    const memoEl = document.getElementById(memoId);
+    
+    if (container) {
+        // 全ボタンをリセット
+        container.querySelectorAll('.emotion-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // 選択状態を復元
+        if (normalized.selection) {
+            const btn = container.querySelector(`[data-emotion="${normalized.selection}"]`);
+            if (btn) btn.classList.add('active');
+        }
+    }
+    if (memoEl) {
+        memoEl.value = normalized.memo;
+    }
+}
+window.setEmotionToSelector = setEmotionToSelector;
 
 /**
  * TradeEntry クラス
@@ -116,7 +219,8 @@ class TradeEntry {
             'swap', 'commission', 'netProfit', 'pips', 'rr', 
             'stopLoss', 'takeProfit', 'reasons', 'insights', 
             'improvements', 'exitReason',
-            'reason1', 'reason2', 'reason3', 'scenario', 'entryEmotion',
+            'reason1', 'reason2', 'reason3', 'scenario',
+            'entryEmotionMemo',  // 感情メモ欄（選択ボタンは別途クリア）
             'tradeMethod', 'quote-currency-rate'  // NEW: リスク管理フィールド
         ];
         
@@ -132,6 +236,10 @@ class TradeEntry {
                 }
             }
         });
+        
+        // 感情選択ボタンのクリア
+        const emotionBtns = document.querySelectorAll('#emotionSelector .emotion-btn');
+        emotionBtns.forEach(btn => btn.classList.remove('active'));
         
         // ラジオボタンのクリア
         const radioGroups = ['direction', 'result'];
@@ -294,7 +402,7 @@ class TradeEntry {
         formData.reason2 = document.getElementById('reason2')?.value || '';
         formData.reason3 = document.getElementById('reason3')?.value || '';
         formData.scenario = document.getElementById('scenario')?.value || '';
-        formData.entryEmotion = document.getElementById('entryEmotion')?.value || '';
+        formData.entryEmotion = getEmotionFromSelector('emotionSelector', 'entryEmotionMemo');
         
         // NEW: リスク管理フィールド
         formData.methodId = document.getElementById('tradeMethod')?.value || null;
@@ -435,7 +543,10 @@ class TradeEntry {
             reason2: this.#sanitize(formData.reason2),
             reason3: this.#sanitize(formData.reason3),
             scenario: this.#sanitize(formData.scenario),
-            entryEmotion: this.#sanitize(formData.entryEmotion),
+            entryEmotion: {
+                selection: formData.entryEmotion.selection || '',
+                memo: this.#sanitize(formData.entryEmotion.memo || '')
+            },
             
             // === 数値フィールドは既にparseFloatで検証済み ===
             // entryPrice, exitPrice, quantity, stopLoss, takeProfit,

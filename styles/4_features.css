@@ -1672,4 +1672,73 @@ body.light-mode .lot-unit-display {
    画像追加モーダル - スタイル終了
    ====================================== */
 
+/* ===== 感情選択ボタン（感情記録の選択式化・単一選択） ===== */
+.emotion-hint {
+    font-size: 0.85em;
+    opacity: 0.7;
+    margin-bottom: 8px;
+    margin-top: 0;
+}
+
+.emotion-selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.emotion-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: inherit;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.emotion-btn:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ポジティブ感情 選択時 */
+.emotion-btn.positive.active {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.6);
+    color: #93c5fd;
+}
+
+/* ネガティブ感情 選択時 */
+.emotion-btn.negative.active {
+    background: rgba(249, 115, 22, 0.25);
+    border-color: rgba(249, 115, 22, 0.6);
+    color: #fdba74;
+}
+
+/* モバイル: 2行×4列を維持、文字サイズ調整 */
+@media (max-width: 480px) {
+    .emotion-selector {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+    }
+    .emotion-btn {
+        font-size: 0.75em;
+        padding: 6px 2px;
+    }
+}
+
+/* 超小画面: 2列に変更 */
+@media (max-width: 320px) {
+    .emotion-selector {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 /* ========== 4_features.css 終了 ========== */

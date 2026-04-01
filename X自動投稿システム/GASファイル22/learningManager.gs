@@ -62,6 +62,23 @@ function extractPostInsights_(postType, postText) {
     var prompt = '以下はFXトレーダー「コンパナ」がXに投稿した文章です。\n\n';
     prompt += '---\n' + postText + '\n---\n';
     prompt += rateInfo;
+    
+    // ★v8.15: アノマリー文脈を追加（仮説にカレンダー要因を考慮させる）
+    if (needsHypothesis) {
+      try {
+        var anomalies = getTodayAnomalies_();
+        if (anomalies.length > 0) {
+          prompt += '\n【本日のカレンダー要因（アノマリー）】\n';
+          for (var ai = 0; ai < anomalies.length; ai++) {
+            prompt += '・' + anomalies[ai].name;
+            if (anomalies[ai].impact) prompt += ': ' + anomalies[ai].impact;
+            prompt += '\n';
+          }
+          prompt += '※仮説を立てる際、このカレンダー要因も考慮せよ。ファンダだけでなくフロー要因も仮説の材料になる。\n';
+        }
+      } catch (anomErr) { /* 無視 */ }
+    }
+    
     prompt += '\n以下の' + (needsHypothesis ? '2つ' : '1つ（学びのみ）') + 'を抽出してください。\n\n';
     
     if (needsHypothesis) {

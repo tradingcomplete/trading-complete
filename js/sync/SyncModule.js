@@ -1628,7 +1628,11 @@
                 scenario: local.scenario || null,
                 status: local.status || local.holdingStatus || 'open',
                 reasons: local.reasons || [],
-                entry_emotion: local.entryEmotion || null,
+                entry_emotion: local.entryEmotion
+                    ? (typeof local.entryEmotion === 'object'
+                        ? JSON.stringify(local.entryEmotion)
+                        : local.entryEmotion)
+                    : null,
                 
                 // NEW: リスク管理フィールド
                 method_id: local.methodId || null,
@@ -1683,7 +1687,14 @@
                 status: supa.status || 'open',
                 holdingStatus: supa.status || 'open',
                 reasons: supa.reasons || [],
-                entryEmotion: supa.entry_emotion,
+                entryEmotion: (() => {
+                    if (!supa.entry_emotion) return { selection: '', memo: '' };
+                    if (typeof supa.entry_emotion === 'string' && supa.entry_emotion.startsWith('{')) {
+                        try { return JSON.parse(supa.entry_emotion); } catch (e) { /* fall through */ }
+                    }
+                    // 旧形式（プレーンテキスト）はそのまま返す（normalizeEmotionで変換）
+                    return supa.entry_emotion;
+                })(),
                 
                 // NEW: リスク管理フィールド
                 methodId: supa.method_id || null,

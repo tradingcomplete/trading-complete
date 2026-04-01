@@ -80,6 +80,17 @@ function factCheckPost_(postText, postType, apiKey, rates) {
     prompt += '※投稿内の要人の役職がこのリストと矛盾していたら❌。\n';
     prompt += '※例: 「バイデン大統領」→❌（現大統領はトランプ）。「石破首相」→❌（現首相は高市早苗）。\n\n';
     
+    // ★v8.15: アノマリー（カレンダー要因）を確定データに追加
+    try {
+      var anomalies = getTodayAnomalies_();
+      var anomalyFactText = formatAnomalyForFactCheck_(anomalies);
+      if (anomalyFactText) {
+        prompt += anomalyFactText;
+      }
+    } catch (anomalyErr) {
+      // アノマリー取得失敗は無視（続行）
+    }
+    
     prompt += '=== チェックルール（2層構造） ===\n\n';
     prompt += '【Layer 1: システム確定データとの照合（最優先）】\n';
     prompt += '1. レート: 確定データ2と3%以内の乖離なら✅。3%超なら❌（correctionに確定値を記載）\n';

@@ -143,7 +143,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: '#00e5ff',
     charMin: 280,
-    charMax: 450
+    charMax: 550
   },
   TOKYO: {
     id: 'tokyo',
@@ -152,7 +152,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 350
+    charMax: 420
   },
   LUNCH: {
     id: 'lunch',
@@ -161,7 +161,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 350
+    charMax: 420
   },
   LONDON: {
     id: 'london',
@@ -170,7 +170,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: '#00ff88',
     charMin: 200,
-    charMax: 350
+    charMax: 420
   },
   GOLDEN: {
     id: 'golden',
@@ -179,7 +179,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 280,
-    charMax: 450
+    charMax: 550
   },
   NY: {
     id: 'ny',
@@ -188,7 +188,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: '#bf5fff',
     charMin: 280,
-    charMax: 450
+    charMax: 550
   },
   INDICATOR: {
     id: 'indicator',
@@ -197,7 +197,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: '#ff3355',
     charMin: 280,
-    charMax: 450
+    charMax: 550
   },
   KNOWLEDGE: {
     id: 'knowledge',
@@ -206,7 +206,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 350
+    charMax: 420
   },
   WEEKLY_REVIEW: {
     id: 'weekly_review',
@@ -215,7 +215,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: '#ffd700',
     charMin: 280,
-    charMax: 450
+    charMax: 550
   },
   RULE_1: {
     id: 'rule_1',
@@ -224,7 +224,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 300
+    charMax: 380
   },
   RULE_2: {
     id: 'rule_2',
@@ -233,7 +233,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: '#00e5ff',
     charMin: 200,
-    charMax: 300
+    charMax: 380
   },
   WEEKLY_LEARNING: {
     id: 'weekly_learning',
@@ -242,7 +242,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 300
+    charMax: 380
   },
   RULE_3: {
     id: 'rule_3',
@@ -251,7 +251,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 300
+    charMax: 380
   },
   NEXT_WEEK: {
     id: 'next_week',
@@ -260,7 +260,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: '#00ff88',
     charMin: 280,
-    charMax: 450
+    charMax: 550
   },
   RULE_4: {
     id: 'rule_4',
@@ -269,7 +269,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 300
+    charMax: 380
   },
   WEEKLY_HYPOTHESIS: {
     id: 'weekly_hypothesis',
@@ -278,7 +278,7 @@ var POST_TYPES = {
     hasImage: false,
     frameColor: null,
     charMin: 200,
-    charMax: 300
+    charMax: 380
   }
 };
 
@@ -317,6 +317,32 @@ var SCHEDULE = {
 // ===== ランダムゆらぎ（分） =====
 var RANDOM_DELAY_MIN = 0;
 var RANDOM_DELAY_MAX = 3; // ★v8.0: 2→3に拡大（ランダム性を確保しつつ6分制限内に収まる）
+
+// ===== 日本の祝日（★v8.15: アノマリー判定用・年1回更新） =====
+// ゴトー日の営業日補正に使用。振替休日含む。
+// 更新タイミング: 毎年12月に翌年分を追加
+var JAPAN_HOLIDAYS = [
+  // 2026年
+  '2026-01-01', // 元日
+  '2026-01-12', // 成人の日
+  '2026-02-11', // 建国記念の日
+  '2026-02-23', // 天皇誕生日
+  '2026-03-20', // 春分の日
+  '2026-04-29', // 昭和の日
+  '2026-05-03', // 憲法記念日
+  '2026-05-04', // みどりの日
+  '2026-05-05', // こどもの日
+  '2026-05-06', // 振替休日
+  '2026-07-20', // 海の日
+  '2026-08-11', // 山の日
+  '2026-09-21', // 敬老の日
+  '2026-09-22', // 国民の休日
+  '2026-09-23', // 秋分の日
+  '2026-10-12', // スポーツの日
+  '2026-11-03', // 文化の日
+  '2026-11-23', // 勤労感謝の日
+  // 2027年（12月に追加予定）
+];
 
 // ===== Gemini API設定 =====
 var GEMINI_MODEL = 'gemini-2.5-pro';  // ★v8.8.1: Flash→Pro変更（指示追従・文字数遵守の改善）

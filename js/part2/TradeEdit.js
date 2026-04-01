@@ -126,7 +126,14 @@ class TradeEdit {
             stopLoss: parseFloat(this.#getFieldValue('editStopLoss')) || trade.stopLoss,
             takeProfit: parseFloat(this.#getFieldValue('editTakeProfit')) || trade.takeProfit,
             scenario: this.#getFieldValue('editScenario') || trade.scenario,
-            entryEmotion: this.#getFieldValue('editEmotion') || trade.entryEmotion
+            entryEmotion: (() => {
+                const emotionData = window.getEmotionFromSelector('editEmotionSelector', 'editEmotionMemo');
+                // 何も選択されず、メモも空なら既存値を維持
+                if (!emotionData.selection && !emotionData.memo) {
+                    return trade.entryEmotion;
+                }
+                return emotionData;
+            })()
         };
         
         const updatedTrade = this.#tradeManager.updateTrade(tradeId, updates)
@@ -425,7 +432,13 @@ class TradeEdit {
                         </div>
                         <div class="form-group">
                             <label>エントリー時の感情・心理状態</label>
-                            <textarea id="editEmotion" style="width: 100%; padding: 10px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); color: rgb(255, 255, 255); border-radius: 5px; min-height: 80px; resize: vertical;">${trade.entryEmotion || ''}</textarea>
+                            <p class="emotion-hint">今、一番強い感情を選択</p>
+                            <div id="editEmotionSelector" class="emotion-selector">
+                                ${window.EMOTION_OPTIONS.map(opt => 
+                                    '<button type="button" class="emotion-btn ' + opt.category + '" data-emotion="' + opt.key + '" onclick="toggleEmotion(this)">' + opt.emoji + ' ' + opt.label + '</button>'
+                                ).join('')}
+                            </div>
+                            <textarea id="editEmotionMemo" style="width: 100%; padding: 10px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); color: rgb(255, 255, 255); border-radius: 5px; min-height: 50px; resize: vertical; margin-top: 8px;" placeholder="補足メモ（任意）"></textarea>
                         </div>
                     </form>
                     <div class="modal-footer">
@@ -439,6 +452,9 @@ class TradeEdit {
         // モーダルを表示
         modal.style.display = 'flex';
         modal.dataset.tradeId = tradeId;
+        
+        // 感情データを選択ボタンに反映
+        window.setEmotionToSelector('editEmotionSelector', 'editEmotionMemo', trade.entryEmotion);
         
         // 少し遅延させて初期化（DOMが完全に描画されてから）
         setTimeout(() => {
