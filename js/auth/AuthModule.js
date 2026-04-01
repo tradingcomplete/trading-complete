@@ -483,8 +483,8 @@ const AuthModule = (function() {
         console.log('[Auth] PaymentModule未初期化 → payment:initialized を待機');
         let handled = false;
         
-        if (typeof EventBus !== 'undefined' && typeof EventBus.on === 'function') {
-            EventBus.on('payment:initialized', function onPaymentReady(data) {
+        if (window.eventBus && typeof window.eventBus.on === 'function') {
+            window.eventBus.on('payment:initialized', function onPaymentReady(data) {
                 if (handled) return;  // 一度だけ実行
                 handled = true;
                 console.log('[Auth] payment:initialized 受信（plan:', data?.plan, '）→ SyncModule初期化');
