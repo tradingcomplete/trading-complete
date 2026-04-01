@@ -457,13 +457,48 @@ const AuthModule = (function() {
         updateUserDisplay();
         updateMyPageDisplay();
         
-        // SyncModule初期化（データ同期用）
-        initializeSyncModule();
-        
         // EventBusで通知（存在する場合のみ）
         if (typeof EventBus !== 'undefined' && typeof EventBus.emit === 'function') {
             EventBus.emit('auth:login', { user: currentUser });
         }
+        
+        // SyncModule初期化（PaymentModule初期化完了後に実行）
+        // PaymentModuleが先に初期化されないとFreeプランと誤判定される
+        initializeSyncAfterPayment();
+    }
+
+    /**
+     * PaymentModule初期化完了後にSyncModuleを初期化
+     * PaymentModuleが未初期化の場合、payment:initialized イベントを待つ
+     */
+    function initializeSyncAfterPayment() {
+        // 既にPaymentModuleが初期化済みかチェック
+        if (window.PaymentModule && window.PaymentModule.getCurrentPlan() !== 'free') {
+            console.log('[Auth] PaymentModule初期化済み（plan:', window.PaymentModule.getCurrentPlan(), '）→ SyncModule初期化');
+            initializeSyncModule();
+            return;
+        }
+        
+        // PaymentModule未初期化 → payment:initialized イベントを待つ
+        console.log('[Auth] PaymentModule未初期化 → payment:initialized を待機');
+        let handled = false;
+        
+        if (typeof EventBus !== 'undefined' && typeof EventBus.on === 'function') {
+            EventBus.on('payment:initialized', function onPaymentReady(data) {
+                if (handled) return;  // 一度だけ実行
+                handled = true;
+                console.log('[Auth] payment:initialized 受信（plan:', data?.plan, '）→ SyncModule初期化');
+                initializeSyncModule();
+            });
+        }
+        
+        // フォールバック: 5秒待ってもイベントが来なければ強制実行
+        setTimeout(() => {
+            if (handled) return;
+            handled = true;
+            console.warn('[Auth] payment:initialized タイムアウト → SyncModule強制初期化');
+            initializeSyncModule();
+        }, 5000);
     }
 
     /**

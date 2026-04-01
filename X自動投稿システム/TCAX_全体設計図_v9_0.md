@@ -1,20 +1,7 @@
-# T-CAX システム 全体設計図 v8.14
+# T-CAX システム 全体設計図 v9.0
 
 **プロジェクト名**: T-CAX（Trading Complete Auto X）
 **コンセプト**: 「毎回その瞬間の最新情報で作成・即投稿」
-**更新日**: 2026-03-26
-**v8.14変更点**: 壊れた句点パターン修復+孤立variation selector修復+Claude API 529対策。品質修正（Gemini）で文が壊れる問題に三重対策。対策A: fixBrokenSentenceEndings_新設（「。ですね。」等の壊れた句点パターンを汎用修復）。対策B: replaceProhibitedPhrases_に「ここからが本番。」壊れパターン除去を追加。対策C: fixOrphanedVariationSelector_新設（⚠️のベース文字欠落でU+FE0Fだけ残る問題を修復）。根本原因修正: miReplacements配列から「ここからが本番」を撤去→「ここが勝負どころ」に変更。対策D: callClaude_改修（指数バックオフ5→10→20秒、リトライ2→3回、エラー詳細ログ）。postProcessor.gs 1,898→1,977行、qualityReview.gs 411→427行
-**v8.13変更点**: ニュース主軸ルール追加（3箇所）。投稿の主軸を「レート・指標」→「ニュース」に転換。buildMarketTypePolicy_+buildFormatRules_で「世界で何が起きているか→為替への影響」の構造を明記。promptBuilder.gs 1,749→1,759行
-**v8.12変更点**: charMax緩和（300→380/350→420/450→550）、答え合わせ重複防止（getHypothesisContext_にキャッシュ照合追加）、品質レビュー全面改修（Claude指摘のみ→Gemini修正→trimToCharMax_文字数保証）、孤立短文除去（removeOrphanedLines_新設）。config.gs charMax更新、promptBuilder.gs 1,722→1,749行、qualityReview.gs 332→411行、postProcessor.gs 1,832→1,898行
-**v8.11変更点**: 条件分岐型仮説ルール追加（6箇所）。一方向の賭け仮説を禁止し「もしAならB、もしCならD」の読み解き型を推奨。promptBuilder.gs 1,709→1,722行
-**v8.10変更点**: buildPrompt_分割リファクタリング（636行→391行）。投稿タイプ別の方針指示を5つのヘルパー関数に切り出し（buildMarketTypePolicy_/buildKnowledgePolicy_/buildIndicatorPolicy_/buildWeekendPolicy_/buildRulePolicy_）。promptBuilder.gs 1,650→1,722行・17関数
-**v8.9変更点**: 未発表指標の仮説答え合わせ防止（二重防御）。対策A: GOLDEN/NY構造指示に未発表指標ルール追加。対策B: getUnreleasedIndicatorNames_新設（経済カレンダー照合→答え合わせ禁止警告注入）。重複コメント6箇所除去。postProcessor.gs 1,837→1,832行、promptBuilder.gs 1,581→1,650行
-**v8.8.1変更点**: Geminiモデル gemini-2.5-flash→gemini-2.5-pro変更（文字数遵守・指示追従の大幅改善）、リトライ4パターンをexecuteRetry_共通化（geminiApi.gs 537→566行）、countEmojis_/checkMultiArrowBlocks_分離、postProcessor.gsの\b除去（設計の鉄則準拠）、testFunctions.gs再構成（819→225行・testAll1-6廃止→testPro_*/testRULE/testWEEK）、★投稿構造の根本改革: ニュース要約型→仮説サイクル型（promptBuilder.gs 1,539→1,581行・投稿プロンプトシート市場系6タイプ書き換え）
-**v8.8変更点**: 後処理チェーン共通関数化（geminiApi.gs 638→537行）、INDICATOR主役ペア除外、GAS 6分タイムガード、メタ自己言及除去、孤立助詞バグ修正、Excel許可リスト、残り時間表現除去、プロンプトセクション数削減（71→53）
-**v8.7変更点**: 確定データシート化（POLICY_RATESハードコード廃止→スプレッドシート一元管理）、要人リスト新設（factCheck/promptBuilderに確定データ注入）
-**v8.6変更点**: プロンプト最適化（キャラクターシート9→5行統合、buildFormatRules_タイプ別条件分岐、セクション数93→68）、レート混同バグ修正（postProcessor.gs）、ファクトチェック検証不能❌即削除（factCheck.gs+geminiApi.gs）、品質レビューシステム新設（Claude Sonnet 4.6によるクロスチェック）、投稿文字数制御改善、scheduler.gs処理順序変更
-**v8.5変更点**: geminiApi.gsファイル分割（9,398行→567行・11ファイル）、政策金利config.gs一元管理化
-**v8.4変更点**: factCheckPost_カレンダースコープ修正、仮説検証ログ登録対象拡張（全市場系）、仮説抽出3要素構造化
 
 ---
 
@@ -579,7 +566,7 @@ CompanaFXAutoPost/
 │   ├── callGemini_()        Gemini API呼び出し（3回リトライ）★v8.0: maxOutputTokens 8192 + thinkingConfig
 │   └── extractTextFromResponse_() レスポンスからテキスト抽出
 │
-├── promptBuilder.gs      ← プロンプト構築+データ注入    ✅実装済み（1,759行）★v8.13: ニュース主軸ルール追加
+├── promptBuilder.gs      ← プロンプト構築+データ注入    ✅実装済み（1,776行）★v9.0: アノマリー注入セクション追加
 │   ├── buildPrompt_()       プロンプト組み立て（★v8.10: 636行→391行に縮小）
 │   ├── buildMarketTypePolicy_()  市場系方針（MORNING〜INDICATOR+月曜コンテキスト）★v8.10新設
 │   ├── buildKnowledgePolicy_()   KNOWLEDGE方針 ★v8.10新設
@@ -597,7 +584,7 @@ CompanaFXAutoPost/
 │   ├── getTradeStyle_()     トレードスタイル取得
 │   └── getReferenceSources_() 情報ソース一覧取得
 │
-├── postProcessor.gs      ← 後処理チェーン              ✅実装済み（1,977行）★v8.14: fixBrokenSentenceEndings_+fixOrphanedVariationSelector_新設
+├── postProcessor.gs      ← 後処理チェーン              ✅実装済み（1,977行）★v9.0: fixBrokenSentenceEndings_+fixOrphanedVariationSelector_新設
 │   ├── removeForeignText_() / stripAIPreamble_() / enforceLineBreaks_()
 │   ├── removeDisallowedEmoji_() / fixOrphanedVariationSelector_() / removeMarkdown_()
 │   ├── replaceProhibitedPhrases_()
@@ -607,7 +594,7 @@ CompanaFXAutoPost/
 │   ├── generateDynamicHashtags_() / removeTCMention_()
 │   └── （主役ペア・絵文字・リスクセンチメントのリトライはgeminiApi.gsのgeneratePost内）
 │
-├── factCheck.gs          ← ファクトチェック+自動修正    ✅実装済み（653行）★v8.6: removable分類+日時注入+要人役職ルール
+├── factCheck.gs          ← ファクトチェック+自動修正    ✅実装済み（672行）★v9.0: Layer 1にアノマリー確定データ追加
 │   ├── factCheckPost_()     2層ファクトチェック（L1:データ照合+L2:Grounding ON）
 │   ├── autoFixPost_()       自動修正（Grounding OFF）
 │   ├── verifyAutoFix_()     修正後残留チェック
@@ -641,7 +628,7 @@ CompanaFXAutoPost/
 │   ├── formatWeeklyIndicatorSummary_() 週次指標サマリー
 │   └── getLatestIndicators_() / setupIndicatorSheet()
 │
-├── learningManager.gs    ← 学び・仮説                  ✅実装済み（859行）★v8.5分割
+├── learningManager.gs    ← 学び・仮説                  ✅実装済み（877行）★v9.0: 仮説抽出にアノマリー文脈追加
 │   ├── extractPostInsights_() 投稿から仮説・学び抽出（3要素構造）
 │   ├── verifyPreviousHypothesis_() 前回仮説の検証
 │   ├── verifyWeeklyHypotheses_() 週次仮説検証
@@ -685,7 +672,16 @@ CompanaFXAutoPost/
 │   ├── getTodayPostCount()  今日の投稿数
 │   └── logError()           エラーログ記録
 │
-├── config.gs             ← 設定・定数                  ✅実装済み
+├── anomalyManager.gs     ← アノマリー自動判定           ✅実装済み（965行）★v9.0新規
+│   ├── getTodayAnomalies_() メイン: 今日の該当アノマリー全取得
+│   ├── checkGotoDay_() / isMonthEndPeriod_() / isQuarterEnd_() / isFiscalYearEnd_()
+│   ├── checkHolidayPeriod_() / calculateEasterDate_() / checkSQDay_()
+│   ├── checkPreCentralBank_() / getMonthlyTendency_()
+│   ├── formatAnomalyForPrompt_() / formatAnomalyForFactCheck_()
+│   ├── isBusinessDay_() / getLastBusinessDayOfMonth_() / getNthDayOfWeek_()
+│   └── setupAnomalySheet() / testTodayAnomalies() / testAnomalyForDate()
+│
+├── config.gs             ← 設定・定数                  ✅実装済み（582行）★v9.0: JAPAN_HOLIDAYS追加
 │   ├── POST_MODE            投稿モード（manual/validate/auto）
 │   ├── GEMINI_MODEL         テキスト生成モデル（gemini-2.5-pro）★v8.8.1更新
 │   ├── SCHEDULE             曜日別1分単位時刻
@@ -1403,6 +1399,27 @@ GASエディタで有効化が必要:
 *　　　　 removeOrphanedLines_新設。10文字以下の孤立行（「です。」等）を自動除去*
 *　　　　 後処理チェーンのremoveDuplicateBlocks_とtruncateAfterHashtag_の間に配置*
 
+*バージョン: v9.0*
+*v9.0: アノマリー（カレンダー要因）自動判定機能 + 品質修正安定化（2026-04-01）*
+*　　　★ アノマリー機能（新規）*
+*　　　① anomalyManager.gs新規作成（965行・22関数）*
+*　　　　 8カテゴリ・20種類のアノマリーをコードで自動判定*
+*　　　　 ゴトー日（営業日補正）、月末/四半期末/年度末、週末金曜、海外祝祭日*
+*　　　　 夏枯れ、SQ日（第2金曜）、中銀会合前日（カレンダーシート照合）、月別傾向*
+*　　　　 setupAnomalySheet()でスプレッドシートにマスターデータ20行を自動入力*
+*　　　② promptBuilder.gs: アノマリー注入セクション追加（1,759→1,776行）*
+*　　　③ factCheck.gs: Layer 1にアノマリー確定データ追加（661→672行）*
+*　　　④ learningManager.gs: 仮説抽出にアノマリー文脈追加（860→877行）*
+*　　　⑤ config.gs: JAPAN_HOLIDAYS祝日配列追加（556→582行）*
+*　　　★ 品質修正安定化*
+*　　　⑥ fixBrokenSentenceEndings_新設（postProcessor.gs: 1,898→1,977行）*
+*　　　　 品質修正（Gemini）で「。ですね。」等の壊れた句点パターンを汎用修復*
+*　　　⑦ fixOrphanedVariationSelector_新設（postProcessor.gs）*
+*　　　　 ⚠️ベース文字欠落でU+FE0Fだけ残る問題を修復*
+*　　　⑧ replaceProhibitedPhrases_: 「ここからが本番。」壊れパターン除去+miReplacements根本修正*
+*　　　⑨ callClaude_改修（qualityReview.gs: 411→427行）*
+*　　　　 529エラー対策: 指数バックオフ（5→10→20秒）、リトライ2→3回、エラー詳細ログ*
+
 *バージョン: v8.14*
 *v8.14: 壊れた句点パターン修復+孤立variation selector修復（2026-03-31）*
 *　　　① fixBrokenSentenceEndings_新設（postProcessor.gs: 1,898→1,977行）*
@@ -1675,3 +1692,7 @@ GASエディタで有効化が必要:
 *　　　Alpha Vantage APIキー取得・Script Propertiesに登録（ALPHA_VANTAGE_API_KEY）*
 *　　　レートキャッシュ列: I(WTI) J(BTC) K(GOLD) L(NATGAS) M(取得元) N(ステータス)*
 *　　　プロンプト注入にGrounding検索指示追加（APIデータ基準値+リアルタイム確認の二重チェック）*
+
+---
+
+*更新日: 2026-04-01 | v9.0（アノマリー自動判定機能+品質修正安定化）*
