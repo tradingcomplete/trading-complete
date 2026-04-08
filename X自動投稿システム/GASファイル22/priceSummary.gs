@@ -346,7 +346,23 @@ function aggregateDailyRates() {
       headers.push(sym + '始値', sym + '高値', sym + '安値', sym + '終値');
     }
     headers.push('データ件数');
+    // ★v12.1.1: SH/SL列を追加
+    for (var sh = 0; sh < CURRENCY_PAIRS.length; sh++) {
+      headers.push(CURRENCY_PAIRS[sh].symbol + '_SH', CURRENCY_PAIRS[sh].symbol + '_SL');
+    }
     dailySheet.appendRow(headers);
+  }
+  
+  // ★v12.1.1: 既存シートにSH/SL列がなければヘッダーを追加
+  var existingHeaderCount = dailySheet.getLastColumn();
+  var expectedCols = DAILY_RATE_COLS.getTotalCols();
+  if (existingHeaderCount < expectedCols && dailySheet.getLastRow() >= 1) {
+    var shslHeaders = [];
+    for (var shh = 0; shh < CURRENCY_PAIRS.length; shh++) {
+      shslHeaders.push(CURRENCY_PAIRS[shh].symbol + '_SH', CURRENCY_PAIRS[shh].symbol + '_SL');
+    }
+    dailySheet.getRange(1, existingHeaderCount + 1, 1, shslHeaders.length).setValues([shslHeaders]);
+    console.log('✅ SH/SL列ヘッダーを追加（' + shslHeaders.length + '列）');
   }
   
   // 既に集約済みの日付を取得
@@ -412,12 +428,26 @@ function aggregateDailyRates() {
   console.log('');
   console.log('集約完了: ' + aggregated + '日分');
   console.log('キャッシュ削除: ' + deletedRows + '行（7日超の古いデータ）');
+  
+  // ★v12.1.1: SH/SL判定（4日前の行を対象に判定して書き込み）
+  if (aggregated > 0) {
+    try {
+      updateSwingHighLow_(dailySheet);
+    } catch (shslErr) {
+      console.log('⚠️ SH/SL判定エラー（続行）: ' + shslErr.message);
+    }
+  }
+  
+  // ★v12.1.1: 週足更新（月曜なら前週分を追加）
+  try {
+    var today = new Date();
+    if (today.getDay() === 1) { // 月曜
+      updateWeeklySheet_(ss, dailySheet);
+    }
+  } catch (weekErr) {
+    console.log('⚠️ 週足更新エラー（続行）: ' + weekErr.message);
+  }
 }
-
-/**
- * Twelve Data APIから過去5年分の日次OHLCを取得して日次レートに書き込む
- * 3通貨ペア × 1回ずつ = 3 APIクレジット消費
- */
 
 /**
  * Twelve Data APIから過去5年分の日次OHLCを取得して日次レートに書き込む
@@ -559,17 +589,16 @@ function rebuildDailyRates() {
   
   updatePriceSummary();
   
+  // ★v12.1.1: 再構築後にSH/SLも再計算
+  try {
+    backfillSwingHighLow();
+  } catch (bfErr) {
+    console.log('⚠️ SH/SLバックフィルエラー: ' + bfErr.message);
+  }
+  
   ui.alert('✅ 再構築完了\n\n' + rows.length + '日分の正確なOHLCデータを取得しました。\n' +
     '（期間: ' + dates[0] + ' 〜 ' + dates[dates.length - 1] + '）');
 }
-
-/**
- * データ配列からOHLC（始値/高値/安値/終値）を算出
- * ★外れ値除去: 中央値から大きく乖離したデータを除外してから計算
- * @param {Array} records - 時刻順にソートされたレコード
- * @param {string} field - 'usdjpy' / 'eurusd' / 'gbpusd'
- * @returns {Object} {open, high, low, close}
- */
 
 /**
  * データ配列からOHLC（始値/高値/安値/終値）を算出
@@ -631,6 +660,208 @@ function calcOHLC_(records, field) {
     close: values[values.length - 1]
   };
 }
+
+// ========================================
+// ★v12.1.1: スイングハイ/ロー判定
+// ========================================
+
+/**
+ * 日次レートシートの直近行に対してSH/SL判定を行い書き込む
+ * 4日前の行を対象（前後4日のデータが必要なため）
+ */
+function updateSwingHighLow_(dailySheet) {
+  var lastRow = dailySheet.getLastRow();
+  if (lastRow < 10) return; // 最低9行必要（ヘッダー+4+対象+4）
+  
+  var numCols = DAILY_RATE_COLS.getOhlcOnlyCols(); // 30列
+  var readStart = Math.max(2, lastRow - 8); // 最大9行読み
+  var data = dailySheet.getRange(readStart, 1, lastRow - readStart + 1, numCols).getValues();
+  
+  if (data.length < 9) return;
+  
+  // 判定対象は末尾から5番目（= 4日前）
+  var targetIdx = data.length - 5;
+  if (targetIdx < 4) return; // 前4日分がない
+  
+  var shslRow = [];
+  for (var p = 0; p < CURRENCY_PAIRS.length; p++) {
+    var cols = DAILY_RATE_COLS.getOhlcCols(p);
+    var targetHigh = parseFloat(data[targetIdx][cols.high]);
+    var targetLow = parseFloat(data[targetIdx][cols.low]);
+    
+    var isSH = true;
+    var isSL = true;
+    
+    for (var offset = 1; offset <= 4; offset++) {
+      // 前4日
+      if (targetIdx - offset >= 0) {
+        if (targetHigh <= parseFloat(data[targetIdx - offset][cols.high])) isSH = false;
+        if (targetLow >= parseFloat(data[targetIdx - offset][cols.low])) isSL = false;
+      } else { isSH = false; isSL = false; }
+      // 後4日
+      if (targetIdx + offset < data.length) {
+        if (targetHigh <= parseFloat(data[targetIdx + offset][cols.high])) isSH = false;
+        if (targetLow >= parseFloat(data[targetIdx + offset][cols.low])) isSL = false;
+      } else { isSH = false; isSL = false; }
+    }
+    
+    shslRow.push(isSH ? targetHigh : '');
+    shslRow.push(isSL ? targetLow : '');
+  }
+  
+  // 書き込み（SH/SL列 = 31列目以降）
+  var writeRow = readStart + targetIdx;
+  var writeCol = DAILY_RATE_COLS.getCountCol() + 2; // 1-indexed（件数列の次）
+  dailySheet.getRange(writeRow, writeCol, 1, shslRow.length).setValues([shslRow]);
+  
+  var shCount = shslRow.filter(function(v) { return v !== ''; }).length;
+  if (shCount > 0) {
+    console.log('📍 SH/SL判定: ' + shCount + '個検出（' + data[targetIdx][0] + '）');
+  }
+}
+
+
+/**
+ * ★v12.1.1: 週足シート更新（月曜に前週分を追加）
+ */
+function updateWeeklySheet_(ss, dailySheet) {
+  // 週足シートを取得（なければ作成）
+  var weeklySheet = ss.getSheetByName('週足');
+  if (!weeklySheet) {
+    weeklySheet = ss.insertSheet('週足');
+    var headers = ['週開始日'];
+    for (var h = 0; h < CURRENCY_PAIRS.length; h++) {
+      var sym = CURRENCY_PAIRS[h].symbol;
+      headers.push(sym + '始値', sym + '高値', sym + '安値', sym + '終値', sym + '_SH', sym + '_SL');
+    }
+    weeklySheet.appendRow(headers);
+    weeklySheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    console.log('📊 週足シートを新規作成');
+  }
+  
+  // 前週の月曜〜金曜の日付範囲を計算
+  var today = new Date();
+  var lastMonday = new Date(today);
+  lastMonday.setDate(lastMonday.getDate() - 7); // 先週月曜
+  var lastFriday = new Date(lastMonday);
+  lastFriday.setDate(lastFriday.getDate() + 4); // 先週金曜
+  
+  var mondayStr = Utilities.formatDate(lastMonday, 'Asia/Tokyo', 'yyyy-MM-dd');
+  var fridayStr = Utilities.formatDate(lastFriday, 'Asia/Tokyo', 'yyyy-MM-dd');
+  
+  // 既に追加済みかチェック
+  if (weeklySheet.getLastRow() >= 2) {
+    var existingWeeks = weeklySheet.getRange(2, 1, weeklySheet.getLastRow() - 1, 1).getValues();
+    for (var ew = 0; ew < existingWeeks.length; ew++) {
+      var ewStr = existingWeeks[ew][0];
+      if (ewStr instanceof Date) ewStr = Utilities.formatDate(ewStr, 'Asia/Tokyo', 'yyyy-MM-dd');
+      else ewStr = String(ewStr).substring(0, 10);
+      if (ewStr === mondayStr) {
+        console.log('📊 週足: ' + mondayStr + '週は追加済み');
+        return;
+      }
+    }
+  }
+  
+  // 日次レートから前週のデータを取得
+  var numCols = DAILY_RATE_COLS.getOhlcOnlyCols();
+  var dailyData = dailySheet.getRange(2, 1, dailySheet.getLastRow() - 1, numCols).getValues();
+  
+  var weekRows = [];
+  for (var d = 0; d < dailyData.length; d++) {
+    var dateVal = dailyData[d][0];
+    var dateStr;
+    if (dateVal instanceof Date) dateStr = Utilities.formatDate(dateVal, 'Asia/Tokyo', 'yyyy-MM-dd');
+    else dateStr = String(dateVal).substring(0, 10);
+    if (dateStr >= mondayStr && dateStr <= fridayStr) {
+      weekRows.push(dailyData[d]);
+    }
+  }
+  
+  if (weekRows.length === 0) {
+    console.log('⚠️ 週足: ' + mondayStr + '〜' + fridayStr + 'のデータなし');
+    return;
+  }
+  
+  // 週足OHLC算出
+  var row = [mondayStr];
+  for (var p = 0; p < CURRENCY_PAIRS.length; p++) {
+    var cols = DAILY_RATE_COLS.getOhlcCols(p);
+    var open = parseFloat(weekRows[0][cols.open]);
+    var close = parseFloat(weekRows[weekRows.length - 1][cols.close]);
+    var high = -Infinity;
+    var low = Infinity;
+    for (var r = 0; r < weekRows.length; r++) {
+      var h = parseFloat(weekRows[r][cols.high]);
+      var l = parseFloat(weekRows[r][cols.low]);
+      if (h > high) high = h;
+      if (l < low) low = l;
+    }
+    row.push(open, high, low, close, '', ''); // SH/SLは後から判定
+  }
+  
+  weeklySheet.appendRow(row);
+  console.log('📊 週足追加: ' + mondayStr + '（' + weekRows.length + '日分）');
+  
+  // 週足SH/SL判定（前後4週のデータが必要）
+  try {
+    updateWeeklySwingHighLow_(weeklySheet);
+  } catch (e) {
+    console.log('⚠️ 週足SH/SL判定エラー（続行）: ' + e.message);
+  }
+  
+  // 52週超の古いデータを削除
+  var maxWeeks = 52;
+  var currentWeeks = weeklySheet.getLastRow() - 1;
+  if (currentWeeks > maxWeeks) {
+    var deleteCount = currentWeeks - maxWeeks;
+    weeklySheet.deleteRows(2, deleteCount);
+    console.log('🗑️ 週足: ' + deleteCount + '行の古いデータを削除');
+  }
+}
+
+
+/**
+ * ★v12.1.1: 週足SH/SL判定
+ */
+function updateWeeklySwingHighLow_(weeklySheet) {
+  var lastRow = weeklySheet.getLastRow();
+  if (lastRow < 10) return; // 最低9行必要
+  
+  var totalCols = WEEKLY_RATE_COLS.getTotalCols();
+  var readStart = Math.max(2, lastRow - 8);
+  var data = weeklySheet.getRange(readStart, 1, lastRow - readStart + 1, totalCols).getValues();
+  
+  if (data.length < 9) return;
+  
+  var targetIdx = data.length - 5;
+  if (targetIdx < 4) return;
+  
+  for (var p = 0; p < CURRENCY_PAIRS.length; p++) {
+    var cols = WEEKLY_RATE_COLS.getPairCols(p);
+    var targetHigh = parseFloat(data[targetIdx][cols.high]);
+    var targetLow = parseFloat(data[targetIdx][cols.low]);
+    
+    var isSH = true;
+    var isSL = true;
+    
+    for (var offset = 1; offset <= 4; offset++) {
+      if (targetIdx - offset >= 0) {
+        if (targetHigh <= parseFloat(data[targetIdx - offset][cols.high])) isSH = false;
+        if (targetLow >= parseFloat(data[targetIdx - offset][cols.low])) isSL = false;
+      } else { isSH = false; isSL = false; }
+      if (targetIdx + offset < data.length) {
+        if (targetHigh <= parseFloat(data[targetIdx + offset][cols.high])) isSH = false;
+        if (targetLow >= parseFloat(data[targetIdx + offset][cols.low])) isSL = false;
+      } else { isSH = false; isSL = false; }
+    }
+    
+    var writeRow = readStart + targetIdx;
+    if (isSH) weeklySheet.getRange(writeRow, cols.sh + 1).setValue(targetHigh); // 1-indexed
+    if (isSL) weeklySheet.getRange(writeRow, cols.sl + 1).setValue(targetLow);
+  }
+}
+
 
 // ========================================
 // 経済カレンダー シート作成 & 自動取得

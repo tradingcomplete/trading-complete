@@ -72,12 +72,6 @@ function setupEconomicCalendarSheet() {
  * 既存データは一切変更しない。ヘッダーと書式のみ追加。
  * GASエディタから手動実行: setupIndicatorResultColumns
  */
-
-/**
- * ★v5.7: 経済カレンダーシートにI列（結果）・J列（判定）を追加する
- * 既存データは一切変更しない。ヘッダーと書式のみ追加。
- * GASエディタから手動実行: setupIndicatorResultColumns
- */
 function setupIndicatorResultColumns() {
   var keys = getApiKeys();
   var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
@@ -165,11 +159,6 @@ function setupRawImportSheet() {
   console.log('3. 「経済指標_貼り付け」シートのA3セルに貼り付け');
   console.log('4. GASエディタで importFromRawSheet を実行');
 }
-
-/**
- * 「経済指標_貼り付け」シートのデータをパースして「経済カレンダー」に書き込む
- * GASエディタから手動実行: importFromRawSheet
- */
 
 /**
  * 「経済指標_貼り付け」シートのデータをパースして「経済カレンダー」に書き込む
@@ -275,8 +264,9 @@ function importFromRawSheet() {
     // ② 休場・祝日スキップ
     if (colA === '休場' || colB === '休場') continue;
 
-    // ③ セパレータ行（旧形式）: B が Date型（時刻）かつ C に [国名] がある
-    if (rawB instanceof Date && colC) {
+    // ③ セパレータ行（旧形式）: B が時刻かつ C に [国名] がある
+    // ★v12.2: テキスト形式の時刻にも対応（rawB instanceof Date || テキスト時刻パターン）
+    if ((rawB instanceof Date || timePattern.test(colB)) && colC) {
       var rawCountry = colC.replace(/^[\[【\[［]/, '').replace(/[\]】\]］]$/, '');
       var mapped = countryMap[rawCountry];
       if (mapped) {
@@ -291,9 +281,9 @@ function importFromRawSheet() {
       continue;
     }
 
-    // ③-2 新形式: A が Date型（時刻）かつ B が国名、C が指標名
-    //   A=DATE(時刻)  B=国名  C=指標名  D=空  E=前回  F=予想  G=結果
-    if (rawA instanceof Date && colB && colC) {
+    // ③-2 新形式: A が時刻かつ B が国名、C が指標名
+    // ★v12.2: テキスト形式の時刻にも対応
+    if ((rawA instanceof Date || timePattern.test(colA)) && colB && colC) {
       var rawCountry2 = colB.replace(/^[\[【\[［]/, '').replace(/[\]】\]］]$/, '');
       var mapped2 = countryMap[rawCountry2];
       if (mapped2) {
@@ -438,7 +428,13 @@ function importFromRawSheet() {
     ]);
   }
   
+  // ★v12.2: B列を書式なしテキストに設定（27:00が3:00に変換されるのを防止）
+  calSheet.getRange(2, 2, rows.length, 1).setNumberFormat('@');
+  
   calSheet.getRange(2, 1, rows.length, 10).setValues(rows);
+  
+  // ★v12.2: 書き込み後もB列テキスト形式を再適用（安全策）
+  calSheet.getRange(2, 2, rows.length, 1).setNumberFormat('@');
   
   // 重要度「高」の行を黄色ハイライト
   for (var k = 0; k < rows.length; k++) {
@@ -502,12 +498,6 @@ function importFromRawSheet() {
  * @param {string} name - 指標名
  * @return {string} '高' or '中'
  */
-
-/**
- * 指標名から重要度を自動判定する
- * @param {string} name - 指標名
- * @return {string} '高' or '中'
- */
 function judgeImportance_(name) {
   // 全角→半角変換してマッチしやすくする
   var n = name.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
@@ -538,13 +528,6 @@ function judgeImportance_(name) {
   
   return '中';
 }
-
-/**
- * Gemini + Google検索で経済指標カレンダーを自動取得してシートに書き込む
- * 今週と来週を別々に取得して合算する（精度向上のため分割）
- * GASエディタから手動実行: fetchEconomicCalendar
- * 週1回（日曜）実行推奨。トリガーで自動化も可能。
- */
 
 /**
  * Gemini + Google検索で経済指標カレンダーを自動取得してシートに書き込む
@@ -655,7 +638,13 @@ function fetchEconomicCalendar() {
     ]);
   }
   
+  // ★v12.2: B列を書式なしテキストに設定（27:00形式保持）
+  sheet.getRange(2, 2, rows.length, 1).setNumberFormat('@');
+  
   sheet.getRange(2, 1, rows.length, 8).setValues(rows);
+  
+  // ★v12.2: 書き込み後もB列テキスト形式を再適用
+  sheet.getRange(2, 2, rows.length, 1).setNumberFormat('@');
   
   // 重要度「高」の行を黄色ハイライト
   for (var j = 0; j < rows.length; j++) {
@@ -689,14 +678,6 @@ function fetchEconomicCalendar() {
   console.log('   https://www.gaitame.com/markets/calendar/');
   console.log('   間違いがあればシート上で直接修正してください。');
 }
-
-/**
- * 1週間分の経済指標をGemini + Google検索で取得する（内部関数）
- * @param {Object} keys - APIキー
- * @param {string} fromStr - 開始日（例: "2026年2月23日"）
- * @param {string} toStr - 終了日（例: "2026年3月1日"）
- * @return {Array} イベント配列
- */
 
 /**
  * 1週間分の経済指標をGemini + Google検索で取得する（内部関数）

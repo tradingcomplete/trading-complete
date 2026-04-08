@@ -70,8 +70,41 @@ function generatePost(postType, context, cachedRates) {
   // Step2: レートを埋め込んでプロンプト構築
   var prompt = buildPrompt_(postType, typeConfig, context, rates);
   
+  // ★v12.1: Claude市場分析（書く前にデータを正しく読む）
+  // 設計: Geminiに「分析も執筆も全部やれ」は無理がある。
+  //   Stage 1: Claude がデータを読み、何が起きているか分析（←これ）
+  //   Stage 2: Gemini がClaudeの分析に基づいて投稿を書く
+  //   Stage 3: Claude が品質レビュー（Q1〜Q7）（既存）
+  var elapsed = (new Date() - startTime) / 1000;
+  if (elapsed < 180) { // 3分以内ならClaude分析を実行（6分制限の安全策）
+    var marketAnalysis = analyzeMarketWithClaude_(rates, postType, keys);
+    if (marketAnalysis) {
+      var injectionMarker = '【★重要: 以下の構造指示が最終版';
+      if (prompt.indexOf(injectionMarker) !== -1) {
+        prompt = prompt.replace(
+          injectionMarker,
+          '【★★★ Claude市場分析（この分析が最も正確。Geminiはこの分析と矛盾する記述を絶対に書くな）】\n' +
+          marketAnalysis + '\n' +
+          '※上記はリアルタイムデータに基づくClaude Sonnetの分析です。\n' +
+          '※通貨の方向（上昇/下落）、強弱関係、背景の記述は全てこの分析に従うこと。\n' +
+          '※この分析と矛盾する一般論（例:「リスク回避=円買い」）をデータが否定している場合、データが正しい。\n\n' +
+          injectionMarker
+        );
+      }
+      console.log('📏 Claude分析注入後のプロンプト: ' + prompt.length + '文字');
+    }
+  } else {
+    console.log('⏱️ 経過' + Math.round(elapsed) + '秒 → Claude市場分析をスキップ（時間節約）');
+  }
+  
   // Step3: 投稿テキスト生成
-  var result = callGemini_(prompt, keys.GEMINI_API_KEY, true);
+  // ★v11.0: Grounding OFFに変更
+  // 理由: プロンプトに22,000文字の検証済みデータ（ニュース・レート・カレンダー・アノマリー）が
+  //        既に注入されている。Grounding ONだとGeminiが追加検索で未検証の情報を拾い、
+  //        それを膨らませてハルシネーション（WTI 113ドル台等）を生成する原因になっていた。
+  // 設計: Groundingは「リサーチ」（fetchMarketNews_）と「検証」（factCheckPost_）でのみ使用。
+  //        「ライティング」では使わない。
+  var result = callGemini_(prompt, keys.GEMINI_API_KEY, false);
   
   if (!result) {
     console.log('❌ Gemini API呼び出し失敗');
@@ -481,6 +514,118 @@ function checkMultiArrowBlocks_(text) {
 }
 
 
+// ===== ★v12.1: Claude市場分析（書く前にデータを正しく読む） =====
+/**
+ * Geminiがテキストを生成する前に、Claudeが市場データを分析する。
+ * 「今何が起きているか」をデータから正しく読み、その分析を
+ * Geminiのプロンプトに注入することで、方向性の矛盾を防ぐ。
+ * 
+ * 設計思想: Geminiに「分析もライティングも全部やれ」は無理がある。
+ *   Claude = 分析役（データを読む）
+ *   Gemini = ライティング役（書く）
+ *   Claude = レビュー役（Q1〜Q7）← 既存
+ * 
+ * @param {Object} rates - 為替レートデータ
+ * @param {string} postType - 投稿タイプ
+ * @param {Object} keys - APIキー群
+ * @return {string|null} Claude分析テキスト（失敗時null）
+ */
+function analyzeMarketWithClaude_(rates, postType, keys) {
+  // RULE系・KNOWLEDGEは市場分析不要
+  var skipTypes = ['RULE_1', 'RULE_2', 'RULE_3', 'RULE_4', 'KNOWLEDGE'];
+  if (skipTypes.indexOf(postType) !== -1) return null;
+  if (!rates) return null;
+  
+  var claudeApiKey = PropertiesService.getScriptProperties().getProperty('CLAUDE_API_KEY');
+  if (!claudeApiKey) {
+    console.log('⚠️ CLAUDE_API_KEY未設定 → 市場分析をスキップ');
+    return null;
+  }
+  
+  try {
+    // ===== データ収集 =====
+    var dataSummary = '';
+    
+    // 為替レート
+    dataSummary += '【現在の為替レート】\n';
+    dataSummary += 'USD/JPY: ' + Number(rates.usdjpy).toFixed(3) + '\n';
+    dataSummary += 'EUR/USD: ' + Number(rates.eurusd).toFixed(5) + '\n';
+    dataSummary += 'GBP/USD: ' + Number(rates.gbpusd).toFixed(5) + '\n';
+    dataSummary += 'EUR/JPY: ' + Number(rates.eurjpy).toFixed(3) + '\n';
+    dataSummary += 'GBP/JPY: ' + Number(rates.gbpjpy).toFixed(3) + '\n';
+    dataSummary += 'AUD/JPY: ' + Number(rates.audjpy).toFixed(3) + '\n';
+    dataSummary += 'AUD/USD: ' + Number(rates.audusd).toFixed(5) + '\n';
+    
+    // 通貨強弱トレンド（★v12.1: 蓄積データから取得。計算不要で高速）
+    var strengthTrend = getCurrencyStrengthHistory_(keys.SPREADSHEET_ID, 4);
+    if (strengthTrend) {
+      dataSummary += '\n' + strengthTrend;
+    } else {
+      // シート未作成の場合はdetectHotPair_にフォールバック
+      var hotPairResult = detectHotPair_(rates, keys.SPREADSHEET_ID);
+      if (hotPairResult && hotPairResult.csRanking) {
+        dataSummary += '\n【通貨強弱ランキング（前日比）】\n';
+        hotPairResult.csRanking.forEach(function(c) {
+          dataSummary += c.currency + ': ' + (c.score >= 0 ? '+' : '') + c.score.toFixed(2) + '%\n';
+        });
+      }
+    }
+    
+    // ★v12.1.1: ダウ理論詳細（日足+週足のSH/SL値を含む）
+    try {
+      var dowSummary = getDowTheorySummary_(keys.SPREADSHEET_ID);
+      if (dowSummary) dataSummary += '\n' + dowSummary;
+    } catch (dowErr) { /* SH/SL未バックフィルの場合はスキップ */ }
+    
+    // 商品価格（BTC/GOLDのみ。WTI/天然ガスはAlpha Vantageデータが古いため停止）
+    try {
+      var btcCom = fetchCommodityPrices_();
+      dataSummary += '\n【商品価格】\n';
+      if (btcCom && btcCom.btc) dataSummary += 'BTC: ' + btcCom.btc.toFixed(0) + 'ドル\n';
+      if (btcCom && btcCom.gold) dataSummary += 'ゴールド: ' + btcCom.gold.toFixed(2) + 'ドル\n';
+    } catch (e) { /* 取得失敗は無視 */ }
+    
+    // ニュースキャッシュ（buildPrompt_で取得済みの場合のみ）
+    var scriptCache = CacheService.getScriptCache();
+    var newsCache = scriptCache.get('market_news_v3');
+    if (newsCache) {
+      dataSummary += '\n【市場ニュース抜粋】\n' + newsCache.substring(0, 600) + '\n';
+    }
+    
+    // ===== Claude分析プロンプト =====
+    var analysisPrompt = 'あなたはFX市場のシニアアナリストです。\n';
+    analysisPrompt += '以下のリアルタイムデータを読み、今の市場で何が起きているかを分析してください。\n';
+    analysisPrompt += 'データが全てです。一般論や思い込みではなく、数字が示す事実だけを述べてください。\n\n';
+    analysisPrompt += dataSummary;
+    analysisPrompt += '\n【分析指示】以下の5項目を簡潔に述べよ:\n';
+    analysisPrompt += '1. 今日の主要テーマ（1文で）\n';
+    analysisPrompt += '2. 通貨の強弱: データから読み取れる事実。「○○が最も強い」「○○が弱い」\n';
+    analysisPrompt += '3. ★勢いとモメンタム（最重要）: どの通貨の勢いが加速しているか。「★初動」がある通貨は特に注目。トレンドの強さ・方向・持続性を重視せよ\n';
+    analysisPrompt += '4. 背景の推測: ニュースや金融政策から推測される理由（推測は「〜の可能性」と明記）\n';
+    analysisPrompt += '5. ダウ理論との整合: 日足SH/SLトレンドと週足SH/SLトレンドが一致しているか。通貨強弱の勢いと日足トレンドが矛盾していないか。週足が日足と逆方向の場合は特に注意して言及せよ\n\n';
+    analysisPrompt += '【出力ルール】\n';
+    analysisPrompt += '・400文字以内で簡潔に\n';
+    analysisPrompt += '・データにない情報を捏造するな\n';
+    analysisPrompt += '・「史上最高値」「急騰」「暴落」等の表現はデータで裏付けられる場合のみ使用可\n';
+    
+    console.log('🧠 Claude市場分析を実行中...');
+    var result = callClaude_(analysisPrompt, claudeApiKey);
+    
+    if (result) {
+      console.log('✅ Claude市場分析完了（' + result.length + '文字）');
+      console.log('🧠 分析: ' + result.substring(0, 200) + (result.length > 200 ? '...' : ''));
+      return result;
+    } else {
+      console.log('⚠️ Claude市場分析失敗 → スキップ');
+      return null;
+    }
+  } catch (e) {
+    console.log('⚠️ Claude市場分析エラー（スキップ）: ' + e.message);
+    return null;
+  }
+}
+
+
 // ===== Gemini API呼び出し =====
 function callGemini_(prompt, apiKey, useGrounding) {
   var url = GEMINI_API_URL + GEMINI_MODEL + ':generateContent?key=' + apiKey;
@@ -515,7 +660,8 @@ function callGemini_(prompt, apiKey, useGrounding) {
     muteHttpExceptions: true
   };
   
-  for (var attempt = 1; attempt <= 3; attempt++) {
+  var MAX_RETRIES = 3;
+  for (var attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       var response = UrlFetchApp.fetch(url, options);
       var code = response.getResponseCode();
@@ -529,7 +675,7 @@ function callGemini_(prompt, apiKey, useGrounding) {
         }
       }
       
-      console.log('⚠️ Gemini API失敗 (' + code + ') 試行' + attempt + '/3');
+      console.log('⚠️ Gemini API失敗 (' + code + ') 試行' + attempt + '/' + MAX_RETRIES);
       console.log('レスポンス: ' + JSON.stringify(body).substring(0, 500));
       
       if (code === 429) {
@@ -538,7 +684,7 @@ function callGemini_(prompt, apiKey, useGrounding) {
         Utilities.sleep(2000);
       }
     } catch (e) {
-      console.log('⚠️ Gemini APIエラー: ' + e.message + ' 試行' + attempt + '/3');
+      console.log('⚠️ Gemini APIエラー: ' + e.message + ' 試行' + attempt + '/' + MAX_RETRIES);
       Utilities.sleep(2000);
     }
   }

@@ -26,9 +26,6 @@ function refreshTodayIndicatorResults() {
 
 // ===== 今日の発表済み指標を取得してI列に書き込む ★v6.7追加 =====
 // TOKYO/LUNCH/LONDON/GOLDEN/NY生成時に呼び出し。時刻が過ぎた今日の指標を対象にする。
-
-// ===== 今日の発表済み指標を取得してI列に書き込む ★v6.7追加 =====
-// TOKYO/LUNCH/LONDON/GOLDEN/NY生成時に呼び出し。時刻が過ぎた今日の指標を対象にする。
 function fetchTodayAnnouncedResults_(spreadsheetId, geminiApiKey) {
   try {
     var ss = SpreadsheetApp.openById(spreadsheetId);
@@ -161,9 +158,6 @@ function fetchTodayAnnouncedResults_(spreadsheetId, geminiApiKey) {
 
 // ===== メイン: 前日の経済指標結果を取得してシートに書き込み =====
 // MORNING生成の冒頭で呼び出し。注入テキストを返す。
-
-// ===== メイン: 前日の経済指標結果を取得してシートに書き込み =====
-// MORNING生成の冒頭で呼び出し。注入テキストを返す。
 function fetchIndicatorResults_(spreadsheetId, geminiApiKey) {
   try {
     // Step 1: 対象日を決定（月曜なら金曜）
@@ -224,8 +218,6 @@ function fetchIndicatorResults_(spreadsheetId, geminiApiKey) {
 }
 
 // ===== 対象日を決定（月曜なら金曜を返す） =====
-
-// ===== 対象日を決定（月曜なら金曜を返す） =====
 function getIndicatorTargetDate_() {
   var now = new Date();
   var dow = now.getDay(); // 0=日, 1=月, 2=火, ...
@@ -247,8 +239,6 @@ function getIndicatorTargetDate_() {
   yesterday.setDate(yesterday.getDate() - 1);
   return yesterday;
 }
-
-// ===== 経済カレンダーから対象日の重要指標を取得 =====
 
 // ===== 経済カレンダーから対象日の重要指標を取得 =====
 function getYesterdayIndicators_(spreadsheetId, targetDate) {
@@ -296,8 +286,6 @@ function getYesterdayIndicators_(spreadsheetId, targetDate) {
 }
 
 // ===== 指標名を英語に変換（部分一致） =====
-
-// ===== 指標名を英語に変換（部分一致） =====
 function getEnglishIndicatorName_(jaName, country) {
   var keys = Object.keys(INDICATOR_NAME_MAP);
   for (var i = 0; i < keys.length; i++) {
@@ -307,8 +295,6 @@ function getEnglishIndicatorName_(jaName, country) {
   }
   return jaName; // マップにない場合はそのまま
 }
-
-// ===== Gemini+Grounding用プロンプトを構築 =====
 
 // ===== Gemini+Grounding用プロンプトを構築 =====
 function buildIndicatorResultPrompt_(indicators, targetDate) {
@@ -369,8 +355,6 @@ function buildIndicatorResultPrompt_(indicators, targetDate) {
 }
 
 // ===== Geminiの応答からJSONを解析 =====
-
-// ===== Geminiの応答からJSONを解析 =====
 function parseIndicatorResults_(rawText) {
   try {
     var jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -399,8 +383,6 @@ function parseIndicatorResults_(rawText) {
     return null;
   }
 }
-
-// ===== 解析結果をシートに書き込み =====
 
 // ===== 解析結果をシートに書き込み =====
 function writeIndicatorResults_(spreadsheetId, indicators, parsed) {
@@ -462,8 +444,6 @@ function writeIndicatorResults_(spreadsheetId, indicators, parsed) {
 }
 
 // ===== 解析結果と指標をマッチング =====
-
-// ===== 解析結果と指標をマッチング =====
 function findMatchedResult_(parsed, indicatorIndex) {
   if (!parsed || !Array.isArray(parsed)) return null;
   
@@ -519,8 +499,6 @@ function judgeDeviation_(forecast, actual) {
   if (diff < -threshold) return '下振れ';
   return '一致';
 }
-
-// ===== MORNING投稿用の注入テキストを生成 =====
 
 // ===== MORNING投稿用の注入テキストを生成 =====
 function formatIndicatorReview_(indicators, parsed) {
@@ -679,8 +657,6 @@ function getIndicatorHistory_(spreadsheetId, options) {
 }
 
 // ===== Layer 2: INDICATOR投稿用 - 今日の指標の「過去実績」を注入 =====
-
-// ===== Layer 2: INDICATOR投稿用 - 今日の指標の「過去実績」を注入 =====
 function formatIndicatorPreview_(spreadsheetId) {
   try {
     var ss = SpreadsheetApp.openById(spreadsheetId);
@@ -769,9 +745,6 @@ function formatIndicatorPreview_(spreadsheetId) {
     return null;
   }
 }
-
-// ===== Layer 3.5: WEEKLY_REVIEW用 - 今週の主要ペア週間レートトレンド（日次OHLC版）=====
-// 日次レートシートのOHLCから今週の各日の動きを集計し、方向性・ドラマを事実として渡す
 
 // ===== Layer 3.5: WEEKLY_REVIEW用 - 今週の主要ペア週間レートトレンド（日次OHLC版）=====
 // 日次レートシートのOHLCから今週の各日の動きを集計し、方向性・ドラマを事実として渡す
@@ -893,9 +866,6 @@ function formatWeeklyRateTrend_(spreadsheetId, rates) {
 
 
 // ===== Layer 3: WEEKLY_REVIEW用 - 今週の全指標結果サマリー =====
-
-
-// ===== Layer 3: WEEKLY_REVIEW用 - 今週の全指標結果サマリー =====
 function formatWeeklyIndicatorSummary_(spreadsheetId) {
   try {
     var now = new Date();
@@ -952,8 +922,6 @@ function formatWeeklyIndicatorSummary_(spreadsheetId) {
     return null;
   }
 }
-
-// ===== Layer 3: MORNING用 - 直近1ヶ月の指標トレンド =====
 
 // ===== Layer 3: MORNING用 - 直近1ヶ月の指標トレンド =====
 function formatIndicatorTrend_(spreadsheetId) {
@@ -1116,11 +1084,6 @@ function getLatestIndicators_(spreadsheetId) {
     return null;
   }
 }
-
-/**
- * 「指標データ」シートを作成し、GOOGLEFINANCE数式を自動投入する
- * 初回1回だけ実行。実行後は関数削除OK
- */
 
 /**
  * 「指標データ」シートを作成し、GOOGLEFINANCE数式を自動投入する

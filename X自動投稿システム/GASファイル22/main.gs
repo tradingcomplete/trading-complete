@@ -246,6 +246,7 @@ function executePostToX_(postText, imageBlob) {
 
 
 // ===== レベル1: 手動承認モード =====
+// ★v12.2: パイプライン分割（Phase A: テキスト生成→下書き / Phase B: 画像+メール）
 function handleManualMode_(postType, postText, generated) {
   console.log('📋 手動承認モード: 下書きに保存します');
 
@@ -259,49 +260,117 @@ function handleManualMode_(postType, postText, generated) {
     validationResult: ''
   });
 
-  // ★ Phase 7: 市場系タイプならAI画像を生成
-  var imageResult = generateImageIfNeeded_(postType, postText);
-  var imageFileId = null;
-  var archetype = null;
-  
-  if (imageResult) {
-    // Driveに保存
-    imageFileId = saveImageToDrive_(imageResult.blob, postId);
-    archetype = imageResult.archetype;
-    
-    // メタデータ保存（再生成ボタン用）
-    saveImageMeta_(postId, {
-      fileId: imageFileId,
-      archetype: archetype,
-      regenCount: 0
-    });
-    
-    console.log('🖼 画像をDriveに保存: ' + imageFileId);
-  }
+  console.log('✅ 下書きを保存しました: ' + postId);
 
-  sendDraftNotification([{
-    postId: postId,
-    scheduledTime: scheduledTime,
-    postType: postType,
-    text: postText,
-    imageFileId: imageFileId,
-    archetype: archetype
-  }]);
+  // ★v12.2: Phase B（画像生成+メール送信）を1分後のトリガーに分離
+  // GAS 6分制限対策: テキスト生成で4-5分使った後でも画像生成+メール送信が確実に実行される
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('PHASE_B_POST_ID', postId);
+  props.setProperty('PHASE_B_POST_TYPE', postType);
+  props.setProperty('PHASE_B_POST_TEXT', postText);
 
+  // 1分後にPhase Bトリガーを設定
+  ScriptApp.newTrigger('executePhaseBImageAndEmail')
+    .timeBased()
+    .after(60 * 1000)
+    .create();
+
+  console.log('⏱️ Phase B（画像+メール）を1分後にスケジュール');
   console.log('');
   console.log('========================================');
-  console.log('📋 下書き保存完了: ' + postId);
-  if (imageFileId) {
-    console.log('🖼 AI画像: ' + archetype);
-  }
-  console.log('📧 Gmail通知送信済み');
-  console.log('→ メールの [✅承認する] をタップすると投稿されます');
-  if (imageFileId) {
-    console.log('→ [🔄画像を再生成] で別のアーキタイプに変更可能');
-  }
+  console.log('📋 Phase A完了: ' + postId);
+  console.log('→ Phase B（画像生成+承認メール）が1分後に自動実行されます');
   console.log('========================================');
 
   return { success: true, mode: 'manual', postId: postId };
+}
+
+
+/**
+ * ★v12.2: Phase B - 画像生成+承認メール送信（Phase Aの1分後に自動実行）
+ */
+function executePhaseBImageAndEmail() {
+  var props = PropertiesService.getScriptProperties();
+  var postId = props.getProperty('PHASE_B_POST_ID');
+  var postType = props.getProperty('PHASE_B_POST_TYPE');
+  var postText = props.getProperty('PHASE_B_POST_TEXT');
+
+  // プロパティをクリア
+  props.deleteProperty('PHASE_B_POST_ID');
+  props.deleteProperty('PHASE_B_POST_TYPE');
+  props.deleteProperty('PHASE_B_POST_TEXT');
+
+  // 使い終わったトリガーを削除
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var t = 0; t < triggers.length; t++) {
+    if (triggers[t].getHandlerFunction() === 'executePhaseBImageAndEmail') {
+      ScriptApp.deleteTrigger(triggers[t]);
+    }
+  }
+
+  if (!postId || !postType) {
+    console.log('⚠️ Phase B: 対象の下書きが見つかりません');
+    return;
+  }
+
+  console.log('========================================');
+  console.log('🎬 Phase B開始: ' + postId + ' (' + postType + ')');
+  console.log('========================================');
+
+  try {
+    // 画像生成（市場系タイプのみ）
+    var imageResult = generateImageIfNeeded_(postType, postText);
+    var imageFileId = null;
+    var archetype = null;
+
+    if (imageResult) {
+      imageFileId = saveImageToDrive_(imageResult.blob, postId);
+      archetype = imageResult.archetype;
+
+      saveImageMeta_(postId, {
+        fileId: imageFileId,
+        archetype: archetype,
+        regenCount: 0
+      });
+
+      console.log('🖼 画像をDriveに保存: ' + imageFileId);
+    }
+
+    // 承認メール送信
+    var scheduledTime = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'HH:mm');
+    sendDraftNotification([{
+      postId: postId,
+      scheduledTime: scheduledTime,
+      postType: postType,
+      text: postText,
+      imageFileId: imageFileId,
+      archetype: archetype
+    }]);
+
+    console.log('');
+    console.log('========================================');
+    console.log('✅ Phase B完了: ' + postId);
+    if (imageFileId) console.log('🖼 AI画像: ' + archetype);
+    console.log('📧 Gmail通知送信済み');
+    console.log('========================================');
+
+  } catch (e) {
+    console.log('❌ Phase Bエラー: ' + e.message);
+    // 画像なしでもメール送信を試みる
+    try {
+      sendDraftNotification([{
+        postId: postId,
+        scheduledTime: Utilities.formatDate(new Date(), 'Asia/Tokyo', 'HH:mm'),
+        postType: postType,
+        text: postText,
+        imageFileId: null,
+        archetype: null
+      }]);
+      console.log('📧 画像なしで承認メール送信');
+    } catch (mailErr) {
+      sendErrorEmail(postType + ' Phase Bエラー', e.message + '\n\n' + e.stack);
+    }
+  }
 }
 
 

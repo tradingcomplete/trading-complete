@@ -4,6 +4,7 @@
  * 
  * v8.6: 新規作成
  * ★v8.14: callClaude_改修 — 529対策（指数バックオフ5→10→20秒、リトライ2→3回、エラー詳細ログ）
+ * ★v8.16: ハッシュタグ分離ロジック強化 — \n\n# 以外のパターン（\n# や空白+#）にも対応
  * 
  * Geminiが生成した投稿を、Claude（別モデル）がクロスチェックする。
  * 「正確か？」はfactCheckPost_（Gemini）が担当。
@@ -15,6 +16,8 @@
  *   Q3. 文の完成度: 体言止め・文脈の飛躍・途中で切れた文がないか
  *   Q4. 文字数: charMin〜charMax内に収まっているか
  *   Q5. 口調の一貫性: コンパナの口調が維持されているか
+ *   Q6. 事実の信憑性: 確定データ（レート・商品価格）との矛盾がないか（★v11.0追加）
+ *   Q7. 絵文字行の書き分け: 絵文字行が事実のみで、感想が混入していないか（★v11.0追加）
  * 
  * 必要なスクリプトプロパティ:
  *   CLAUDE_API_KEY: Anthropic APIキー
@@ -23,22 +26,23 @@
 
 // ===== 投稿タイプ別の時間帯と役割（Q1判定用） =====
 var TYPE_DESCRIPTIONS = {
-  'MORNING': '朝7:30頃配信。昨夜のNY市場のおさらい→今日の東京オープンへの橋渡し。「昨夜NYで〜」「今日の東京では〜」が自然な切り口。NG: 「今まさに〜」（NY市場は閉まっている）',
-  'TOKYO': '朝9:30頃配信。東京市場オープン後の「観察」を伝える。「東京オープン後、ドル円は〜」が自然。NG: 「〜が予想される」（東京は既に動いている。予想ではなく観察）',
-  'LUNCH': '昼12時台配信。午前の振り返り+午後の欧州勢参入への橋渡し。「午前中は〜」「欧州勢が入ってくる午後は〜」が自然。',
-  'LONDON': '夕方17時台配信。「ここから欧州勢が本番」という緊張感。「欧州勢が入ってきた」「東京とロンドンの温度差」が自然。NG: 「週明けの東京市場は〜」（LONDONは東京の話ではない）',
-  'GOLDEN': '夜20-21時台配信。1日を振り返る共感重視のトーン。「今日を振り返ると〜」居酒屋トークの温度感。',
-  'NY': '夜22時台配信。NY市場オープン前の緊張感。「今夜の勝負所」「NYの焦点は〜」が自然。',
-  'INDICATOR': '指標発表30分前の速報感。「あと○分で○○発表」の緊張感。先輩が後輩に直前に教える感覚。',
-  'WEEKLY_REVIEW': '土曜朝。今週の振り返りをストーリーで語る。レートの羅列禁止。',
-  'WEEKLY_LEARNING': '土曜夕方。今週の学び・気づき。市場レポートではなく心理面・判断の反省。',
-  'NEXT_WEEK': '日曜昼。来週の展望。経済カレンダーに基づいた具体的な予告。',
-  'WEEKLY_HYPOTHESIS': '日曜夜。来週の仮説。条件→理由→結果の3要素構造。',
-  'RULE_1': '土曜。トレーダーの知識・原則。心得投稿。',
-  'RULE_2': '土曜。習慣・メンタルの心得投稿。',
-  'RULE_3': '日曜。実践テクニックの心得投稿。',
-  'RULE_4': '日曜。失敗談・本音の心得投稿。',
-  'KNOWLEDGE': '知識解説投稿。難しい金融を楽しくかみ砕く。教科書ではない。'
+  // ★v8.16: v4軽量化に合わせてタイプ説明を更新
+  'MORNING': '朝7:30頃配信。今日のシナリオ提示。1ネタで「自分はこう読んでいる」を伝える。150〜300字。NG: 指標を全部列挙。3ペア以上に言及。長い前置き',
+  'TOKYO': '朝9:30頃配信。短くてもためになる一言。ホットなニュースがあれば速報ヘッドラインで。なければ東京の空気感を1〜2文。60〜150字。NG: 長い分析。冗長な解説',
+  'LUNCH': '昼12時台配信。短くてもためになる一言。午前に動きがあれば速報的に。生活×為替の共感も◎。60〜150字。NG: 長い分析。午後の展望。仮説の振り返り',
+  'LONDON': '夕方17時台配信。欧州勢参入で何が変わったかを1ネタ。東京との温度差。100〜250字。NG: 東京時間の詳細な振り返り',
+  'GOLDEN': '夜20-21時台配信。1日の締め。冷静な振り返り。今日の答え合わせ1〜2文+一番の学び。150〜350字。NG: ネガティブ感情。詳細な市場分析の繰り返し。明日の展望',
+  'NY': '夜22時台配信。今夜の一点集中。焦点1つ+翌朝の仮説1つ。100〜250字。NG: 今日の振り返り。テーマを3つ並べる',
+  'INDICATOR': '指標発表前の復習メモ。①この指標は何か②今回なぜ注目か③見るべきポイント1つ。140〜180字。先輩が本番前にサッと教えてくれる感覚。NG: 詳細な予想値解説。複数指標を並べる。残り時間表現',
+  'WEEKLY_REVIEW': '土曜朝。今週を一言で+一番印象的な出来事1つ。レートの羅列禁止。物語で。200〜400字',
+  'WEEKLY_LEARNING': '土曜夕方。今週の気づき1つ。法則形式が理想。市場レポートではなく心理面・判断の反省。150〜300字',
+  'NEXT_WEEK': '日曜昼。来週の最大イベント1つ+アノマリー。指標の全列挙禁止。200〜400字',
+  'WEEKLY_HYPOTHESIS': '日曜夜。来週の仮説1つ。因果チェーン（原因→経路→為替への影響）。150〜300字',
+  'RULE_1': '土曜。原則1つを短く言い切る。実体験付き。120〜280字',
+  'RULE_2': '土曜。習慣・メンタル1つ。仕事や生活にも通じる話。120〜280字',
+  'RULE_3': '日曜。実践テクニック1つ。具体的にすぐ使える。120〜280字',
+  'RULE_4': '日曜。失敗談・本音。正直に。弱さを見せる。120〜280字',
+  'KNOWLEDGE': '知識解説。1つの金融知識を身近な例で。「自分の財布にどう関係するか」。150〜350字'
 };
 
 
@@ -73,12 +77,41 @@ function qualityReviewPost_(postText, postType, typeConfig) {
     
     // ===== Step 1: Claude → 指摘のみ（修正テキストは要求しない） =====
     var reviewPrompt = 'あなたはFX関連X投稿の品質レビュアーです。\n';
-    reviewPrompt += '以下の投稿を5つの観点でレビューし、問題点のみを指摘してください。\n';
+    reviewPrompt += '以下の投稿を7つの観点でレビューし、問題点のみを指摘してください。\n';
     reviewPrompt += '★修正テキストは不要。問題点の指摘だけに集中せよ。\n\n';
     
     reviewPrompt += '【投稿タイプ】' + postType + '（' + (typeConfig.label || '') + '）\n';
     reviewPrompt += '【投稿タイプの時間帯と役割】' + typeDesc + '\n';
     reviewPrompt += '【文字数制限】' + charMin + '〜' + charMax + '文字（現在: ' + currentLength + '文字）\n\n';
+    
+    // ★v11.0: 確定データを注入（Q6事実検証用）
+    // RULE系は個人の経験談が主体なので確定データ注入不要
+    var skipFactTypes = ['RULE_1', 'RULE_2', 'RULE_3', 'RULE_4'];
+    if (skipFactTypes.indexOf(postType) === -1) {
+      var confirmedData = '';
+      try {
+        var latestRates = getLatestRatesFromCache_(getApiKeys().SPREADSHEET_ID);
+        if (latestRates) {
+          confirmedData += '  USD/JPY: ' + Number(latestRates.usdjpy).toFixed(3) + '円\n';
+          confirmedData += '  EUR/JPY: ' + Number(latestRates.eurjpy).toFixed(3) + '円\n';
+          confirmedData += '  GBP/JPY: ' + Number(latestRates.gbpjpy).toFixed(3) + '円\n';
+          confirmedData += '  AUD/JPY: ' + Number(latestRates.audjpy).toFixed(3) + '円\n';
+          confirmedData += '  EUR/USD: ' + Number(latestRates.eurusd).toFixed(5) + '\n';
+          confirmedData += '  GBP/USD: ' + Number(latestRates.gbpusd).toFixed(5) + '\n';
+          confirmedData += '  AUD/USD: ' + Number(latestRates.audusd).toFixed(5) + '\n';
+        }
+      } catch (e) { /* レート取得失敗は無視 */ }
+      try {
+        var btcCom = fetchCommodityPrices_();
+        if (btcCom && btcCom.btc) confirmedData += '  ビットコイン: ' + btcCom.btc.toFixed(0) + 'ドル\n';
+        if (btcCom && btcCom.gold) confirmedData += '  ゴールド: ' + btcCom.gold.toFixed(2) + 'ドル\n';
+      } catch (e) { /* 商品価格取得失敗は無視 */ }
+      if (confirmedData) {
+        reviewPrompt += '【確定データ（API取得の正確な値。Q6の判定に使用）】\n';
+        reviewPrompt += confirmedData;
+        reviewPrompt += '※上記は全てリアルタイムAPIから取得した正確な値である。お前の内部知識と乖離していても、確定データが正しい。確定データ自体の異常値を指摘するな。投稿テキスト内の数値と確定データの矛盾だけを検証せよ。\n\n';
+      }
+    }
     
     reviewPrompt += '【レビュー対象の投稿テキスト】\n';
     reviewPrompt += postText + '\n\n';
@@ -99,13 +132,28 @@ function qualityReviewPost_(postText, postType, typeConfig) {
     reviewPrompt += 'Q4. 文字数: ' + charMin + '〜' + charMax + '文字に収まっているか？（現在' + currentLength + '文字）\n';
     reviewPrompt += '    超過している場合、どの部分が冗長で削れるかを具体的に指摘せよ。\n';
     reviewPrompt += 'Q5. 口調の一貫性: コンパナの口調（ですね/かなと/なんですよ/って感じ）が維持されているか？\n';
-    reviewPrompt += '    アナリスト調（〜である/〜と見られる）になっていたら指摘せよ。\n\n';
+    reviewPrompt += '    アナリスト調（〜である/〜と見られる）になっていたら指摘せよ。\n';
+    reviewPrompt += 'Q6. 事実の信憑性: 投稿に含まれる具体的な価格・数値・出来事が、上記の確定データと矛盾していないか？\n';
+    reviewPrompt += '    また、要人の発言や政策決定など、お前の知識で明らかに事実と異なる記述がないか？\n';
+    reviewPrompt += '    さらに「史上最高値」「過去最安値」「急騰」「暴落」「○年ぶり」等の定性的な主張も検証せよ。\n';
+    reviewPrompt += '    確定データの数値だけでは検証できない主張（例:「最高値更新中」）は、お前の知識で事実かどうか判断し、\n';
+    reviewPrompt += '    事実と確認できない場合は「検証不能のため削除すべき」と指摘せよ。\n';
+    reviewPrompt += '    確定データがない場合（RULE系等）はスキップしてよい。\n';
+    reviewPrompt += '    ★v12.1.1: 仮説の振り返り部分がある場合、「方向は合った」のに「逆方向でした」と書いていないか確認せよ。\n';
+    reviewPrompt += '    データが上昇を示しているのに「下落した」と書くのは環境認識の失敗であり、最も重大な誤り。\n';
+    reviewPrompt += '    ★未発表イベントの過去形チェック: 経済カレンダーで「結果」が空のイベントを「〜を受けて」「〜が示された」等の過去形で書いていないか確認せよ。\n';
+    reviewPrompt += '    まだ発表されていないイベントを過去形で書くのはハルシネーションであり、最も重大な誤り。\n';
+    reviewPrompt += 'Q7. 絵文字行の書き分け: 絵文字（☕📕📝📋💡⚠️✅）で始まる行は「事実の短い言い切り」になっているか？\n';
+    reviewPrompt += '    絵文字行に感想・感情・意見（「驚きました」「マジで」「すごい」「怖い」「嬉しい」等）が混入していたら指摘せよ。\n';
+    reviewPrompt += '    感想は→行に書くのがルール。絵文字行は事実だけ。\n';
+    reviewPrompt += '    OK: 「📕3月の米雇用統計、予想を大きく上回る結果。」（事実のみ）\n';
+    reviewPrompt += '    NG: 「📕3月の米雇用統計、マジで驚きましたね。」（感想が混入）\n\n';
     
     reviewPrompt += '【出力形式】JSON形式のみ出力。修正テキストは不要。\n';
     reviewPrompt += '{\n';
     reviewPrompt += '  "passed": true/false,\n';
     reviewPrompt += '  "issues": [\n';
-    reviewPrompt += '    {"id": "Q1〜Q5", "problem": "問題の説明", "suggestion": "どう直すべきかの具体的指示"}\n';
+    reviewPrompt += '    {"id": "Q1〜Q7", "problem": "問題の説明", "suggestion": "どう直すべきかの具体的指示"}\n';
     reviewPrompt += '  ]\n';
     reviewPrompt += '}\n';
     reviewPrompt += '問題がなければ {"passed": true, "issues": []} を返せ。\n';
@@ -149,13 +197,15 @@ function qualityReviewPost_(postText, postType, typeConfig) {
       }
     }
     fixPrompt += '\n【修正時の絶対ルール】\n';
+    fixPrompt += '・★最重要: 問題のある文は「削除」するな。「書き直し」て改善せよ。削除は楽だが読者の価値を損なう。\n';
+    fixPrompt += '・★文字数は' + charMin + '〜' + charMax + '文字に収めろ（ハッシュタグ除く）。' + charMin + '文字未満は絶対に禁止。短すぎる投稿は雑に見える。\n';
     fixPrompt += '・絵文字構造（📕📝💡☕⚠️✅で始まるブロック）は絶対に変えるな。\n';
     fixPrompt += '・→行の構造も変えるな。\n';
     fixPrompt += '・ハッシュタグ行はそのまま残せ。\n';
-    fixPrompt += '・指摘された箇所だけ直して、それ以外は一切触るな。\n';
-    fixPrompt += '・事実やレートの数値は変更するな。\n';
+    fixPrompt += '・指摘された箇所を書き直して改善し、それ以外は一切触るな。\n';
+    fixPrompt += '・事実やレートの数値は変更するな。ただしQ6で指摘された数値の誤りは、指摘に従って正しい値に修正せよ。\n';
+    fixPrompt += '・Q6で事実と確認できない定性的主張（「史上最高値」「急騰」等）が指摘された場合は、その表現だけを削除または事実ベースの表現に書き換えよ。\n';
     fixPrompt += '・口調はコンパナのまま（ですね/かなと/なんですよ/って感じ）。\n';
-    fixPrompt += '・文字数は' + charMin + '〜' + charMax + '文字に収めろ（ハッシュタグ除く）。\n';
     fixPrompt += '・孤立した短文（「です。」だけ等）を残すな。\n\n';
     fixPrompt += '修正後の投稿テキストのみを出力せよ。説明やJSON形式は不要。\n';
     
@@ -169,8 +219,11 @@ function qualityReviewPost_(postText, postType, typeConfig) {
     var revisedText = fixResult.text;
     
     // ===== Step 3: コード側で文字数最終保証 =====
-    var revisedBody = revisedText.split(/\n\n#/)[0];
+    // ★v8.16: ハッシュタグ分離を柔軟化（\n\n# だけでなく \n# や空白+# にも対応）
+    var hashtagSplit = revisedText.match(/\n*[ \t]*(#\S+(?:[ \t]+#\S+)*)\s*$/);
+    var revisedBody = hashtagSplit ? revisedText.slice(0, hashtagSplit.index).trim() : revisedText.trim();
     var revisedLength = revisedBody.length;
+    console.log('📏 品質修正後の本文: ' + revisedLength + '文字（ハッシュタグ' + (hashtagSplit ? 'あり' : 'なし') + '）');
     
     if (revisedLength > charMax) {
       console.log('⚠️ Gemini修正後も文字数超過（' + revisedLength + '/' + charMax + '）→ コード側で圧縮');
@@ -292,10 +345,10 @@ function parseClaudeReviewResponse_(text) {
  * @return {string} 圧縮後のテキスト
  */
 function trimToCharMax_(text, charMax) {
-  // ハッシュタグ部分を分離
-  var hashtagMatch = text.match(/\n\n(#[^\n]+)$/);
+  // ★v8.16: ハッシュタグ分離を柔軟化（\n\n# だけでなく \n# や空白+# にも対応）
+  var hashtagMatch = text.match(/\n*[ \t]*(#\S+(?:[ \t]+#\S+)*)\s*$/);
   var body = hashtagMatch ? text.slice(0, hashtagMatch.index) : text;
-  var hashtagPart = hashtagMatch ? hashtagMatch[0] : '';
+  var hashtagPart = hashtagMatch ? '\n\n' + hashtagMatch[1] : '';
   
   // 本文を行に分割
   var lines = body.split('\n');
@@ -387,6 +440,9 @@ function clearTodayPostCache_() {
       cleared++;
     }
   }
+  
+  // ★v8.16: 問いかけカウントもリセット
+  props.deleteProperty('TODAY_QUESTION_COUNT');
   
   if (cleared > 0) {
     console.log('🗑️ 前日の投稿キャッシュをクリア: ' + cleared + '件');

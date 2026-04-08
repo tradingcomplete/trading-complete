@@ -71,6 +71,19 @@ function factCheckPost_(postText, postType, apiKey, rates) {
       prompt += '\n';
     }
     
+    // ★v12.1.1: 商品価格（BTC/GOLDのみ。WTI/天然ガスはAlpha Vantageデータが古いため停止）
+    try {
+      var btcCom = fetchCommodityPrices_();
+      var comData = [];
+      if (btcCom && btcCom.btc) comData.push('  ビットコイン: ' + btcCom.btc.toFixed(0) + 'ドル');
+      if (btcCom && btcCom.gold) comData.push('  ゴールド: ' + btcCom.gold.toFixed(2) + 'ドル');
+      if (comData.length > 0) {
+        prompt += '【確定データ5: 商品価格（API取得）】\n';
+        prompt += comData.join('\n') + '\n';
+        prompt += '※投稿内の商品価格がこの確定値と5%以上乖離していたら❌。\n\n';
+      }
+    } catch (comErr) { /* 商品価格取得失敗は無視（続行） */ }
+    
     // ★v8.7: 政策金利+要人リストを「確定データ」シートから取得
     prompt += '【確定データ3: 主要中銀の政策金利】\n';
     prompt += getPolicyRatesText_() + '\n';
@@ -93,7 +106,8 @@ function factCheckPost_(postText, postType, apiKey, rates) {
     
     prompt += '=== チェックルール（2層構造） ===\n\n';
     prompt += '【Layer 1: システム確定データとの照合（最優先）】\n';
-    prompt += '1. レート: 確定データ2と3%以内の乖離なら✅。3%超なら❌（correctionに確定値を記載）\n';
+    prompt += '1. 為替レート: 確定データ2と3%以内の乖離なら✅。3%超なら❌（correctionに確定値を記載）\n';
+    prompt += '1b. 商品価格（WTI・BTC・ゴールド等）: 確定データ5と5%以内の乖離なら✅。5%超なら❌（correctionに確定値を記載）\n';
     prompt += '2. 政策金利・利上げ/利下げ/据え置き: 確定データ3と一致すれば✅。矛盾すれば❌\n';
     prompt += '3. 経済指標の名称・時刻: 確定データ1のカレンダーと一致すれば✅。カレンダーにない指標を「今日発表」と書いていたら❌\n';
     prompt += '4. 経済指標の名称混同: CPI（消費者物価指数）とPPI（卸売物価指数）、HICP（統合CPI）を混同していたら❌\n';
@@ -274,17 +288,6 @@ function factCheckPost_(postText, postType, apiKey, rates) {
  * @param {string} apiKey - Gemini APIキー
  * @return {Object} { text: string, fixed: boolean, fixLog: string }
  */
-
-/**
- * ファクトチェックで発見された誤りを自動修正
- * Gemini + Groundingで正確な情報に書き換える
- * 
- * @param {string} postText - 修正対象の投稿テキスト
- * @param {Array} issues - factCheckPost_が返したissues配列
- * @param {string} postType - 投稿タイプ
- * @param {string} apiKey - Gemini APIキー
- * @return {Object} { text: string, fixed: boolean, fixLog: string }
- */
 function autoFixPost_(postText, issues, postType, apiKey, rates) {
   try {
     if (!issues || issues.length === 0) {
@@ -417,10 +420,6 @@ function autoFixPost_(postText, issues, postType, apiKey, rates) {
 
 // ★v8.0: 自動修正後の残留チェック
 // ファクトチェックで指摘されたclaimがまだテキストに残っているか検証
-
-
-// ★v8.0: 自動修正後の残留チェック
-// ファクトチェックで指摘されたclaimがまだテキストに残っているか検証
 function verifyAutoFix_(fixedText, issues) {
   var remaining = [];
   for (var i = 0; i < issues.length; i++) {
@@ -446,9 +445,6 @@ function verifyAutoFix_(fixedText, issues) {
 
 // ★v8.0: claimからキーフレーズを抽出
 // 「パウエル議長、利上げも協議した」→ 「利上げも協議した」等の特徴的フレーズ
-
-// ★v8.0: claimからキーフレーズを抽出
-// 「パウエル議長、利上げも協議した」→ 「利上げも協議した」等の特徴的フレーズ
 function extractKeyPhrases_(claim) {
   var phrases = [];
   // claim全体が短い場合はそのまま使う
@@ -470,9 +466,6 @@ function extractKeyPhrases_(claim) {
   }
   return phrases;
 }
-
-// ★v8.0: 問題の表現を含む行を強制削除（最終手段）
-// リトライでも修正されなかった場合、問題行を丸ごと削除する
 
 // ★v8.0: 問題の表現を含む行を強制削除（最終手段）
 // リトライでも修正されなかった場合、問題行を丸ごと削除する

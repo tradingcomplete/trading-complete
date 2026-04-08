@@ -3,6 +3,7 @@
  * アノマリー（カレンダー要因）の自動判定 + プロンプト/ファクトチェック注入
  * 
  * v8.15: 新規作成（Phase 1）
+ * ★v8.16: 祝日データ不足の自動検知+メール通知機能
  * 
  * 8カテゴリ・20種類のアノマリーをコードで自動判定し、
  * 投稿の仮説精度と品質を向上させる。
@@ -44,6 +45,9 @@
 function getTodayAnomalies_(targetDate, scope) {
   var now = targetDate || new Date();
   var results = [];
+  
+  // ★v8.16: 祝日データの年カバレッジチェック（年1回メール通知）
+  checkHolidayDataCoverage_(now);
   
   // scope='next_week'の場合、来週月〜金の全日を走査
   if (scope === 'next_week') {
@@ -651,6 +655,78 @@ function formatAnomalyForFactCheck_(anomalies) {
   text += '※アノマリーを「確実に起こる」と断定している場合も⚠️。あくまで「傾向」である。\n\n';
   
   return text;
+}
+
+
+// ========================================
+// ★v8.16: 祝日データ不足の自動検知+メール通知
+// ========================================
+
+/**
+ * JAPAN_HOLIDAYS配列に今年のデータが含まれているかチェック。
+ * 含まれていない場合、年1回だけメールで通知する。
+ * 
+ * ScriptPropertiesの 'HOLIDAY_NOTIFIED_YEAR' で通知済み年を管理。
+ * → 同じ年に何度も通知が飛ばないようにする。
+ */
+function checkHolidayDataCoverage_(now) {
+  try {
+    var currentYear = String(now.getFullYear());
+    
+    // 既に今年分の通知済みならスキップ
+    var props = PropertiesService.getScriptProperties();
+    var notifiedYear = props.getProperty('HOLIDAY_NOTIFIED_YEAR') || '';
+    if (notifiedYear === currentYear) return;
+    
+    // JAPAN_HOLIDAYSに今年のデータがあるかチェック
+    if (typeof JAPAN_HOLIDAYS === 'undefined') {
+      console.log('⚠️ JAPAN_HOLIDAYS未定義');
+      return;
+    }
+    
+    var hasCurrentYear = false;
+    var prefix = currentYear + '-';
+    for (var i = 0; i < JAPAN_HOLIDAYS.length; i++) {
+      if (JAPAN_HOLIDAYS[i].indexOf(prefix) === 0) {
+        hasCurrentYear = true;
+        break;
+      }
+    }
+    
+    if (hasCurrentYear) return; // 今年のデータあり → 問題なし
+    
+    // ===== 今年のデータがない → メール通知 =====
+    console.log('🚨 JAPAN_HOLIDAYSに' + currentYear + '年のデータがありません！');
+    console.log('   → config.gsの JAPAN_HOLIDAYS配列に' + currentYear + '年の祝日を追加してください');
+    
+    var recipientEmail = Session.getEffectiveUser().getEmail();
+    if (!recipientEmail) {
+      console.log('⚠️ メールアドレス取得不可 → ログ出力のみ');
+      props.setProperty('HOLIDAY_NOTIFIED_YEAR', currentYear);
+      return;
+    }
+    
+    var subject = '【T-CAX】祝日データ更新が必要です（' + currentYear + '年）';
+    var body = 'T-CAXアノマリー機能からの通知です。\n\n'
+      + 'config.gs の JAPAN_HOLIDAYS 配列に ' + currentYear + '年の祝日データがありません。\n\n'
+      + 'ゴトー日の営業日判定が正しく動作しない可能性があります。\n\n'
+      + '【対応方法】\n'
+      + '1. GASエディタで config.gs を開く\n'
+      + '2. JAPAN_HOLIDAYS 配列に ' + currentYear + '年の祝日を追加\n'
+      + '   （内閣府「国民の祝日」ページを参照: https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html ）\n'
+      + '3. 振替休日も忘れずに追加\n\n'
+      + 'このメールは年1回のみ送信されます。';
+    
+    GmailApp.sendEmail(recipientEmail, subject, body);
+    console.log('📧 祝日データ不足の通知メールを送信しました → ' + recipientEmail);
+    
+    // 通知済みフラグをセット（同じ年に再送しない）
+    props.setProperty('HOLIDAY_NOTIFIED_YEAR', currentYear);
+    
+  } catch (e) {
+    // 通知失敗でも投稿処理は止めない
+    console.log('⚠️ 祝日カバレッジチェックエラー（続行）: ' + e.message);
+  }
 }
 
 

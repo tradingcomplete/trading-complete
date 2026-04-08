@@ -396,10 +396,11 @@ function callGeminiImageApi_(prompt) {
     muteHttpExceptions: true
   };
   
-  // 3回リトライ（指数バックオフ）
-  for (var attempt = 1; attempt <= 3; attempt++) {
+  // リトライ（指数バックオフ）
+  var MAX_RETRIES = 3;
+  for (var attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      Logger.log('🎨 画像生成API呼び出し（試行 ' + attempt + '/3）...');
+      Logger.log('🎨 画像生成API呼び出し（試行 ' + attempt + '/' + MAX_RETRIES + '）...');
       var response = UrlFetchApp.fetch(url, options);
       var code = response.getResponseCode();
       
@@ -417,7 +418,7 @@ function callGeminiImageApi_(prompt) {
       }
       
       // リトライ前に待機（指数バックオフ）
-      if (attempt < 3) {
+      if (attempt < MAX_RETRIES) {
         var waitSec = 5 * attempt;
         Logger.log('⏳ ' + waitSec + '秒後にリトライ...');
         Utilities.sleep(waitSec * 1000);
@@ -425,11 +426,11 @@ function callGeminiImageApi_(prompt) {
       
     } catch (e) {
       Logger.log('⚠️ 通信エラー（試行 ' + attempt + '）: ' + e.message);
-      if (attempt < 3) Utilities.sleep(5000 * attempt);
+      if (attempt < MAX_RETRIES) Utilities.sleep(5000 * attempt);
     }
   }
   
-  Logger.log('❌ 3回リトライ後も画像生成失敗');
+  Logger.log('❌ ' + MAX_RETRIES + '回リトライ後も画像生成失敗');
   return null;
 }
 
@@ -499,7 +500,7 @@ function extractImageFromResponse_(json) {
  * @param {string} draftId - 下書きID（ファイル名に使用）
  * @returns {Object|null} { fileId, webViewLink, webContentLink } または null
  */
-function saveImageToDrive_(imageBlob, draftId) {
+function saveImageToTempDrive_(imageBlob, draftId) {
   try {
     // 一時フォルダを取得または作成
     var folderName = 'CompanaAutoPost_TempImages';
@@ -574,7 +575,7 @@ function cleanupTempImages() {
  * @param {string} fileId - DriveファイルID
  * @returns {Blob|null} 画像Blob または null
  */
-function getImageFromDrive_(fileId) {
+function getImageFromDriveTemp_(fileId) {
   try {
     var file = DriveApp.getFileById(fileId);
     return file.getBlob();
@@ -780,7 +781,7 @@ function testImageGeneration() {
     Logger.log('  アーキタイプ: ' + result.archetype);
     
     // Driveに保存して確認
-    var driveResult = saveImageToDrive_(result.blob, 'test_morning');
+    var driveResult = saveImageToTempDrive_(result.blob, 'test_morning');
     if (driveResult) {
       Logger.log('  📎 確認用URL: ' + driveResult.webViewLink);
     }
@@ -824,7 +825,7 @@ function testImageAllTypes() {
     var result = generatePostImage(testTexts[type], type);
     if (result) {
       successCount++;
-      var driveResult = saveImageToDrive_(result.blob, 'test_' + type.toLowerCase());
+      var driveResult = saveImageToTempDrive_(result.blob, 'test_' + type.toLowerCase());
       if (driveResult) {
         Logger.log('✅ ' + type + ': 成功（' + result.archetype + '）');
         Logger.log('   📎 ' + driveResult.webViewLink);

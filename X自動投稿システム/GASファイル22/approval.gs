@@ -529,6 +529,8 @@ function processPendingRegenRequests_() {
         continue;
       }
 
+      // ★v11.0: スプレッドシートから読み取ったテキストをログ出力（編集反映の確認用）
+      console.log('📝 下書きテキスト（スプレッドシートE列）: ' + (draftData.text || '').substring(0, 80) + '...');
       console.log('🎨 画像再生成開始: ' + postId + '（' + (regenCount + 1) + '/' + MAX_REGEN + '回目）');
 
       var result = regeneratePostImage(draftData.text, draftData.postType, imageMeta.archetype);
@@ -641,6 +643,17 @@ function processApprovedDrafts() {
     var draft = approved[i];
     
     try {
+      // ★v11.0: 投稿直前にスプレッドシートから再読み込み（手動編集を確実に反映）
+      var latestDraft = getDraftById_(draft.postId);
+      if (latestDraft && latestDraft.text) {
+        if (latestDraft.text !== draft.text) {
+          console.log('📝 スプレッドシート編集を検出 → 最新テキストを使用');
+          console.log('  変更前: ' + draft.text.substring(0, 50) + '...');
+          console.log('  変更後: ' + latestDraft.text.substring(0, 50) + '...');
+        }
+        draft.text = latestDraft.text;
+      }
+      
       // ★ 画像メタデータがあれば画像付き投稿
       var imageMeta = getImageMeta_(draft.postId);
       var imageBlob = null;

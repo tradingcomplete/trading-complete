@@ -79,6 +79,19 @@ function extractPostInsights_(postType, postText) {
       } catch (anomErr) { /* 無視 */ }
     }
     
+    // ★v12.1: 通貨強弱トレンド+ダウ理論を仮説の材料に追加
+    if (needsHypothesis) {
+      try {
+        var strengthData = getCurrencyStrengthHistory_(keys.SPREADSHEET_ID, 3);
+        if (strengthData) {
+          prompt += '\n' + strengthData;
+          prompt += '※仮説を立てる際、通貨強弱の勢い（加速/減速/★初動）とダウ理論のSH/SLトレンドを活用せよ。\n';
+          prompt += '  例: 「EUR3日連続最強+日足SH切上(1.1520→1.1580)+週足も上昇 → EUR/USD 1.16台へ続伸。\n';
+          prompt += '  週足SL 1.1380が下値サポート」のように、SH/SLの数値を根拠にせよ。\n';
+        }
+      } catch (csErr) { /* 通貨強弱シートがない場合はスキップ */ }
+    }
+    
     prompt += '\n以下の' + (needsHypothesis ? '2つ' : '1つ（学びのみ）') + 'を抽出してください。\n\n';
     
     if (needsHypothesis) {
@@ -270,11 +283,6 @@ function extractPostInsights_(postType, postText) {
 /**
  * 学びログシートに書き込み（extractPostInsights_から呼ばれる）
  */
-
-
-/**
- * 学びログシートに書き込み（extractPostInsights_から呼ばれる）
- */
 function saveLearningToLog_(category, learning, postType) {
   try {
     var keys = getApiKeys();
@@ -430,6 +438,17 @@ function verifyPreviousHypothesis_() {
     var prompt = '以下のFX相場仮説を、実際のレート変動データで検証してください。\n\n';
     prompt += '仮説: ' + hypothesis + '\n\n';
     prompt += dataBlock + '\n';
+    
+    // ★v12.1: 通貨強弱トレンド+ダウ理論を検証材料に追加
+    try {
+      var strengthTrend = getCurrencyStrengthHistory_(keys.SPREADSHEET_ID, 3);
+      if (strengthTrend) {
+        prompt += '\n' + strengthTrend + '\n';
+        prompt += '※通貨強弱の流れとダウ理論SH/SLも検証の判断材料にせよ。\n';
+        prompt += '  例: 仮説「ドル高」→ USD強弱+0.3%回復+日足SH切上なら追加根拠。週足SHを超えなければ本格転換とは言えない。\n\n';
+      }
+    } catch (csErr) { /* 通貨強弱シートがない場合はスキップ */ }
+    
     prompt += '【判定基準】\n';
     prompt += '○的中: 仮説の方向・水準がおおむね正しかった\n';
     prompt += '△部分的: 方向は合ったが水準が外れた、または一時的に的中した\n';
@@ -658,12 +677,6 @@ function parseHypothesisDetails_(hypothesisText) {
  * 未検証の仮説を現在のレートデータで自動検証する
  * scheduler.gsから月曜朝に呼ばれる
  */
-
-
-/**
- * 未検証の仮説を現在のレートデータで自動検証する
- * scheduler.gsから月曜朝に呼ばれる
- */
 function verifyWeeklyHypotheses_() {
   try {
     var keys = getApiKeys();
@@ -770,17 +783,6 @@ function verifyWeeklyHypotheses_() {
  * @param {string} apiKey - Gemini APIキー
  * @return {string} 理由テキスト（20文字以内）
  */
-
-
-/**
- * 仮説検証の「なぜ当たった/外れた」を1行で自動生成
- * @param {Object} hypothesis - 仮説データ
- * @param {number} currentRate - 検証時レート
- * @param {number} change - 変動幅
- * @param {string} verdict - 的中/不的中
- * @param {string} apiKey - Gemini APIキー
- * @return {string} 理由テキスト（20文字以内）
- */
 function generateVerificationReason_(hypothesis, currentRate, change, verdict, apiKey) {
   try {
     var prompt = '以下のFX仮説の検証結果を1行（20文字以内）で説明してください。\n\n';
@@ -802,12 +804,6 @@ function generateVerificationReason_(hypothesis, currentRate, change, verdict, a
     return verdict === '的中' ? '仮説通りの展開' : '仮説と異なる展開';
   }
 }
-
-
-/**
- * WEEKLY_HYPOTHESIS生成時にプロンプトに注入する的中率サマリーを生成
- * @return {string} 注入テキスト（最大500文字）。データなしなら空文字
- */
 
 
 /**

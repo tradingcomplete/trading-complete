@@ -116,6 +116,26 @@ function applyDailyRateColors_(sheet) {
   // データ件数列
   sheet.getRange(2, lastCol, maxRow - 1, 1).setBackground(OTHER_DATA_BG);
   
+  // ★v12.1.1: SH/SL列の色設定（件数列の次から14列）
+  var shslStartCol = lastCol + 1;
+  var shslColCount = pairCount * 2; // 7ペア × SH/SL
+  if (sheet.getLastColumn() >= shslStartCol + shslColCount - 1) {
+    // ヘッダー
+    for (var si = 0; si < pairCount; si++) {
+      var shCol = shslStartCol + si * 2;
+      var slCol = shCol + 1;
+      var shslColor = PAIR_COLORS[colorKeys[si]][0];
+      sheet.getRange(1, shCol, 1, 2).setBackground(shslColor).setFontWeight('bold').setFontColor(HEADER_TEXT_COLOR);
+    }
+    // データ行
+    for (var sj = 0; sj < pairCount; sj++) {
+      var shDataCol = shslStartCol + sj * 2;
+      var shslDataColor = PAIR_COLORS[colorKeys[sj]][1];
+      sheet.getRange(2, shDataCol, maxRow - 1, 2).setBackground(shslDataColor);
+    }
+    console.log('  ✅ SH/SL列: ' + shslColCount + '列に色設定');
+  }
+  
   console.log('  ✅ 日次レート: ' + pairCount + 'ペア × ' + colsPerPair + '列 = ' + (pairCount * colsPerPair) + '列に色設定');
 }
 

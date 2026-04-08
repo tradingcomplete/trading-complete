@@ -8,6 +8,7 @@
  * ★ Phase 3.5 追加: POST_MODE, SHEET_NAMES拡張, VALIDATION_CONFIG
  * ★ v3.7 追加: KNOWLEDGE投稿タイプ
  * ★ v5.5.3: MARKET_INDICATORS追加、X Premium対応で文字数拡張
+ * ★ v8.16: POST_TYPES文字数を全タイプ軽量化（スクロール不要の共感重視設計）
  */
 
 // ===== 通貨ペア定義（全システム共通） =====
@@ -45,6 +46,46 @@ var DAILY_COMMODITY_ASSETS = [
   { avFunction: 'WTI',         key: 'wti',   label: 'WTI原油',  unit: 'ドル', decimals: 2, min: 30, max: 200 },
   { avFunction: 'NATURAL_GAS', key: 'natgas',label: '天然ガス', unit: 'ドル', decimals: 3, min: 1,  max: 20  }
 ];
+
+// ===== 日次レートシート列定義 ★v12.1.1 =====
+// SH/SL列を追加しても既存コードに影響しないよう、列位置を1箇所で管理
+var DAILY_RATE_COLS = {
+  DATE: 0,
+  OHLC_START: 1,
+  OHLC_PER_PAIR: 4,
+  getOhlcCols: function(pairIndex) {
+    var base = this.OHLC_START + pairIndex * this.OHLC_PER_PAIR;
+    return { open: base, high: base + 1, low: base + 2, close: base + 3 };
+  },
+  getCountCol: function() {
+    return this.OHLC_START + CURRENCY_PAIRS.length * this.OHLC_PER_PAIR;
+  },
+  getShCol: function(pairIndex) {
+    return this.getCountCol() + 1 + pairIndex * 2;
+  },
+  getSlCol: function(pairIndex) {
+    return this.getCountCol() + 1 + pairIndex * 2 + 1;
+  },
+  getTotalCols: function() {
+    return 1 + CURRENCY_PAIRS.length * this.OHLC_PER_PAIR + 1 + CURRENCY_PAIRS.length * 2;
+  },
+  getOhlcOnlyCols: function() {
+    return 1 + CURRENCY_PAIRS.length * this.OHLC_PER_PAIR + 1;
+  }
+};
+
+// ===== 週足シート列定義 ★v12.1.1 =====
+var WEEKLY_RATE_COLS = {
+  DATE: 0,
+  COLS_PER_PAIR: 6,
+  getPairCols: function(pairIndex) {
+    var base = 1 + pairIndex * this.COLS_PER_PAIR;
+    return { open: base, high: base + 1, low: base + 2, close: base + 3, sh: base + 4, sl: base + 5 };
+  },
+  getTotalCols: function() {
+    return 1 + CURRENCY_PAIRS.length * this.COLS_PER_PAIR;
+  }
+};
 
 // ===== 経済指標名の日英マッピング ★v5.7 =====
 // Gemini Grounding検索精度向上用
@@ -135,6 +176,7 @@ function getApiKeys() {
 var POST_MODE = PropertiesService.getScriptProperties().getProperty('POST_MODE') || 'manual';
 
 // ===== 投稿タイプの定義 =====
+// ★v8.16: 文字数を全タイプ軽量化（1投稿1ネタ・140字以内ならスクロール不要）
 var POST_TYPES = {
   MORNING: {
     id: 'morning',
@@ -142,8 +184,8 @@ var POST_TYPES = {
     emoji: '🌅',
     hasImage: false,
     frameColor: '#00e5ff',
-    charMin: 280,
-    charMax: 550
+    charMin: 150,
+    charMax: 300
   },
   TOKYO: {
     id: 'tokyo',
@@ -151,8 +193,8 @@ var POST_TYPES = {
     emoji: '📊',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 420
+    charMin: 60,
+    charMax: 150
   },
   LUNCH: {
     id: 'lunch',
@@ -160,8 +202,8 @@ var POST_TYPES = {
     emoji: '🍱',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 420
+    charMin: 60,
+    charMax: 150
   },
   LONDON: {
     id: 'london',
@@ -169,8 +211,8 @@ var POST_TYPES = {
     emoji: '🌆',
     hasImage: false,
     frameColor: '#00ff88',
-    charMin: 200,
-    charMax: 420
+    charMin: 100,
+    charMax: 250
   },
   GOLDEN: {
     id: 'golden',
@@ -178,8 +220,8 @@ var POST_TYPES = {
     emoji: '🔥',
     hasImage: false,
     frameColor: null,
-    charMin: 280,
-    charMax: 550
+    charMin: 150,
+    charMax: 350
   },
   NY: {
     id: 'ny',
@@ -187,8 +229,8 @@ var POST_TYPES = {
     emoji: '🗽',
     hasImage: false,
     frameColor: '#bf5fff',
-    charMin: 280,
-    charMax: 550
+    charMin: 100,
+    charMax: 250
   },
   INDICATOR: {
     id: 'indicator',
@@ -196,8 +238,8 @@ var POST_TYPES = {
     emoji: '⚡',
     hasImage: false,
     frameColor: '#ff3355',
-    charMin: 280,
-    charMax: 550
+    charMin: 140,
+    charMax: 180
   },
   KNOWLEDGE: {
     id: 'knowledge',
@@ -205,8 +247,8 @@ var POST_TYPES = {
     emoji: '📕',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 420
+    charMin: 150,
+    charMax: 350
   },
   WEEKLY_REVIEW: {
     id: 'weekly_review',
@@ -214,8 +256,8 @@ var POST_TYPES = {
     emoji: '📋',
     hasImage: false,
     frameColor: '#ffd700',
-    charMin: 280,
-    charMax: 550
+    charMin: 200,
+    charMax: 400
   },
   RULE_1: {
     id: 'rule_1',
@@ -223,8 +265,8 @@ var POST_TYPES = {
     emoji: '🧠',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 380
+    charMin: 120,
+    charMax: 280
   },
   RULE_2: {
     id: 'rule_2',
@@ -232,8 +274,8 @@ var POST_TYPES = {
     emoji: '💪',
     hasImage: false,
     frameColor: '#00e5ff',
-    charMin: 200,
-    charMax: 380
+    charMin: 120,
+    charMax: 280
   },
   WEEKLY_LEARNING: {
     id: 'weekly_learning',
@@ -241,8 +283,8 @@ var POST_TYPES = {
     emoji: '📝',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 380
+    charMin: 150,
+    charMax: 300
   },
   RULE_3: {
     id: 'rule_3',
@@ -250,8 +292,8 @@ var POST_TYPES = {
     emoji: '🧠',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 380
+    charMin: 120,
+    charMax: 280
   },
   NEXT_WEEK: {
     id: 'next_week',
@@ -259,8 +301,8 @@ var POST_TYPES = {
     emoji: '🔮',
     hasImage: false,
     frameColor: '#00ff88',
-    charMin: 280,
-    charMax: 550
+    charMin: 200,
+    charMax: 400
   },
   RULE_4: {
     id: 'rule_4',
@@ -268,8 +310,8 @@ var POST_TYPES = {
     emoji: '💡',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 380
+    charMin: 120,
+    charMax: 280
   },
   WEEKLY_HYPOTHESIS: {
     id: 'weekly_hypothesis',
@@ -277,8 +319,8 @@ var POST_TYPES = {
     emoji: '💭',
     hasImage: false,
     frameColor: null,
-    charMin: 200,
-    charMax: 380
+    charMin: 150,
+    charMax: 300
   }
 };
 

@@ -180,11 +180,6 @@ function stripAIPreamble_(text) {
  * 改行ルールを強制する後処理
  * 「。」「？」の後に改行がなければ自動挿入
  */
-
-/**
- * 改行ルールを強制する後処理
- * 「。」「？」の後に改行がなければ自動挿入
- */
 function enforceLineBreaks_(text) {
   var original = text;
   
@@ -271,13 +266,6 @@ function enforceLineBreaks_(text) {
   }
   return text;
 }
-
-/**
- * 禁止絵文字を後処理で機械的に除去
- * 許可: 📕📝📋☕💡⚠️✅ のみ（7種）
- * それ以外の絵文字は全て除去する
- * ★v5.8: 許可絵文字でも4個目以降を除去（スパム判定回避）
- */
 
 /**
  * 禁止絵文字を後処理で機械的に除去
@@ -497,12 +485,6 @@ function removeMarkdown_(text) {
   
   return text;
 }
-
-/**
- * 禁止表現を後処理で置換
- * プロンプトで制御しきれない表現を機械的に修正する
- * ★v5.5.3: 二重表記除去、答え合わせローテーション、丁寧すぎ修正を追加
- */
 
 /**
  * 禁止表現を後処理で置換
@@ -1031,17 +1013,6 @@ function replaceProhibitedPhrases_(text) {
  * @param {string} text - 投稿テキスト
  * @return {string} 修正済みテキスト
  */
-
-/**
- * 月曜日の「昨日」「昨夜」を「先週金曜」に機械的に置換 ★v5.6追加
- * 
- * 月曜日に「昨日のNY市場」と書けば、昨日=日曜で市場は閉まっている。
- * これは100%事実の誤りであるため、後処理で確実に修正する。
- * プロンプトで指示してもGeminiが従わないケースがあるため、後処理が必要。
- * 
- * @param {string} text - 投稿テキスト
- * @return {string} 修正済みテキスト
- */
 function fixMondayYesterday_(text) {
   var original = text;
   var changes = [];
@@ -1085,17 +1056,6 @@ function fixMondayYesterday_(text) {
   
   return text;
 }
-
-/**
- * ★v8.0: 重複テキストブロック除去
- * autoFixPost_やリトライ時にGeminiが本文の一部を繰り返し出力するケースへの対策
- * 冒頭数行と同じ内容が後半に再出現した場合、重複ブロックを除去する
- * 
- * 例:
- *   ☕午前中は豪ドルが急落...（本文）
- *   ...#FX #FOMC の手前に
- *   午前中は豪ドルが急落...（重複）← これを除去
- */
 
 /**
  * ★v8.0: 重複テキストブロック除去
@@ -1318,17 +1278,6 @@ function truncateAfterHashtag_(text) {
  * @param {Object} rates - {usdjpy, eurusd, gbpusd, eurjpy, gbpjpy, audjpy, audusd}
  * @return {string} 修正済みテキスト
  */
-
-/**
- * ★v5.9.3: 小数点が消失したレート数値を後処理で修正する
- * 
- * Geminiが「1.33361ドル」を「133361ドル」と出力するケースに対応。
- * 各レートの小数点なしバージョンを生成し、テキスト内で一致すれば正しい値に置換する。
- * 
- * @param {string} text - 投稿テキスト
- * @param {Object} rates - {usdjpy, eurusd, gbpusd, eurjpy, gbpjpy, audjpy, audusd}
- * @return {string} 修正済みテキスト
- */
 function fixMissingDecimalPoint_(text, rates) {
   if (!rates) return text;
   
@@ -1432,20 +1381,6 @@ function fixMissingDecimalPoint_(text, rates) {
   
   return text;
 }
-
-/**
- * ★v8.1: 自動修正で混入したハルシネーションレートを確定レートで修正する
- * 
- * autoFixPost_がGeminiにレート修正を依頼した際、Geminiが正しいレートではなく
- * 別の数値を返すケースに対応。システムが持つ確定レートと照合し、
- * 乖離が大きい場合は確定レートに置換する。
- * 
- * 例: USD/JPY確定レート159.89 → Geminiが149.60と書く → 159.89に修正
- * 
- * @param {string} text - 投稿テキスト
- * @param {Object} rates - {usdjpy, eurusd, gbpusd, eurjpy, gbpjpy, audjpy, audusd}
- * @return {string} 修正済みテキスト
- */
 
 /**
  * ★v8.1: 自動修正で混入したハルシネーションレートを確定レートで修正する
@@ -1601,21 +1536,6 @@ function normalizeRateDecimals_(text) {
  * @param {Object} rates - 確定レートオブジェクト（optional）
  * @return {string} 検証・修正済みテキスト
  */
-
-/**
- * ★v8.2.1: 最終フォーマットバリデーション（後処理チェーンの最終安全網）
- * 
- * 後処理チェーンの複数の修正が連鎖した結果、フォーマットが壊れるケースを検出・修正する。
- * 例: replaceProhibitedPhrases_ → fixHallucinatedRates_ の連鎖で
- *     「1.15916ドル」→「1.1.5916ドル」→「1.1.1592ドル」のような二重小数点が発生
- * 
- * ファクトチェックを通した後の最終出力は「正しいもの」でなければならない。
- * この関数はその最後の砦として機能する。
- * 
- * @param {string} text - 投稿テキスト
- * @param {Object} rates - 確定レートオブジェクト（optional）
- * @return {string} 検証・修正済みテキスト
- */
 function validateFinalFormat_(text, rates) {
   var fixes = [];
   
@@ -1673,14 +1593,6 @@ function validateFinalFormat_(text, rates) {
  * @param {Object} rates - 確定レートオブジェクト
  * @return {string|null} 正しいレート文字列、特定できなければnull
  */
-
-/**
- * 二重小数点から正しいレートを特定する補助関数
- * @param {string} brokenRate - 壊れたレート文字列（例: "1.1.1592"）
- * @param {string} unit - 通貨単位（"円" or "ドル"）
- * @param {Object} rates - 確定レートオブジェクト
- * @return {string|null} 正しいレート文字列、特定できなければnull
- */
 function findCorrectRate_(brokenRate, unit, rates) {
   var pairChecks;
   if (unit === '円') {
@@ -1722,16 +1634,6 @@ function findCorrectRate_(brokenRate, unit, rates) {
   
   return null;
 }
-
-/**
- * テキスト内容からハッシュタグを動的生成する ★v5.5.1
- * 
- * Geminiが付けたハッシュタグ行を除去し、テキスト内容を分析して
- * 最適なハッシュタグを自動選定・付与する
- * 
- * 優先度: #FX（固定）→ TC言及(#個人開発) → イベント → 通貨ペア → テーマ
- * 最大3個
- */
 
 /**
  * テキスト内容からハッシュタグを動的生成する ★v5.5.1
@@ -1891,11 +1793,6 @@ function countPairTag_(text, word, excludePrefix, excludeSuffix) {
   
   return Math.max(0, total);
 }
-
-/**
- * TC（Trading Complete）言及を含む文を除去する
- * プロンプト指示で禁止しても、Geminiがすり抜けて書くことがあるため後処理で対応
- */
 
 /**
  * TC（Trading Complete）言及を含む文を除去する

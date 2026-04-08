@@ -3,6 +3,9 @@
  * プロンプト構築 + データ注入
  * 
  * v8.5: geminiApi.gsからファイル分割（Phase 6）
+ * ★v8.16: 仮説振り返りは1日1回制（2投稿目以降は重複回避指示に切替）
+ * ★v8.16: 仮説精度向上（的中率フィードバック全市場投稿に拡大 + 2層構造仮説）
+ * ★v8.16: 問いかけシステム（1日2回上限・確率50%・対象タイプのみ）
  * 
  * buildPrompt_はシステム最大の関数（636行）。
  * 他のほぼ全モジュールの関数を呼び出し、投稿プロンプトを組み立てる。
@@ -132,8 +135,6 @@ function getTCOverview() {
 }
 
 // ===== トレードスタイルをSheetsから取得 =====
-
-// ===== トレードスタイルをSheetsから取得 =====
 function getTradeStyle_() {
   try {
     var keys = getApiKeys();
@@ -160,8 +161,6 @@ function getTradeStyle_() {
     return '';
   }
 }
-
-// ===== 参照ソースをSheetsから取得 =====
 
 // ===== 参照ソースをSheetsから取得 =====
 function getReferenceSources_() {
@@ -194,7 +193,6 @@ function getReferenceSources_() {
   }
 }
 
-// ===== 経済カレンダーをSheetsから取得 =====
 // ===== 経済カレンダーをSheetsから取得 =====
 /**
  * 「経済カレンダー」シートから今日〜来週末の指標を取得
@@ -290,10 +288,14 @@ function getEconomicCalendar_(scope) {
           }
           var nowHour = now.getHours();
           var nowMin = now.getMinutes();
-          // ★v7.10: 深夜・早朝（0:00〜5:59）イベントの誤判定防止
-          // 外為どっとコムは米国取引日をA列に使うため、FOMC 3:00等は
-          // 実際にはJST翌日未明の発表。結果(I列)が空なら未発表扱い。
-          if (eventHour < 6 && !result) {
+          // ★v12.2: 外為オンラインの27:00形式に正式対応
+          // 27:00 = 翌日AM3:00。eventHour=27として比較すれば自然に未発表判定される
+          // フォールバック: 3:00形式で貼られた場合も eventHour < 6 && !result で未発表扱い
+          if (eventHour >= 24) {
+            // 27:00等の深夜帯。現在時刻（0-23）より常に大きいので未発表
+            statusLabel = result ? '■発表済み ' : '■未発表 ';
+          } else if (eventHour < 6 && !result) {
+            // フォールバック: 3:00形式で結果なし → 未発表扱い
             statusLabel = '■未発表 ';
           } else if (nowHour > eventHour || (nowHour === eventHour && nowMin >= eventMin)) {
             statusLabel = '■発表済み ';
@@ -597,14 +599,13 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     prompt += '※「日銀のハト派姿勢」「日銀の緩和政策」は過去の話。現在は利上げ路線。間違えるな。\n';
     prompt += '※ 上記と矛盾する金融政策スタンスを書くな（例: 日銀がハト派、FRBが利上げ中 等は誤り）。\n\n';
 
-    // ★v6.5更新: 商品データ注入（WTI・天然ガス=日次キャッシュ、BTC=30分キャッシュ）
-    var dailyForPrompt = fetchDailyCommodityPrices_();
+    // ★v12.1.1: 商品データ注入（BTC/GOLD=Twelve Data のみ。WTI/天然ガスはAlpha Vantageデータが古いため停止）
     var btcForPrompt   = fetchCommodityPrices_();
     var commoditiesForPrompt = {
-      wti:    dailyForPrompt ? dailyForPrompt.wti    : null,
+      wti:    null,
       btc:    btcForPrompt   ? btcForPrompt.btc      : null,
       gold:   btcForPrompt   ? btcForPrompt.gold     : null,
-      natgas: dailyForPrompt ? dailyForPrompt.natgas : null
+      natgas: null
     };
     var hasComData = COMMODITY_ASSETS.some(function(a) { return commoditiesForPrompt[a.key] !== null; });
     if (hasComData) {
@@ -723,7 +724,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       'RULE_1': '知識・原則',
       'RULE_2': '習慣・メンタル',
       'RULE_3': '実践テクニック',
-      'RULE_4': '失敗談・本音'
+      'RULE_4': '失敗談・本音'  // ★心得テーマシートのカテゴリ名と一致させること
     };
     var category = categoryMap[postType];
     if (category) {
@@ -775,8 +776,11 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     prompt += qualityFeedback;
   }
 
-  // Phase 2: WEEKLY_HYPOTHESIS生成時に、過去の仮説的中率サマリーを注入
-  if (postType === 'WEEKLY_HYPOTHESIS') {
+  // ★v8.16: 仮説的中率サマリーを全市場投稿に拡大（以前はWEEKLY_HYPOTHESISのみ）
+  // AIが「自分が最近何を外しているか」を知ることで、仮説の精度が向上する
+  var verifTargetTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY',
+                          'WEEKLY_REVIEW', 'WEEKLY_HYPOTHESIS'];
+  if (verifTargetTypes.indexOf(postType) !== -1) {
     var verifSummary = getHypothesisVerificationSummary_();
     if (verifSummary) {
       prompt += verifSummary;
@@ -829,8 +833,34 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   
   var historyContext = getHypothesisContext_(rates);
   
+  // ★v8.16: 仮説の振り返りは1日1回だけ（平日市場系のみ）
+  // 2投稿目以降は「振り返り済み」指示に切り替え、同じ答え合わせの繰り返しを防ぐ
+  var dailyMarketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY'];
+  var isDailyMarket = dailyMarketTypes.indexOf(postType) !== -1;
+  var alreadyReviewed = false;
+  
+  if (isDailyMarket) {
+    try {
+      var todayPosts = getTodayPreviousPosts_();
+      for (var tp = 0; tp < todayPosts.length; tp++) {
+        if (dailyMarketTypes.indexOf(todayPosts[tp].type) !== -1) {
+          alreadyReviewed = true;
+          break;
+        }
+      }
+    } catch (e) {
+      // キャッシュ取得失敗時は初回扱い（安全側）
+    }
+  }
+  
   // 仮説の振り返り（レートキャッシュの数値差分ベース）
-  if (needsHypothesis && historyContext && historyContext.hypothesisBlock) {
+  if (needsHypothesis && alreadyReviewed) {
+    // ★v8.16: 2投稿目以降 → 振り返り済み指示
+    prompt += '\n【前回の仮説の振り返り（本日済み）】\n';
+    prompt += '今日の最初の投稿で前回の仮説を振り返り済み。同じ答え合わせを繰り返すな。\n';
+    prompt += '「読み違えた」「外した」等の自己批判も不要。新しい視点で市場を語れ。\n';
+    console.log('📝 仮説振り返り: 本日済み（' + postType + 'は2投稿目以降）→ 重複回避指示を注入');
+  } else if (needsHypothesis && historyContext && historyContext.hypothesisBlock) {
     prompt += historyContext.hypothesisBlock;
   } else if (needsHypothesis && context && context.lastHypothesis) {
     // フォールバック: 外部contextから
@@ -847,6 +877,35 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     prompt += '→ この学びを狙い目シナリオの根拠や、振り返りの反省材料として活用せよ。\n';
   }
   
+  // ★v8.16: 問いかけ注入（1日2回上限・対象タイプのみ）
+  var questionEligibleTypes = ['MORNING', 'LUNCH', 'GOLDEN', 'WEEKLY_REVIEW', 'WEEKLY_LEARNING',
+                                'NEXT_WEEK', 'WEEKLY_HYPOTHESIS', 'RULE_1', 'RULE_2', 'RULE_3', 'RULE_4', 'KNOWLEDGE'];
+  if (questionEligibleTypes.indexOf(postType) !== -1) {
+    var qCount = getQuestionCount_();
+    if (qCount < 2) {
+      // 確率的に注入（毎回ではなく約50%の確率）
+      var shouldQuestion = (Math.random() < 0.5);
+      if (shouldQuestion) {
+        prompt += '\n【★問いかけを入れてよい（今日' + qCount + '/2回使用済み）】\n';
+        prompt += '投稿の最後に、読者が答えたくなる問いかけを1つだけ自然に入れろ。\n';
+        prompt += '★最重要: 今日の投稿の題材から自分で考えろ。固定フレーズを使い回すな。\n';
+        prompt += '★その日のニュース・為替の動き・生活への影響から、読者が「自分ごと」として答えられる問いを作れ。\n';
+        prompt += '方向性の参考（この通りに書くな。あくまで方向性）:\n';
+        prompt += '  ・生活実感: 為替や原油の変動が財布にどう影響するか\n';
+        prompt += '  ・夢・目標: 投資の先にある生活。時間やお金の自由\n';
+        prompt += '  ・選択・判断: 金利や為替の変動を受けて、生活でどう行動するか\n';
+        prompt += '  ・内省: トレーダーとしての自分を振り返る\n';
+        prompt += '★答えやすさが命。YES/NOや一言で答えられるのが理想。長文回答を求めるな。\n';
+        incrementQuestionCount_();
+        console.log('❓ 問いかけ: 注入（' + postType + '・本日' + (qCount + 1) + '/2回目）');
+      } else {
+        console.log('❓ 問いかけ: スキップ（確率判定で今回は不要）');
+      }
+    } else {
+      console.log('❓ 問いかけ: 上限到達（本日' + qCount + '/2回済み）');
+    }
+  }
+  
   // ★v5.9.3: プロンプト文字数測定（デバッグ用）
   console.log('📏 プロンプト総文字数: ' + prompt.length + '文字（約' + Math.round(prompt.length / 2) + 'トークン）');
   
@@ -859,6 +918,37 @@ function buildPrompt_(postType, typeConfig, context, rates) {
 }
 
 // ========================================
+// ★v8.16: 問いかけ回数管理
+// ========================================
+
+/**
+ * 今日の問いかけ使用回数を取得
+ * @return {number} 今日の問いかけ回数（0〜2）
+ */
+function getQuestionCount_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var count = parseInt(props.getProperty('TODAY_QUESTION_COUNT') || '0', 10);
+    return isNaN(count) ? 0 : count;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/**
+ * 問いかけ使用回数をインクリメント
+ */
+function incrementQuestionCount_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var count = getQuestionCount_();
+    props.setProperty('TODAY_QUESTION_COUNT', String(count + 1));
+  } catch (e) {
+    console.log('⚠️ 問いかけカウント更新エラー: ' + e.message);
+  }
+}
+
+
 // ★v8.9: 未発表指標名取得（仮説答え合わせ防止用）
 // ========================================
 
@@ -902,10 +992,13 @@ function getUnreleasedIndicatorNames_() {
         eventMin = parseInt(parts[1] || '0', 10);
       }
       
-      // 未発表判定（getEconomicCalendar_ の ■未発表 ロジックと同一）
+      // ★v12.2: 未発表判定（27:00形式対応）
       var isUnreleased = false;
-      if (eventHour < 6 && !result) {
-        // 深夜・早朝（0:00〜5:59）で結果なし → 未発表
+      if (eventHour >= 24) {
+        // 27:00等の深夜帯。結果がなければ未発表
+        isUnreleased = !result;
+      } else if (eventHour < 6 && !result) {
+        // フォールバック: 3:00形式で結果なし → 未発表
         isUnreleased = true;
       } else if (now.getHours() < eventHour || (now.getHours() === eventHour && now.getMinutes() < eventMin)) {
         // 現在時刻がイベント時刻より前 → 未発表
@@ -1041,6 +1134,37 @@ function getHypothesisContext_(rates) {
       block += '  変動: ' + changeStr + '円（' + direction + '）\n';
     }
     
+    // ★v12.1.1: 仮説検証ログからシステム判定を取得して注入
+    // verifyPreviousHypothesis_がgeneratePostの前に実行済み → 判定結果がシートにある
+    try {
+      var verifySheet = ss.getSheetByName('仮説検証ログ');
+      if (verifySheet && verifySheet.getLastRow() >= 2) {
+        var verifyData = verifySheet.getRange(2, 1, verifySheet.getLastRow() - 1, 11).getValues();
+        // 最新の検証済み結果を探す（J列=index9が空でないもの）
+        for (var vi = verifyData.length - 1; vi >= 0; vi--) {
+          var verdict = verifyData[vi][9]; // J列: 判定（○/△/×）
+          var verdictReason = verifyData[vi][10]; // K列: 理由
+          if (verdict && String(verdict).trim()) {
+            // 仮説内容が一致するか確認（先頭20文字で照合）
+            var logHypothesis = String(verifyData[vi][2]).trim();
+            if (logHypothesis && lastHypothesis.substring(0, 20) === logHypothesis.substring(0, 20)) {
+              block += '\n■ システム検証結果（自動判定・この判定が正しい）\n';
+              block += '  判定: ' + String(verdict).trim() + '\n';
+              if (verdictReason) block += '  理由: ' + String(verdictReason).trim() + '\n';
+              block += '\n【絶対遵守】上記のシステム検証結果に従え。この判定と矛盾する記述は絶対に書くな。\n';
+              block += '  例: 判定が「△方向は合った」なら「逆方向でした」「読み違えた」は絶対禁止。\n';
+              block += '  例: 判定が「×外れ」なら「読み通り」「的中」は絶対禁止。\n';
+              block += '  環境認識が全て。データが示す事実をそのまま伝えよ。感情や願望で歪めるな。\n';
+              console.log('📊 仮説検証結果を注入: ' + String(verdict).trim());
+              break;
+            }
+          }
+        }
+      }
+    } catch (verifyErr) {
+      console.log('⚠️ 仮説検証ログ読み取りエラー（続行）: ' + verifyErr.message);
+    }
+    
     // ★v8.9: 仮説に未発表指標が含まれる場合、答え合わせ不可の警告を追加
     var unreleasedNames = getUnreleasedIndicatorNames_();
     var matchedUnreleased = [];
@@ -1132,6 +1256,13 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '  NG: 「動かない相場で無理にトレードしても、疲れるだけで結局は消耗しちゃいますからね」（「休む勇気が大事」と書けば十分）\n';
   rules += '  NG: 「市場参加者が積極的にポジションを取りにいってない状況」（「小動きでスタート」で伝わる）\n';
   rules += '  OK: 核心→根拠→一言感想。この3要素だけで1ブロックを完結させろ。\n';
+  rules += '7. ★抽象逃げ禁止。「面白い動き」「注目の展開」「興味深い」は情報量ゼロ。何がどう動いて、なぜそうなっているかを書け。\n';
+  rules += '  NG: 「豪ドル円が面白い動きになっています」（何が面白いのか不明。読者は何も学べない）\n';
+  rules += '  NG: 「注目の展開ですね」「興味深い値動き」（感想であって情報ではない）\n';
+  rules += '  OK: 「豪ドル円が110円台前半で揉み合い。原油高の豪ドル買いとリスクオフの円買いがぶつかってる構図ですね」\n';
+  rules += '  OK: 「ドル円159円台で膠着。160円台の介入警戒が上値を抑えてる感じかなと」\n';
+  rules += '  → 短い投稿でも「何が」「どう動いて」「なぜか」の3点は必ず含めろ。これが読者の学びになる。\n';
+  rules += '8. ★ネガティブ感情禁止。「疲れた」「胃が痛い」「怖い」「辛い」は書くな。外れたら「切り替える」。\n';
   
   // === コンパナの口調（圧縮版） ===
   rules += '\n【コンパナの口調（絶対遵守）】\n';
@@ -1147,7 +1278,7 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '■ 全投稿が同じ「ノート形式」になるように書け。投稿タイプごとに構造を変えるな。\n';
   rules += '\n';
   rules += '■ ノートの基本単位 = 「絵文字ブロック」:\n';
-  rules += '  絵文字行: 絵文字+事実や題名（1行で短く。言い切り型）\n';
+  rules += '  絵文字行: 絵文字+事実（1行で短く。言い切り型。感想は入れるな）\n';
   rules += '  →行: その話題の背景・分析・感想。1ブロックに→は1つだけ。1〜2文で完結させろ。\n';
   rules += '  補足行: →なしの通常テキスト。最大1行。なくてもよい。\n';
   rules += '\n';
@@ -1232,6 +1363,15 @@ function buildFormatRules_(charMin, charMax, postType) {
     rules += '仮説の答え合わせがある場合は冒頭1ブロックで。その後すぐにニュースへ。\n';
     rules += 'レートの数字を並べるな。方向感（上昇基調/売られっぱなし/大台に迫る/介入警戒ゾーン等）で語れ。\n';
   }
+  
+  // === ★v12.1.1: 環境認識の原則（全投稿タイプ共通） ===
+  rules += '\n【環境認識の原則（最重要・全投稿で遵守）】\n';
+  rules += 'T-CAXは市場を予測するシステムではない。環境認識システムである。\n';
+  rules += '・現状を正確に認識せよ。今が上昇なら「上昇している」と書け。「下がるかも」と願望を書くな。\n';
+  rules += '・データが示す事実がすべて。感情・願望・希望的観測で事実を歪めるな。\n';
+  rules += '・仮説の振り返りでは、システム検証結果（○/△/×）が注入されている場合、その判定に100%従え。\n';
+  rules += '  「方向は合った」と判定されているのに「逆方向でした」と書くのは絶対禁止。\n';
+  rules += '・未来は誰にも分からない。「〜になるだろう」ではなく「〜の可能性が高い環境」と書け。\n';
   
   // === 事実・数値の正確性（★v8.6: タイプ別に分岐。重複レート桁数ルールをbuildPrompt_に一本化） ===
   if (needsMarketRules) {
@@ -1320,18 +1460,16 @@ function buildFormatRules_(charMin, charMax, postType) {
     rules += '× 絶対NG: 「リスク回避で円売り」「リスクオフで円安」は真逆。使うな。\n';
   }
   
-  // === 断言ルールと人間味ルール（市場系投稿のみ） ===
-  var assertTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'NY', 'INDICATOR'];
+  // === 断言ルールと人間味ルール ===
+  var assertTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR',
+                     'WEEKLY_REVIEW', 'WEEKLY_LEARNING', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
   if (assertTypes.indexOf(postType) !== -1) {
     rules += '\n【絵文字行と→行の書き分けルール（最重要）】\n';
     rules += '投稿は「絵文字行（事実）」と「→行（意見・背景・感想）」の2層構造で書け。\n';
     rules += '\n';
-    rules += '■ 絵文字行（📕📝💡等で始まる行）= 事実・情報の提示\n';
-    rules += '  → 確認できている事実を言い切れ。「〜だ。」「〜している。」「〜した。」\n';
+    rules += '■ 絵文字行（📕📝💡等で始まる行）= 事実のメモ。短く言い切れ。感想・意見は入れるな。\n';
     rules += '\n';
-    rules += '■ →行（→で始まる行）= コンパナの意見・背景・読み・感想\n';
-    rules += '  → 人間味のある表現を使え。「〜かなと。」「〜かもしれません。」はOK。\n';
-    rules += '  → 居酒屋で隣のトレーダーが話しているような温度感で書け。\n';
+    rules += '■ →行（→で始まる行）= コンパナの意見・背景・読み・感想。人間味はここで出せ。\n';
     rules += '\n';
     rules += '■ その他: 「要確認」は投稿に書くな。「かもしれません」は→行のみ。\n';
   }
@@ -1442,6 +1580,14 @@ function buildMarketTypePolicy_(postType, now) {
     text += '■ 指標に言及する場合は時刻を含めて正確に。上記「今日の経済指標」の時刻を使え。\n';
     text += '■ 【最重要】レートの事実とニュース解釈を一致させろ。矛盾したらレート優先。\n';
     text += '■ 【通貨の動きとの整合】売られている通貨を「買い」、買われている通貨を「売り」と書くのは絶対禁止。データが事実。\n';
+    text += '■ ★v10.1【抽象的な値動き描写の禁止】\n';
+    text += '  ・「面白い動き」「注目の動き」「興味深い展開」等の抽象的な形容詞で値動きを描写するな。\n';
+    text += '  ・値動きには必ずファンダメンタルズの因果関係を添えろ。「なぜその動きが起きているのか」が読者の学びになる。\n';
+    text += '  ・NG: 「豪ドル円が面白い動きになっています」（何が面白いのか不明。学びゼロ）\n';
+    text += '  ・OK: 「豪ドル円が綱引き状態ですね。原油高で資源国の豪ドルが買われる一方、中東リスクで円も買われていて方向が定まらない」\n';
+    text += '  ・NG: 「ユーロに注目です」（なぜ注目なのか書いていない）\n';
+    text += '  ・OK: 「ユーロ圏PMIが予想を大幅に下回って、ECBの追加利下げ観測が再浮上していますね」\n';
+    text += '  ・原則: 形容詞を使うな。因果関係を書け。読者が「なるほど、だからこう動いてるのか」と思えるのが正解。\n';
     text += '\n【★仮説ベースの投稿構造（v8.8.1・最重要）】\n';
     text += '■ コンパナの投稿はニュース要約ではない。「仮説の提示→答え合わせ→次の仮説」のサイクルで回せ。\n';
     text += '■ 前回の仮説の振り返りデータが注入されている場合、必ず1ブロック使って答え合わせを入れろ。\n';
@@ -1454,6 +1600,17 @@ function buildMarketTypePolicy_(postType, now) {
     text += '  ・OK: 「市場は利下げ織り込みを進めているが、トランプの関税第2弾が来たらインフレ再燃でシナリオ崩壊」\n';
     text += '  ・NG: 「失業保険が予想以下ならドル買い」（当たり前すぎる）\n';
     text += '  ・NG: 「159.50超えならロング。損切は159.00」（数字の羅列。読者の目が滑る）\n';
+    text += '■ ★v8.16: 仮説は「2層構造」で考えろ:\n';
+    text += '  【構造仮説】今週〜数週間の大きなシナリオ。ファンダメンタルズ・地政学に根ざした読み。\n';
+    text += '    ・例: 「ホルムズ海峡の安全航行が回復すれば、WTI原油が90ドル台に下落→インフレ期待後退→FRB利下げ観測でドル安、同時にリスクオンで円売り」\n';
+    text += '    ・例: 「トランプの対中関税第3弾が発動されれば、中国減速→豪州資源輸出減→豪ドル売り加速」\n';
+    text += '    ・例: 「ECBがエネルギーインフレに耐えきれず利上げに転じたら、ユーロ圏景気後退リスクでユーロは一時的に買われた後、むしろ売られる」\n';
+    text += '    ・ポイント: 「原因→経路→為替への影響」の因果チェーンで書け。結論だけ言うな。\n';
+    text += '  【今日の仮説】今日〜明日の具体的な注目点。構造仮説の枠内で、今日のイベントがどう作用するか。\n';
+    text += '    ・例: 「今夜の失業保険は、上の構造（FRBの利下げ観測）が正しいかのテスト。強い数字なのにドルが売られたら、市場は利下げを既定路線と見ている証拠」\n';
+    text += '    ・ポイント: 構造仮説を「検証するための観察ポイント」として書くと、外れても学びになる。\n';
+    text += '  投稿では両方を全て書く必要はない。構造仮説を頭に置いた上で、今日の仮説を自然に語れ。\n';
+    text += '  ただしNY・GOLDENでは構造仮説に触れるチャンスがある。大きな読みを語れ。\n';
     text += '■ ★v8.11: 仮説は「条件分岐型」で書け（一方向の賭けは禁止）:\n';
     text += '  ・仮説 = 市場の読み解き方を示すこと。「当たるか外れるか」の賭けではない。\n';
     text += '  ・「結果が出た後の市場の反応」を読む仮説が最上。どう転んでも学びになる。\n';
@@ -1478,6 +1635,14 @@ function buildMarketTypePolicy_(postType, now) {
     text += '・NG例: 今日が3月17日なのに「日銀会合が控えています」（日銀会合は3月19日）\n';
     text += '・OK例: 「今日12:30にRBA政策金利発表が予定されています」（カレンダーに今日の日付で記載あり）\n';
     text += '・今週の指標に触れたい場合は「今週19日に日銀会合が予定されています」と日付を明記せよ。\n';
+    text += '\n★★★【未発表イベントを過去形で書くな（絶対禁止・ハルシネーション防止）】\n';
+    text += '・経済カレンダーの「結果」列が空欄の指標はまだ発表されていない。\n';
+    text += '・未発表の指標やイベントを「〜を受けて」「〜の結果」「〜が示された」等の過去形で書くな。\n';
+    text += '・ニュース検索で事前報道や観測記事が見つかっても、それは「発表された結果」ではない。\n';
+    text += '・例: FOMC議事要旨が今夜3:00発表予定 → 「FOMC議事要旨を受けてドル安」は絶対禁止。まだ出ていない。\n';
+    text += '  OK: 「今夜FOMC議事要旨が控えている。ハト派なら〜の可能性」（未来形・条件分岐型）\n';
+    text += '  NG: 「FOMC議事要旨でハト派な見解が示された」（まだ発表されていない）\n';
+    text += '・環境認識の原則: データが示す事実だけを書け。まだ起きていないことを起きたように書くな。\n';
   }
   
   // ②-c1.5 MORNING共通: 東京市場オープン前の認識 ★v5.6追加
@@ -1485,13 +1650,13 @@ function buildMarketTypePolicy_(postType, now) {
     text += '\n【MORNING投稿の時間帯と役割（重要 - 全曜日共通）】\n';
     text += '■ この投稿は朝7:30〜8:00頃の配信。東京市場（9:00）オープンの約1時間前。\n';
     text += '■ 構成の基本フレーム:\n';
-    text += '  ①【仮説答え合わせ】前回の仮説データが注入されていれば冒頭で。正直に。\n';
-    text += '  ②【昨夜の世界で何が起きたか】NYの数字ではなく、政治・地政学・中銀の姿勢変化を語れ。\n';
-    text += '  ③【今日の仮説】条件分岐型で。「もしAならB、もしCならD」の構造。一方向の賭けは禁止。\n';
+    text += '  ①【昨夜の世界で何が起きたか】政治・地政学・中銀の姿勢変化を語れ。\n';
+    text += '  ②【今日の仮説】条件分岐型で。「もしAならB、もしCならD」の構造。一方向の賭けは禁止。\n';
+    text += '  ③【仮説答え合わせ】前回の仮説データが注入されていれば。最長1文。\n';
     text += '■ 【通貨ペア混同禁止】同じ段落で異なる通貨ペアのレートを混ぜるな。\n';
   }
   
-  // ②-c1.6 TOKYO共通: 東京市場序盤の認識（全曜日共通） ★v6.6追加
+  // ②-c1.6 TOKYO共通: 東京市場序盤の認識（全曜日共通） ★v6.6追加 ★v10.1: 理由必須
   if (postType === 'TOKYO') {
     text += '\n【TOKYO投稿の時間帯と役割（重要 - 全曜日共通）】\n';
     text += '■ 朝9:11〜9:43頃配信。東京オープン後10〜40分。「予想」ではなく「観察」。\n';
@@ -1504,13 +1669,11 @@ function buildMarketTypePolicy_(postType, now) {
   // ②-c1.7 GOLDEN: 1日のスコアカード ★v8.8.1追加 ★v8.9: 未発表指標ルール追加
   if (postType === 'GOLDEN') {
     text += '\n【GOLDEN投稿の時間帯と役割（重要）】\n';
-    text += '■ 夜20-21時台配信。居酒屋トークの温度感。\n';
-    text += '■ ①仮説スコアカード: 朝の仮説がどうなったか。当たり外れを正直に。これが冒頭。\n';
-    text += '■ ②今日一番考えさせられたこと: 数字ではなく「世界の動き」から何を感じたか。\n';
+    text += '■ 夜20-21時台配信。1日の振り返りを冷静に。\n';
+    text += '■ ①仮説スコアカード: 朝の仮説がどうなったか。当たり外れを正直に。\n';
+    text += '■ ②今日一番の学び: 数字ではなく「世界の動き」から何を学んだか。\n';
     text += '■ ③明日への視点: 今日の結果を踏まえて世界がどう動きそうか。\n';
-    text += '■ ★未発表指標の答え合わせ禁止: 仮説の条件に含まれる経済指標がまだ■未発表なら、答え合わせは保留。\n';
-    text += '  → OK: 「21:30の失業保険の結果次第。どう出るか」\n';
-    text += '  → NG: 「下がると見ていましたが159円台を維持」（指標未発表なのに答え合わせ）\n';
+    text += '■ ★未発表指標の答え合わせ禁止: 仮説の条件に含まれる経済指標がまだ未発表なら、答え合わせは保留。\n';
   }
   
   // ②-c1.8 NY: 今夜の焦点と仮説 ★v8.8.1追加 ★v8.9: 未発表指標ルール追加
@@ -1579,7 +1742,7 @@ function buildKnowledgePolicy_(postType) {
   
   var text = '\n【KNOWLEDGE投稿の方針（最重要 - 必ず守れ）】\n';
   text += '■ この投稿は「難しい金融を楽しくかみ砕く」投稿。教科書ではない。\n';
-  text += '■ 読者が「へぇ！」「そういうことか！」と思える例え話やトリビアを必ず入れる。\n';
+  text += '■ 読者が「そうだったのか」「知らなかった」と思える例え話やトリビアを必ず入れる。\n';
   text += '■ 上の確定レートは「今日何が注目されているか」を判断するためだけに使え。\n';
   text += '■ 冒頭にレートの数字を書くな。「ドル円は152円」から始めるのは禁止。\n';
   text += '■ 内容のヒント（構造は共通のノート形式に従え）:\n';
@@ -1611,20 +1774,22 @@ function buildIndicatorPolicy_(postType, keys) {
     console.log('⚠️ 指標予習注入スキップ: ' + pErr.message);
   }
   
-  // ②-e INDICATOR投稿の方針（かみ砕き重視）
+  // ②-e INDICATOR投稿の方針（★v10.1: 本番前の復習メモ）
   text += '\n【INDICATOR投稿の方針】\n';
+  text += '■ ★v10.1: 「本番前の復習メモ」として書け。読者がこの投稿を読んで発表に臨める内容にしろ。\n';
+  text += '  ・①この指標は何か（1文で簡潔に）: 「CPIは物価の体温計。上がればインフレ→FRBは利下げしにくくなる」\n';
+  text += '  ・②今回なぜ注目か（1文で文脈）: 「前回予想を上回って市場が荒れた。今回も上振れるかが焦点」\n';
+  text += '  ・③見るべきポイント1つ: 「ヘッドラインより平均時給。FRBが一番気にしてるのは賃金インフレ」\n';
   text += '■ 上の「今日の経済指標」に記載された指標のみ解説せよ。記載がない指標を勝手に書くな。\n';
   text += '■ 「今日の経済指標」が「なし」の場合:\n';
   text += '  → 架空の指標発表を書くのは致命的な誤情報。「あと○分でCPI発表」等は絶対禁止。\n';
   text += '  → 代わりに通貨強弱データと市場ニュースを活用して、今日の値動きの解説に切り替えろ。\n';
   text += '  → または、来週の注目指標の予告に切り替えよ。\n';
-  text += '■ 指標の「予想値と前回値」だけでなく、「なぜ重要か」「結果がどう影響するか」をかみ砕く。\n';
-  text += '■ 具体的な数値（前回値・予想値）は上記「今日の経済指標」に記載されたものだけ使え。記載がない数値を捏造するな。\n';
   text += '■ 因果関係を明示する: 「CPIが高い＝物価上昇＝利下げ遠のく＝ドル買われやすい」\n';
-  text += '■ 大衆心理を描写: 「みんなが今どう身構えているか」を人間味ある言葉で。\n';
-  text += '■ OK: 「市場は上振れにビクビク。もし3%超えたら…という恐怖が漂っている」\n';
+  text += '■ 具体的な数値（前回値・予想値）は上記「今日の経済指標」に記載されたものだけ使え。記載がない数値を捏造するな。\n';
+  text += '■ OK: 「前回は予想を上回って市場が大きく動いた。今回のポイントは平均時給の方ですね」\n';
   text += '■ NG: 「上振れの場合、ドル円は156円を目指す展開も想定されます」（無機質すぎ）\n';
-  text += '■ NG: 「あと15分でCPI発表」（カレンダーに記載がない指標＝捏造）\n';
+  text += '■ NG: 「あと○分でCPI発表」（カレンダーに記載がない指標＝捏造）\n';
   text += '■ 「あと○分で発表」「まもなく発表」等の残り時間表現は禁止。承認までのタイムロスで不正確になるため。\n';
   text += '■ OK: 「本日9:30に豪州CPIが発表されます」（時刻指定）\n';
   text += '■ NG: 「あと24分で豪州CPI発表」（残り時間指定）\n';

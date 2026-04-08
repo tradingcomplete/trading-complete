@@ -74,6 +74,10 @@ TradeEntry.js の先頭で定義、window に公開:
 - 新形式: `{ selection: "calm", memo: "補足テキスト" }`
 - 旧形式: `"冷静に分析できていた"`（プレーンテキスト、normalizeEmotionで変換）
 
+バリデーション:
+- 感情選択は **必須**（TradeEntry.js #validateTradeData / TradeEdit.js saveBasicInfo で検証）
+- 未選択でのエントリー・編集保存は不可
+
 ---
 
 ## Part 3（相場ノート）- 完成 (2025-11-27)
@@ -210,12 +214,19 @@ deleteMethod(id)                      // 手法削除（論理削除）
 | モジュール | 責任 | 主要API |
 |-----------|------|---------|
 | StatisticsModule | 統計計算 | updateStatistics(), updateYenStatistics(), switchStatisticsView('pips'\|'yen') |
-| ReportModule | レポート | displayReport(), generateReflectionList(), handlePeriodChange(periodType, year, period) |
+| ReportModule | レポート | displayReport(), generateReflectionList(), generateEmotionAnalysis(), handlePeriodChange(periodType, year, period) |
 | ChartModule | チャート | render() |
 | **AISummaryModule** | **AIサマリー** | **generateSummary(), generateTextSummary(), getStatus()** |
 
 **円建て統計**: PF、期待値、総損益、平均利益/損失、RR比、最大DD
 **ルール遵守・リスク分析**: 遵守率、遵守/非遵守別成績、許容損失別成績、手法別成績
+**感情別分析**: ポジティブ/ネガティブ別成績、8感情別成績（アコーディオン + 印刷用PDF対応）
+
+アコーディオンセクション順序:
+pairAnalysis → dayAnalysis → sessionAnalysis → tradeHistory → ruleRiskAnalysis → **emotionAnalysis** → reflectionList
+
+トレード記録タブ:
+- 感情バッジ（emotion-badge）: EMOTION_OPTIONS の絵文字を表示、ポジティブ=緑系/ネガティブ=赤系
 **EventBus**: statistics:updated/yenUpdated/viewChanged, capital:recordAdded連携, **aiSummary:generated**
 
 ### AISummaryModule（トレード分析強化 Phase 6）
