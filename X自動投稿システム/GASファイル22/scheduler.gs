@@ -51,6 +51,15 @@ function scheduleTodayPosts() {
   var today = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
   var triggersCreated = 0;
   
+  // ★v12.5.2: サマータイム判定（LONDON/NYの投稿時刻を1時間前倒し）
+  var isSummer = isSummerTime_(now);
+  if (isSummer) {
+    console.log('☀️ サマータイム期間: LONDON/NYを' + Math.abs(SUMMER_TIME_OFFSET_MIN) + '分前倒し');
+  } else {
+    console.log('❄️ 冬時間期間: LONDON/NYは通常時刻');
+  }
+  console.log('');
+  
   for (var i = 0; i < schedule.times.length; i++) {
     var timeStr = schedule.times[i];
     var postType = schedule.types[i];
@@ -60,6 +69,17 @@ function scheduleTodayPosts() {
     var parts = timeStr.split(':');
     var hour = parseInt(parts[0], 10);
     var minute = parseInt(parts[1], 10);
+    
+    // ★v12.5.2: サマータイムオフセット適用（LONDON/NYのみ）
+    var summerAdjusted = false;
+    if (isSummer && SUMMER_TIME_TYPES.indexOf(postType) !== -1) {
+      minute += SUMMER_TIME_OFFSET_MIN; // -60分
+      while (minute < 0) {
+        minute += 60;
+        hour -= 1;
+      }
+      summerAdjusted = true;
+    }
     
     // ランダムゆらぎ追加（0〜5分）
     var randomMinutes = Math.floor(Math.random() * (RANDOM_DELAY_MAX - RANDOM_DELAY_MIN + 1)) + RANDOM_DELAY_MIN;
@@ -85,7 +105,11 @@ function scheduleTodayPosts() {
       .create();
     
     var actualTime = padZero_(hour) + ':' + padZero_(minute);
-    console.log('  ✅ ' + timeStr + ' +' + randomMinutes + '分 = ' + actualTime + ' → ' + postType + '（' + functionName + '）');
+    if (summerAdjusted) {
+      console.log('  ✅ ' + timeStr + ' ☀️+' + randomMinutes + '分 → ' + actualTime + ' → ' + postType + '（' + functionName + '）');
+    } else {
+      console.log('  ✅ ' + timeStr + ' +' + randomMinutes + '分 = ' + actualTime + ' → ' + postType + '（' + functionName + '）');
+    }
     triggersCreated++;
   }
   
@@ -294,9 +318,13 @@ function testScheduleDryRun() {
   }
   
   console.log(schedule.dayName + '曜日: ' + schedule.postCount + '件の投稿');
-  console.log('');
   
   var now = new Date();
+  
+  // ★v12.5.2: サマータイム表示
+  var isSummer = isSummerTime_(now);
+  console.log(isSummer ? '☀️ サマータイム期間' : '❄️ 冬時間期間');
+  console.log('');
   
   for (var i = 0; i < schedule.times.length; i++) {
     var timeStr = schedule.times[i];
@@ -306,6 +334,18 @@ function testScheduleDryRun() {
     var parts = timeStr.split(':');
     var hour = parseInt(parts[0], 10);
     var minute = parseInt(parts[1], 10);
+    
+    
+    // ★v12.5.2: サマータイムオフセット適用
+    var summerTag = '';
+    if (isSummer && SUMMER_TIME_TYPES.indexOf(postType) !== -1) {
+      minute += SUMMER_TIME_OFFSET_MIN;
+      while (minute < 0) {
+        minute += 60;
+        hour -= 1;
+      }
+      summerTag = '☀️';
+    }
     
     // ランダムゆらぎの範囲を表示
     var minTime = padZero_(hour) + ':' + padZero_(minute);
@@ -322,7 +362,7 @@ function testScheduleDryRun() {
     var label = typeConfig ? typeConfig.label : postType;
     var hasImage = typeConfig ? (typeConfig.hasImage ? '📷' : '  ') : '  ';
     
-    console.log(hasImage + ' ' + minTime + '〜' + maxTime + ' | ' + emoji + ' ' + label + ' → ' + functionName + '()');
+    console.log(hasImage + ' ' + minTime + '〜' + maxTime + ' | ' + emoji + ' ' + label + summerTag + ' → ' + functionName + '()');
   }
   
   console.log('');
@@ -511,8 +551,8 @@ function scheduleIndicatorTriggers_() {
     return a.triggerTime.getTime() - b.triggerTime.getTime();
   });
 
-  // 最大2件に制限
-  var maxIndicators = 2;
+  // 最大1件に制限（★v12.2: 同時刻帯の重複投稿防止）
+  var maxIndicators = 1;
   var triggerCount = 0;
 
   for (var j = 0; j < Math.min(candidates.length, maxIndicators); j++) {
@@ -536,6 +576,13 @@ function scheduleIndicatorTriggers_() {
       .timeBased()
       .at(actualTriggerTime)
       .create();
+
+    // ★v12.4: 対象指標をScriptPropertiesに保存（buildIndicatorPolicy_で読み取り）
+    PropertiesService.getScriptProperties().setProperty('INDICATOR_TARGET', JSON.stringify({
+      name: c.indicatorName,
+      country: c.country,
+      time: c.eventTime
+    }));
 
     var actualTimeStr = padZero_(actualHour) + ':' + padZero_(actualMinute);
     console.log('  ✅ ⚡ ' + c.eventTime + ' [' + c.country + '] ' + c.indicatorName);

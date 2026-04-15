@@ -3,11 +3,13 @@
  * ファクトチェック + 自動修正
  * 
  * v8.5: geminiApi.gsからファイル分割（Phase 3）
+ * ★v12.5: qualityCheckPost_ 削除（v8.6でqualityReview.gsのqualityReviewPost_に置き換え済み）
  * 
  * 4層品質保証の中核（Layer 1-3）:
  *   factCheckPost_ L1: システム確定データ照合（Grounding不要）
+ *     ★v12.3.1: 通貨強弱の方向チェック追加（「強」の通貨を「下落」と書く矛盾を検出）
  *   factCheckPost_ L2: Geminiの知識+Google検索（Grounding ON）
- *   autoFixPost_: 誤りのみ修正（Grounding OFF）
+ *   autoFixPost_: 誤りのみ修正（★v12.4: Gemini→Claude化。確定データガード付き）
  * 
  * 設計の鉄則:
  *   - factCheckPost_ は Grounding ON（検出に使う）
@@ -18,7 +20,7 @@
  */
 
 
-function factCheckPost_(postText, postType, apiKey, rates) {
+function factCheckPost_(postText, postType, apiKey, rates, csData) {
   try {
     // RULE系は個人の経験談が主体なのでスキップ
     var skipTypes = ['RULE_1', 'RULE_2', 'RULE_3', 'RULE_4'];
@@ -61,13 +63,13 @@ function factCheckPost_(postText, postType, apiKey, rates) {
     // 確定レート
     if (rates) {
       prompt += '【確定データ2: リアルタイムレート（Twelve Data API）】\n';
-      if (rates.usdjpy) prompt += '  USD/JPY（ドル円）: ' + Number(rates.usdjpy).toFixed(3) + '円\n';
-      if (rates.eurjpy) prompt += '  EUR/JPY（ユーロ円）: ' + Number(rates.eurjpy).toFixed(3) + '円\n';
-      if (rates.gbpjpy) prompt += '  GBP/JPY（ポンド円）: ' + Number(rates.gbpjpy).toFixed(3) + '円\n';
-      if (rates.audjpy) prompt += '  AUD/JPY（豪ドル円）: ' + Number(rates.audjpy).toFixed(3) + '円\n';
-      if (rates.eurusd) prompt += '  EUR/USD（ユーロドル）: ' + Number(rates.eurusd).toFixed(5) + 'ドル\n';
-      if (rates.gbpusd) prompt += '  GBP/USD（ポンドドル）: ' + Number(rates.gbpusd).toFixed(5) + 'ドル\n';
-      if (rates.audusd) prompt += '  AUD/USD（豪ドル米ドル）: ' + Number(rates.audusd).toFixed(5) + 'ドル\n';
+      if (rates.usdjpy) prompt += '  USD/JPY（ドル円）: ' + formatRate_(rates.usdjpy, 'usdjpy', 'verify') + '円\n';
+      if (rates.eurjpy) prompt += '  EUR/JPY（ユーロ円）: ' + formatRate_(rates.eurjpy, 'eurjpy', 'verify') + '円\n';
+      if (rates.gbpjpy) prompt += '  GBP/JPY（ポンド円）: ' + formatRate_(rates.gbpjpy, 'gbpjpy', 'verify') + '円\n';
+      if (rates.audjpy) prompt += '  AUD/JPY（豪ドル円）: ' + formatRate_(rates.audjpy, 'audjpy', 'verify') + '円\n';
+      if (rates.eurusd) prompt += '  EUR/USD（ユーロドル）: ' + formatRate_(rates.eurusd, 'eurusd', 'verify') + 'ドル\n';
+      if (rates.gbpusd) prompt += '  GBP/USD（ポンドドル）: ' + formatRate_(rates.gbpusd, 'gbpusd', 'verify') + 'ドル\n';
+      if (rates.audusd) prompt += '  AUD/USD（豪ドル米ドル）: ' + formatRate_(rates.audusd, 'audusd', 'verify') + 'ドル\n';
       prompt += '\n';
     }
     
@@ -104,10 +106,25 @@ function factCheckPost_(postText, postType, apiKey, rates) {
       // アノマリー取得失敗は無視（続行）
     }
     
+    // ★v12.3.1: 通貨強弱データ（方向チェック用）
+    if (csData && csData.length > 0) {
+      prompt += '【確定データ6: 通貨強弱ランキング（前日比・実測値）】\n';
+      for (var ci = 0; ci < csData.length; ci++) {
+        var cs = csData[ci];
+        prompt += '  ' + cs.jpName + '(' + cs.currency + '): ' + (cs.score >= 0 ? '+' : '') + cs.score.toFixed(2) + '% → ' + cs.direction + '\n';
+      }
+      prompt += '\n';
+      prompt += '※これは実測されたレートから計算した事実。投稿本文の方向描写がこの強弱と矛盾していたら❌。\n';
+      prompt += '  例: AUDが+2.95%（強）なのに「豪ドルが大きく売られている」「豪ドル下落」→ ❌\n';
+      prompt += '  例: JPYが-1.70%（弱）なのに「円が大幅に買われている」→ ❌\n';
+      prompt += '  例: USDが-1.89%（弱）なのに「ドル高が進行」→ ❌\n\n';
+    }
+    
     prompt += '=== チェックルール（2層構造） ===\n\n';
     prompt += '【Layer 1: システム確定データとの照合（最優先）】\n';
     prompt += '1. 為替レート: 確定データ2と3%以内の乖離なら✅。3%超なら❌（correctionに確定値を記載）\n';
     prompt += '1b. 商品価格（WTI・BTC・ゴールド等）: 確定データ5と5%以内の乖離なら✅。5%超なら❌（correctionに確定値を記載）\n';
+    prompt += '1c. 通貨の方向: 確定データ6の強弱と投稿内の方向描写が矛盾していたら❌。「強」の通貨を「売られている」「下落」と書くのは致命的な誤り\n';
     prompt += '2. 政策金利・利上げ/利下げ/据え置き: 確定データ3と一致すれば✅。矛盾すれば❌\n';
     prompt += '3. 経済指標の名称・時刻: 確定データ1のカレンダーと一致すれば✅。カレンダーにない指標を「今日発表」と書いていたら❌\n';
     prompt += '4. 経済指標の名称混同: CPI（消費者物価指数）とPPI（卸売物価指数）、HICP（統合CPI）を混同していたら❌\n';
@@ -280,7 +297,7 @@ function factCheckPost_(postText, postType, apiKey, rates) {
 
 /**
  * ファクトチェックで発見された誤りを自動修正
- * Gemini + Groundingで正確な情報に書き換える
+ * ★v12.4: Claude + 確定データガードで修正（Gemini Groundingの古い情報で正しい投稿を壊す事故を根絶）
  * 
  * @param {string} postText - 修正対象の投稿テキスト
  * @param {Array} issues - factCheckPost_が返したissues配列
@@ -288,7 +305,7 @@ function factCheckPost_(postText, postType, apiKey, rates) {
  * @param {string} apiKey - Gemini APIキー
  * @return {Object} { text: string, fixed: boolean, fixLog: string }
  */
-function autoFixPost_(postText, issues, postType, apiKey, rates) {
+function autoFixPost_(postText, issues, postType, apiKey, rates, csData) {
   try {
     if (!issues || issues.length === 0) {
       return { text: postText, fixed: false, fixLog: '' };
@@ -315,13 +332,13 @@ function autoFixPost_(postText, issues, postType, apiKey, rates) {
     if (rates) {
       prompt += '\n【システム確定レート（Twelve Data API - この値を正として使え）】\n';
       prompt += 'レートの修正が必要な場合、Google検索の値ではなく以下のAPI確定値を使え。\n';
-      if (rates.usdjpy) prompt += '  USD/JPY: ' + Number(rates.usdjpy).toFixed(3) + '円\n';
-      if (rates.eurjpy) prompt += '  EUR/JPY: ' + Number(rates.eurjpy).toFixed(3) + '円\n';
-      if (rates.gbpjpy) prompt += '  GBP/JPY: ' + Number(rates.gbpjpy).toFixed(3) + '円\n';
-      if (rates.audjpy) prompt += '  AUD/JPY: ' + Number(rates.audjpy).toFixed(3) + '円\n';
-      if (rates.eurusd) prompt += '  EUR/USD: ' + Number(rates.eurusd).toFixed(5) + 'ドル\n';
-      if (rates.gbpusd) prompt += '  GBP/USD: ' + Number(rates.gbpusd).toFixed(5) + 'ドル\n';
-      if (rates.audusd) prompt += '  AUD/USD: ' + Number(rates.audusd).toFixed(5) + 'ドル\n';
+      if (rates.usdjpy) prompt += '  USD/JPY: ' + formatRate_(rates.usdjpy, 'usdjpy', 'verify') + '円\n';
+      if (rates.eurjpy) prompt += '  EUR/JPY: ' + formatRate_(rates.eurjpy, 'eurjpy', 'verify') + '円\n';
+      if (rates.gbpjpy) prompt += '  GBP/JPY: ' + formatRate_(rates.gbpjpy, 'gbpjpy', 'verify') + '円\n';
+      if (rates.audjpy) prompt += '  AUD/JPY: ' + formatRate_(rates.audjpy, 'audjpy', 'verify') + '円\n';
+      if (rates.eurusd) prompt += '  EUR/USD: ' + formatRate_(rates.eurusd, 'eurusd', 'verify') + 'ドル\n';
+      if (rates.gbpusd) prompt += '  GBP/USD: ' + formatRate_(rates.gbpusd, 'gbpusd', 'verify') + 'ドル\n';
+      if (rates.audusd) prompt += '  AUD/USD: ' + formatRate_(rates.audusd, 'audusd', 'verify') + 'ドル\n';
     }
     // ★v8.7: 政策金利+要人リストを「確定データ」シートから取得
     prompt += '\n【主要中銀の政策金利（システム確定値 - この値を正として使え）】\n';
@@ -336,6 +353,16 @@ function autoFixPost_(postText, issues, postType, apiKey, rates) {
     prompt += '・政策金利に関する修正が必要な場合は、上記のシステム確定金利を使え。Google検索で古い金利が出ても確定値を優先せよ。\n';
     prompt += '・投稿内容がシステム確定データ（レート・金利）と整合している場合は、その部分を修正するな。\n';
     prompt += '・修正後の投稿テキストのみ出力。説明文は不要。\n';
+    
+    // ★v12.4: 通貨強弱データを修正プロンプトに注入（方向の矛盾防止）
+    if (csData && csData.length > 0) {
+      prompt += '\n【通貨強弱ランキング（前日比・実測値 - 方向の真実）】\n';
+      for (var csi = 0; csi < csData.length; csi++) {
+        var cs = csData[csi];
+        prompt += '  ' + cs.jpName + '(' + cs.currency + '): ' + (cs.score >= 0 ? '+' : '') + cs.score.toFixed(2) + '% → ' + cs.direction + '\n';
+      }
+      prompt += '※この方向と矛盾する修正は絶対にするな。「強」の通貨を「下落」に書き換えるのは致命的な誤り。\n';
+    }
     
     // ★v7.8: 投稿タイプ別トーン・構造の保持
     var typeContextMap = {
@@ -354,15 +381,14 @@ function autoFixPost_(postText, issues, postType, apiKey, rates) {
       prompt += '・修正後もこのトーン・時間帯感を維持せよ。別タイプの投稿に変質させるな。\n';
     }
     
-    // ★v8.3: Grounding OFF（factCheckPost_のcorrection情報+システムデータのみで修正）
-    // Grounding ONだと検索結果で正しい投稿を壊すリスクがある（v8.2の教訓）
-    var result = callGemini_(prompt, apiKey, false);
+    // ★v12.4: Gemini→Claude化（確定データガード付きで方向の矛盾を防止）
+    var result = callClaudeGenerate_(prompt, getApiKeys());
     
     if (result && result.text) {
       var fixedText = result.text.trim();
       
-      // ★v8.1: ファクトチェック用語が混入していないかチェック
-      // autoFixPost_がGeminiに修正を依頼した際、「修正後テキスト」ではなく
+      // ★v8.1→v12.4: ファクトチェック用語が混入していないかチェック
+      // autoFixPost_がClaude（旧Gemini）に修正を依頼した際、「修正後テキスト」ではなく
       // 「ファクトチェック結果の説明文」を返してしまうケースへの対策
       var contaminationPatterns = [
         '記述は正確です',
@@ -492,165 +518,7 @@ function forceRemoveIssueLines_(text, issues) {
   return result;
 }
 
-
-// ========================================
-// ★v8.6: 品質チェック（事実検証とは別のレイヤー）
-// ========================================
-
-/**
- * 投稿の「品質」をチェックし、問題があればGeminiに修正させる
- * factCheckPost_が「事実の正誤」を見るのに対し、こちらは「投稿として良いか」を見る
- * 
- * チェック項目:
- *   1. 投稿タイプの時間帯感が合っているか
- *   2. →行の分析が1文だけで浅くないか
- *   3. 文が途中で終わっていないか（体言止めの不完全文）
- *   4. 同じ内容の繰り返しがないか
- *   5. 冒頭がそのタイプらしい書き出しになっているか
- * 
- * @param {string} postText - 投稿テキスト
- * @param {string} postType - 投稿タイプ
- * @param {string} apiKey - Gemini APIキー
- * @return {Object} { text: string, fixed: boolean, fixLog: string }
- */
-function qualityCheckPost_(postText, postType, apiKey) {
-  try {
-    // RULE系・KNOWLEDGEは品質チェック不要（構造が自由）
-    var skipTypes = ['RULE_1', 'RULE_2', 'RULE_3', 'RULE_4', 'KNOWLEDGE'];
-    if (skipTypes.indexOf(postType) !== -1) {
-      return { text: postText, fixed: false, fixLog: '' };
-    }
-    
-    var now = new Date();
-    var dateStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy年M月d日（E）HH:mm');
-    
-    // 投稿タイプ別の時間帯・役割定義
-    var typeContextMap = {
-      'MORNING': '朝7:30頃の配信。東京市場オープン前。昨夜のNY市場を受けた今日の展望を語る。「東京市場は〜だった」（過去形）で始まるのは不自然。',
-      'TOKYO': '朝9:30頃の配信。東京市場オープン後。東京市場が動き出した直後の「観察」を伝える。',
-      'LUNCH': '昼12時頃の配信。午前の振り返り。欧州勢参入前の橋渡し。',
-      'LONDON': '夕方17:30頃の配信。ロンドン市場オープン。「ここからが本番」の緊張感。東京時間の話で始まるのではなく、欧州勢の参入を意識した書き出しにすべき。「東京市場は〜」で始めるな。',
-      'GOLDEN': '夜20:30頃の配信。1日を振り返る共感重視のトーン。',
-      'NY': '夜22時頃の配信。NY市場オープン前。「今夜の勝負所」の緊張感。',
-      'INDICATOR': '指標発表30分前の速報感重視。',
-      'WEEKLY_REVIEW': '土曜の週振り返り。今週のドラマをストーリーで語る。',
-      'NEXT_WEEK': '日曜の来週展望。',
-      'WEEKLY_HYPOTHESIS': '日曜の仮説立案。',
-      'WEEKLY_LEARNING': '土曜の学び。今週の気づきを語る。'
-    };
-    
-    var typeContext = typeContextMap[postType] || '';
-    
-    var prompt = '以下のFX投稿の「品質」をチェックしてください。事実の正誤ではなく、投稿としての読みやすさ・適切さを検証します。\n\n';
-    prompt += '現在の日時: ' + dateStr + '\n';
-    prompt += '投稿タイプ: ' + postType + '\n';
-    prompt += 'このタイプの役割: ' + typeContext + '\n\n';
-    prompt += '【投稿テキスト】\n';
-    prompt += postText + '\n\n';
-    prompt += '【チェック項目】\n';
-    prompt += '1. 時間帯感: 冒頭がこの投稿タイプの時間帯に合った書き出しか？ LONDONなのに「東京市場は〜」で始まっていたら❌。\n';
-    prompt += '2. 分析の深さ: →行が短すぎないか？ 1文だけの→行は浅い。「なぜそうなるのか」の根拠が含まれているか。\n';
-    prompt += '3. 文の完結性: 体言止めや途中で終わっている文がないか？ 「地政学リスクの動向と、欧州勢がどう反応するのか。」のように名詞で終わる不完全文は❌。\n';
-    prompt += '4. 冗長さ: 同じ意味の繰り返しや、読者が推測できる不要な説明がないか。\n';
-    prompt += '5. 締めの多様性: 「休む勇気が大事」で毎回締めるのはワンパターン。別の締め方を検討すべきか。\n\n';
-    prompt += '【出力形式】JSON。\n';
-    prompt += '{\n';
-    prompt += '  "needsFix": true/false,\n';
-    prompt += '  "issues": [\n';
-    prompt += '    { "item": "時間帯感", "verdict": "✅ or ❌", "detail": "具体的な問題点", "suggestion": "修正案" }\n';
-    prompt += '  ]\n';
-    prompt += '}\n';
-    prompt += '問題がなければ {"needsFix": false, "issues": []} を返せ。\n';
-    
-    var result = callGemini_(prompt, apiKey, false);  // Grounding OFF
-    
-    if (!result || !result.text) {
-      console.log('⚠️ 品質チェック失敗（スキップ）');
-      return { text: postText, fixed: false, fixLog: '' };
-    }
-    
-    var checkText = result.text.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    
-    try {
-      var parsed = JSON.parse(checkText);
-      
-      if (!parsed.needsFix || !parsed.issues || parsed.issues.length === 0) {
-        console.log('✅ 品質チェック: 問題なし');
-        return { text: postText, fixed: false, fixLog: '' };
-      }
-      
-      // 品質問題があれば修正を依頼
-      var fixIssues = [];
-      for (var i = 0; i < parsed.issues.length; i++) {
-        if (parsed.issues[i].verdict && parsed.issues[i].verdict.indexOf('❌') !== -1) {
-          fixIssues.push(parsed.issues[i]);
-        }
-      }
-      
-      if (fixIssues.length === 0) {
-        console.log('✅ 品質チェック: ❌なし（軽微な指摘のみ）');
-        return { text: postText, fixed: false, fixLog: '' };
-      }
-      
-      console.log('📝 品質チェック: ' + fixIssues.length + '件の修正必要');
-      for (var fi = 0; fi < fixIssues.length; fi++) {
-        console.log('  ❌ ' + fixIssues[fi].item + ': ' + fixIssues[fi].detail);
-      }
-      
-      // 修正プロンプト
-      var fixPrompt = '以下のFX投稿に品質上の問題があります。修正してください。\n\n';
-      fixPrompt += '【元の投稿】\n' + postText + '\n\n';
-      fixPrompt += '【修正が必要な点】\n';
-      for (var j = 0; j < fixIssues.length; j++) {
-        fixPrompt += (j + 1) + '. ' + fixIssues[j].item + ': ' + fixIssues[j].detail + '\n';
-        if (fixIssues[j].suggestion) {
-          fixPrompt += '   修正案: ' + fixIssues[j].suggestion + '\n';
-        }
-      }
-      fixPrompt += '\n【修正ルール】\n';
-      fixPrompt += '・指摘された点だけ修正せよ。口調・フォーマット・文字数は維持。\n';
-      fixPrompt += '・コンパナの口調（〜ですね、〜かなと、〜なんですよ）を維持せよ。\n';
-      fixPrompt += '・修正後の投稿テキストのみ出力。説明文は不要。\n';
-      
-      var fixResult = callGemini_(fixPrompt, apiKey, false);
-      
-      if (fixResult && fixResult.text) {
-        var fixedText = fixResult.text.trim();
-        
-        // ファクトチェック用語混入チェック（autoFixPost_と同じ安全策）
-        var contaminationPatterns = ['記述は正確です', '検証できません', '確認できません', '一致しています', '情報源によると'];
-        var isContaminated = false;
-        for (var ci = 0; ci < contaminationPatterns.length; ci++) {
-          if (fixedText.indexOf(contaminationPatterns[ci]) !== -1) {
-            console.log('⚠️ 品質修正にチェック用語混入→棄却');
-            isContaminated = true;
-            break;
-          }
-        }
-        
-        if (!isContaminated) {
-          var fixLog = '【品質修正 ' + fixIssues.length + '件】\n';
-          for (var k = 0; k < fixIssues.length; k++) {
-            fixLog += '  📝 ' + fixIssues[k].item + ': ' + fixIssues[k].detail + '\n';
-          }
-          console.log('✅ 品質修正完了（' + fixIssues.length + '件）');
-          return { text: fixedText, fixed: true, fixLog: fixLog };
-        }
-      }
-      
-      console.log('⚠️ 品質修正失敗。元テキストを使用');
-      return { text: postText, fixed: false, fixLog: '' };
-      
-    } catch (parseErr) {
-      console.log('⚠️ 品質チェックJSON解析失敗（スキップ）');
-      return { text: postText, fixed: false, fixLog: '' };
-    }
-    
-  } catch (e) {
-    console.log('⚠️ 品質チェックエラー（スキップ）: ' + e.message);
-    return { text: postText, fixed: false, fixLog: '' };
-  }
-}
+// ★v12.5: qualityCheckPost_ を削除（v8.6で qualityReview.gs の qualityReviewPost_ に置き換え済み。呼び出し元ゼロ）
 
 
 // ========================================

@@ -220,6 +220,24 @@ function sendDraftNotification(drafts) {
     html += displayText;
     html += '</div>';
     
+    // ★v12.2: Flashフォールバック通知
+    try {
+      var props = PropertiesService.getScriptProperties();
+      var flashUsed = props.getProperty('FLASH_FALLBACK_USED');
+      if (flashUsed) {
+        html += '<div style="margin:10px 0; padding:8px 12px; background:#fff3e0; border-left:4px solid #ff9800; border-radius:4px; font-size:0.9rem; color:#e65100;">';
+        if (flashUsed === 'claude') {
+          html += '&#x26A0;&#xFE0F; Gemini Pro 503 &#x2192; Claudeで代替生成';
+        } else {
+          html += '&#x26A0;&#xFE0F; Gemini Pro 503 &#x2192; 代替モデルで生成（品質が通常と異なる可能性）';
+        }
+        html += '</div>';
+        props.deleteProperty('FLASH_FALLBACK_USED');
+      }
+    } catch (flashErr) {
+      // 表示失敗しても投稿処理には影響なし
+    }
+    
     // ★v6.1: ファクトチェック結果をメールに追加
     try {
       var props = PropertiesService.getScriptProperties();

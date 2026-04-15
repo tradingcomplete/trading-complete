@@ -193,8 +193,8 @@ var POST_TYPES = {
     emoji: '📊',
     hasImage: false,
     frameColor: null,
-    charMin: 60,
-    charMax: 150
+    charMin: 100,
+    charMax: 180
   },
   LUNCH: {
     id: 'lunch',
@@ -202,8 +202,8 @@ var POST_TYPES = {
     emoji: '🍱',
     hasImage: false,
     frameColor: null,
-    charMin: 60,
-    charMax: 150
+    charMin: 100,
+    charMax: 180
   },
   LONDON: {
     id: 'london',
@@ -326,8 +326,8 @@ var POST_TYPES = {
 
 // ===== 曜日別スケジュール（1分単位 + Bot判定回避） =====
 var SCHEDULE = {
-  1: { // 月曜
-    times: ['07:28', '09:18', '12:08', '17:22', '20:47', '22:13'],
+  1: { // 月曜 ★v12.3.1: MORNING 07:28→08:03（原油先物開場+1h確保。週末ニュースのGrounding精度向上）
+    times: ['08:03', '09:18', '12:08', '17:22', '20:47', '22:13'],
     types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
   },
   2: { // 火曜
@@ -359,6 +359,149 @@ var SCHEDULE = {
 // ===== ランダムゆらぎ（分） =====
 var RANDOM_DELAY_MIN = 0;
 var RANDOM_DELAY_MAX = 3; // ★v8.0: 2→3に拡大（ランダム性を確保しつつ6分制限内に収まる）
+
+// ===== ★v12.6: レート桁数の一元管理（リグレッション防止） =====
+// toFixed()の桁数が6ファイル以上に散在していた問題を解消。
+// 「投稿テキスト用」と「内部検証用」の2種類を一元定義。
+//
+// 使い方:
+//   formatRate_(158.864, 'usdjpy', 'display')  → '158.86'（投稿テキスト用）
+//   formatRate_(158.864, 'usdjpy', 'verify')   → '158.864'（内部検証用）
+//   formatRate_(1.15374, 'eurusd', 'display')  → '1.1537'（投稿テキスト用）
+//   formatRate_(1.15374, 'eurusd', 'verify')   → '1.15374'（内部検証用）
+//
+// 鉄則: Number(rates.xxx).toFixed(N) を直書きしない。この関数を使う。
+
+/** 投稿テキスト用の桁数（人間が読む精度） */
+var RATE_DECIMALS_DISPLAY = { jpy: 2, usd: 4 };
+/** 内部検証用の桁数（API精度を維持） */
+var RATE_DECIMALS_VERIFY  = { jpy: 3, usd: 5 };
+
+/**
+ * レートの表示桁数を一元管理する
+ *
+ * @param {number} value - レート値
+ * @param {string} pairKey - 通貨ペアキー（'usdjpy', 'eurusd'等）
+ * @param {string} [purpose='display'] - 'display'=投稿用(2/4桁), 'verify'=検証用(3/5桁)
+ * @return {string} フォーマット済みレート文字列
+ */
+function formatRate_(value, pairKey, purpose) {
+  if (!value || isNaN(Number(value))) return '';
+  purpose = purpose || 'display';
+  
+  // CURRENCY_PAIRSからペア情報を取得
+  var pair = null;
+  for (var i = 0; i < CURRENCY_PAIRS.length; i++) {
+    if (CURRENCY_PAIRS[i].key === pairKey) {
+      pair = CURRENCY_PAIRS[i];
+      break;
+    }
+  }
+  
+  if (!pair) return Number(value).toFixed(2);
+  
+  // JPYペア（decimals=3）かUSDペア（decimals=5）かで桁数を決定
+  var isJpy = pair.decimals === 3;
+  var decimals;
+  if (purpose === 'verify') {
+    decimals = isJpy ? RATE_DECIMALS_VERIFY.jpy : RATE_DECIMALS_VERIFY.usd;
+  } else {
+    decimals = isJpy ? RATE_DECIMALS_DISPLAY.jpy : RATE_DECIMALS_DISPLAY.usd;
+  }
+  
+  return Number(value).toFixed(decimals);
+}
+
+
+// ===== formatRate_テスト =====
+function testFormatRate() {
+  console.log('=== formatRate_ テスト ===');
+  var passed = 0;
+  var failed = 0;
+  
+  function check(name, expected, actual) {
+    if (expected === actual) {
+      passed++;
+    } else {
+      failed++;
+      console.log('  ❌ ' + name + ': 期待=' + expected + ' 実際=' + actual);
+    }
+  }
+  
+  // JPYペア display: 2桁
+  check('USD/JPY display', '158.86', formatRate_(158.864, 'usdjpy', 'display'));
+  check('EUR/JPY display', '163.42', formatRate_(163.421, 'eurjpy', 'display'));
+  check('AUD/JPY display', '97.50',  formatRate_(97.503, 'audjpy', 'display'));
+  
+  // JPYペア verify: 3桁
+  check('USD/JPY verify', '158.864', formatRate_(158.864, 'usdjpy', 'verify'));
+  check('EUR/JPY verify', '163.421', formatRate_(163.421, 'eurjpy', 'verify'));
+  
+  // USDペア display: 4桁
+  check('EUR/USD display', '1.1537', formatRate_(1.15374, 'eurusd', 'display'));
+  check('GBP/USD display', '1.2984', formatRate_(1.29843, 'gbpusd', 'display'));
+  check('AUD/USD display', '0.7126', formatRate_(0.71260, 'audusd', 'display'));
+  
+  // USDペア verify: 5桁
+  check('EUR/USD verify', '1.15374', formatRate_(1.15374, 'eurusd', 'verify'));
+  check('AUD/USD verify', '0.71260', formatRate_(0.71260, 'audusd', 'verify'));
+  
+  // デフォルトはdisplay
+  check('purpose省略=display', '158.86', formatRate_(158.864, 'usdjpy'));
+  
+  // エッジケース
+  check('null入力', '', formatRate_(null, 'usdjpy'));
+  check('NaN入力', '', formatRate_('abc', 'usdjpy'));
+  
+  console.log('');
+  console.log('formatRate_テスト: ✅' + passed + ' / ❌' + failed);
+}
+
+// ===== ★v12.5.2: サマータイム自動調整 =====
+// ロンドン・NY市場の開場時刻はサマータイムで1時間早まる。
+// 投稿時刻もそれに合わせて自動で1時間前倒しする。
+// 欧州サマータイム: 3月最終日曜〜10月最終日曜（米国DST: 3月第2日曜〜11月第1日曜とほぼ重複）
+// → 欧州基準で判定（ロンドン市場を優先。NY市場は1-2週間のズレがあるが実用上問題なし）
+
+/** サマータイム対象の投稿タイプ（ロンドン・NY市場連動 + GOLDEN） */
+var SUMMER_TIME_TYPES = ['LONDON', 'GOLDEN', 'NY'];
+
+/** サマータイム時のオフセット（分）。マイナス = 前倒し */
+var SUMMER_TIME_OFFSET_MIN = -60;
+
+/**
+ * 現在が欧州サマータイム期間かどうかを判定する
+ * 欧州サマータイム: 3月最終日曜 01:00 UTC 〜 10月最終日曜 01:00 UTC
+ * 
+ * @param {Date} [date] - 判定対象日（省略時は現在）
+ * @return {boolean} サマータイム期間ならtrue
+ */
+function isSummerTime_(date) {
+  var now = date || new Date();
+  var year = now.getFullYear();
+  var month = now.getMonth(); // 0-11
+  
+  // 4月〜9月は確実にサマータイム
+  if (month >= 3 && month <= 8) return true;
+  // 1月〜2月, 11月〜12月は確実に冬時間
+  if (month <= 1 || month >= 10) return false;
+  
+  // 3月: 最終日曜日以降ならサマータイム
+  if (month === 2) {
+    var marchLast = new Date(year, 2, 31);
+    var marchLastSun = 31 - marchLast.getDay();
+    return now.getDate() >= marchLastSun;
+  }
+  
+  // 10月: 最終日曜日より前ならサマータイム
+  if (month === 9) {
+    var octLast = new Date(year, 9, 31);
+    var octLastSun = 31 - octLast.getDay();
+    return now.getDate() < octLastSun;
+  }
+  
+  return false;
+}
 
 // ===== 日本の祝日（★v8.15: アノマリー判定用・年1回更新） =====
 // ゴトー日の営業日補正に使用。振替休日含む。

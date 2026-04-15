@@ -32,11 +32,17 @@ function onOpen() {
     // --- モード切替 ---
     .addItem('現在のモード確認', 'showCurrentMode')
     .addItem('🔄 手動モード（承認して投稿）', 'setModeManual')
+    .addItem('🔄 検証モード（問題時のみ承認）', 'setModeValidate')
     .addItem('🔄 自動モード（即投稿）', 'setModeAuto')
     .addSeparator()
     
     // --- セットアップ ---
     .addItem('📋 確定データシート作成（金利+要人）', 'setupReferenceDataSheet')
+    .addSeparator()
+    
+    // --- テスト（★v12.6: リグレッション防止） ---
+    .addItem('🧪 後処理チェーンテスト', 'testPostProcessorChain')
+    .addItem('🧪 レートフォーマットテスト', 'testFormatRate')
     .addSeparator()
     
     // --- 危険 ---
@@ -94,6 +100,14 @@ function showCurrentMode() {
  */
 function setModeManual() {
   setPostMode_('manual', '手動モード（Gmail承認して投稿）');
+}
+
+/**
+ * 検証モードに切り替え（問題時のみ承認メール）
+ * ★v12.2: メニュー復活
+ */
+function setModeValidate() {
+  setPostMode_('validate', '検証モード（問題時のみ承認メール）');
 }
 
 /**
@@ -165,6 +179,12 @@ function executePost(postType) {
       console.log('画像選択済み: ' + generated.imageName);
     }
     console.log('');
+
+    // === ★v12.2: ファクトチェック失敗時は強制的にmanualモードへ ===
+    if (generated.factCheckSkipped && POST_MODE !== 'manual') {
+      console.log('⚠️ ファクトチェック失敗 → 安全のためmanualモードに強制切替');
+      return handleManualMode_(postType, postText, generated);
+    }
 
     // === POST_MODEで分岐 ===
     switch (POST_MODE) {

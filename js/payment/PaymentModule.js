@@ -1,16 +1,18 @@
 /**
  * @module PaymentModule
- * @description 決済・サブスクリプション管理モジュール
- * @version 2.3.0
- * @date 2026-03-25
+ * @description 決済・サブスクリプション管理モジュール（PAY.JP + PayPal 多層決済対応）
+ * @version 3.0.0
+ * @date 2026-04-15
  * @important MODULES.md準拠
  *
  * 【責務】
  * - 現在のプラン状態管理
  * - プラン制限チェック（トレード件数、クラウド同期、AI機能）
  * - PAY.JP Checkout公式ポップアップ起動（index.htmlのscriptタグ必須）
- * - Edge Function (create-checkout-session) 呼び出し
- * - サブスクリプション解約（cancel-subscription呼び出し）
+ * - PayPal JS SDKによるサブスクリプション作成（index.htmlのscriptタグ必須）
+ * - Edge Function (create-checkout-session) 呼び出し（PAY.JP用）
+ * - Edge Function (paypal-activate-subscription) 呼び出し（PayPal用）
+ * - サブスクリプション解約（provider別にEdge Function分岐）
  * - サブスクリプション情報の取得・更新
  *
  * 【依存関係】
@@ -19,6 +21,9 @@
  * - PAY.JP Checkout（index.htmlにscriptタグ必須）
  *   <script class="payjp-button" src="https://checkout.pay.jp/"
  *     data-key="pk_test_xxx" data-on-created="payjpTokenCallback" data-lang="ja">
+ *   </script>
+ * - PayPal JS SDK（index.htmlにscriptタグ必須）
+ *   <script src="https://www.paypal.com/sdk/js?client-id=xxx&vault=true&intent=subscription&currency=JPY">
  *   </script>
  *
  * 【EventBus】
@@ -48,6 +53,21 @@ class PaymentModule {
     static PLAN_IDS = {
         pro_monthly: 'pro_monthly',
         pro_yearly: 'pro_yearly',
+    };
+
+    // ================
+    // Static: PayPal Client ID（Sandbox）
+    // 本番切替時にClient IDを差替え
+    // ================
+    static PAYPAL_CLIENT_ID = 'ATf3cbiPiYlvHmCDHcEwc1R_6kQ1D1kDlgkFrvDFX5ifPI8jtZn3jHUDL4rIFhUmT4VZAWkwBpPkVz0X';
+
+    // ================
+    // Static: PayPal Plan IDs（Sandbox）
+    // 本番切替時にPlan IDsを差替え
+    // ================
+    static PAYPAL_PLAN_IDS = {
+        pro_monthly: 'P-8H109475V37223216NHPRNQQ',
+        pro_yearly: 'P-04D84309HK327863FNHPRNQQ',
     };
 
     // ================
@@ -177,22 +197,35 @@ class PaymentModule {
     }
 
     /**
-     * PAY.JP Checkoutポップアップを起動
+     * チェックアウトを開始（provider別に分岐）
+     * @param {string} planId - プランID（例: 'pro_monthly'）
+     * @param {string} provider - 決済プロバイダ ('paypal' or 'payjp')
+     */
+    async startCheckout(planId, provider = 'paypal') {
+        if (!this.#supabase) {
+            window.showToast?.('ログインが必要です', 'error');
+            return;
+        }
+
+        const { data: { session } } = await this.#supabase.auth.getSession();
+        if (!session) {
+            window.showToast?.('ログインが必要です', 'error');
+            return;
+        }
+
+        if (provider === 'paypal') {
+            await this.#startPayPalCheckout(planId);
+        } else {
+            await this.#startPayjpCheckout(planId);
+        }
+    }
+
+    /**
+     * PAY.JP Checkoutポップアップを起動（既存フロー）
      * @param {string} planId - PAY.JP プランID（例: 'pro_monthly'）
      */
-    async startCheckout(planId) {
+    async #startPayjpCheckout(planId) {
         try {
-            if (!this.#supabase) {
-                window.showToast?.('ログインが必要です', 'error');
-                return;
-            }
-
-            const { data: { session } } = await this.#supabase.auth.getSession();
-            if (!session) {
-                window.showToast?.('ログインが必要です', 'error');
-                return;
-            }
-
             if (!PaymentModule.PLAN_IDS[planId]) {
                 throw new Error('不明なプランIDです: ' + planId);
             }
@@ -223,7 +256,7 @@ class PaymentModule {
             }, 300);
 
         } catch (error) {
-            console.error('PaymentModule: startCheckout error', error);
+            console.error('PaymentModule: startPayjpCheckout error', error);
             window.showToast?.('決済処理でエラーが発生しました', 'error');
             this.#pendingPlanId = null;
         }
@@ -232,6 +265,7 @@ class PaymentModule {
     /**
      * サブスクリプションを解約する
      * （期間終了時に自動解約。即時解約ではない）
+     * provider別にEdge Functionを分岐
      */
     async cancelSubscription() {
         try {
@@ -246,8 +280,16 @@ class PaymentModule {
                 return;
             }
 
+            // providerに応じてEdge Functionを分岐
+            const provider = this.#subscription?.provider || 'payjp';
+            const functionName = provider === 'paypal'
+                ? 'paypal-cancel-subscription'
+                : 'cancel-subscription';
+
+            console.log('PaymentModule: 解約開始', { provider, functionName });
+
             const response = await fetch(
-                `${this.#supabase.supabaseUrl}/functions/v1/cancel-subscription`,
+                `${this.#supabase.supabaseUrl}/functions/v1/${functionName}`,
                 {
                     method: 'POST',
                     headers: {
@@ -305,6 +347,132 @@ class PaymentModule {
     // ================
     // Private Methods
     // ================
+
+    /**
+     * PayPal JS SDKでサブスクリプション作成フローを開始
+     * @param {string} planId - 内部プランID（例: 'pro_monthly'）
+     */
+    async #startPayPalCheckout(planId) {
+        try {
+            const paypalPlanId = PaymentModule.PAYPAL_PLAN_IDS[planId];
+            if (!paypalPlanId) {
+                throw new Error('不明なプランIDです: ' + planId);
+            }
+
+            // PayPal JS SDKの読み込み確認
+            if (typeof paypal === 'undefined') {
+                throw new Error('PayPal JS SDKが読み込まれていません。ページを再読み込みしてお試しください。');
+            }
+
+            // アップグレードモーダルを閉じる
+            const upgradeModal = document.getElementById('upgradeModal');
+            if (upgradeModal) upgradeModal.style.display = 'none';
+
+            // PayPalボタン用コンテナを作成（既存があれば再利用）
+            let container = document.getElementById('paypal-button-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'paypal-button-container';
+                document.body.appendChild(container);
+            }
+
+            // コンテナのスタイル設定（モーダル風に中央表示）
+            container.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:100000; background:#fff; padding:32px; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.3); min-width:320px; max-width:420px;';
+            container.innerHTML = '<p style="text-align:center; margin:0 0 16px; font-size:16px; font-weight:bold;">PayPalで決済</p><div id="paypal-buttons"></div><button id="paypal-cancel-btn" style="display:block; margin:16px auto 0; padding:8px 24px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer;">キャンセル</button>';
+
+            // オーバーレイ作成
+            let overlay = document.getElementById('paypal-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'paypal-overlay';
+                document.body.appendChild(overlay);
+            }
+            overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999;';
+
+            // キャンセルボタン・オーバーレイのクリックで閉じる
+            const cleanup = () => {
+                container.style.display = 'none';
+                overlay.style.display = 'none';
+            };
+            document.getElementById('paypal-cancel-btn').addEventListener('click', cleanup);
+            overlay.addEventListener('click', cleanup);
+
+            // PayPalボタンを描画
+            paypal.Buttons({
+                style: {
+                    shape: 'rect',
+                    color: 'gold',
+                    layout: 'vertical',
+                    label: 'subscribe',
+                },
+                createSubscription: (data, actions) => {
+                    return actions.subscription.create({
+                        plan_id: paypalPlanId,
+                    });
+                },
+                onApprove: async (data) => {
+                    cleanup();
+                    console.log('PaymentModule: PayPal承認完了', data.subscriptionID);
+                    await this.#handlePayPalApproval(data.subscriptionID, planId);
+                },
+                onError: (err) => {
+                    cleanup();
+                    console.error('PaymentModule: PayPalボタンエラー', err);
+                    window.showToast?.('PayPal決済でエラーが発生しました', 'error');
+                },
+            }).render('#paypal-buttons');
+
+        } catch (error) {
+            console.error('PaymentModule: startPayPalCheckout error', error);
+            window.showToast?.(error.message || '決済処理でエラーが発生しました', 'error');
+        }
+    }
+
+    /**
+     * PayPal承認後にEdge Functionでサブスクリプションを検証・保存
+     * @param {string} subscriptionId - PayPalサブスクリプションID（例: 'I-XXXX'）
+     * @param {string} planId - 内部プランID（例: 'pro_monthly'）
+     */
+    async #handlePayPalApproval(subscriptionId, planId) {
+        try {
+            window.showToast?.('決済処理中...', 'info');
+
+            const { data: { session } } = await this.#supabase.auth.getSession();
+            if (!session) {
+                window.showToast?.('ログインが必要です', 'error');
+                return;
+            }
+
+            const response = await fetch(
+                `${this.#supabase.supabaseUrl}/functions/v1/paypal-activate-subscription`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                        subscriptionId: subscriptionId,
+                        planId: planId,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // 決済成功 → プラン情報を再取得してUIに反映
+            await this.refreshSubscription();
+            window.showToast?.('Proプランへのアップグレードが完了しました!', 'success');
+
+        } catch (error) {
+            console.error('PaymentModule: handlePayPalApproval error', error);
+            window.showToast?.('決済処理でエラーが発生しました', 'error');
+        }
+    }
 
     /**
      * PAY.JP Checkoutボタンが生成されるまで待つ

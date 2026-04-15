@@ -196,10 +196,11 @@ function enforceLineBreaks_(text) {
     );
   });
 
-  // ★v6.0.3: →の前に改行を強制（行頭以外の→は改行して行頭にする）
+  // ★v6.0.3→v12.5.4: →の前に改行を強制（行頭以外の→は改行して行頭にする）
   // 例: 「☕今夜は米指標ラッシュ→インフレ指標」→「☕今夜は米指標ラッシュ\n→インフレ指標」
   // ただし既に行頭にある→はスキップ
-  text = text.replace(/([^\n])→/g, '$1\n→');
+  // ★v12.5.4: 数値変化の→（例: 4.35%→4.10%）は改行しない
+  text = text.replace(/([^\n])→(?!\d)/g, '$1\n→');
   
   // 「。」の後に改行でない文字が続く場合、改行を挿入
   text = text.replace(/。([^\n])/g, '。\n$1');
@@ -1413,62 +1414,107 @@ function fixHallucinatedRates_(text, rates) {
   
   var lines = text.split('\n');
   
-  for (var p = 0; p < pairChecks.length; p++) {
-    var pair = pairChecks[p];
-    if (!pair.value) continue;
-    var correctRate = Number(pair.value);
-    if (isNaN(correctRate)) continue;
+  for (var li = 0; li < lines.length; li++) {
+    var line = lines[li];
     
-    for (var li = 0; li < lines.length; li++) {
-      var line = lines[li];
+    // ===== Step 1: この行に存在する全ペアキーワードの位置を収集 =====
+    // ★v12.6: ペア単位ではなく行単位で処理。各レートを最も近いキーワードに割り当てることで
+    //          同一行に複数ペアがある場合のクロス汚染を防止
+    var kwFound = [];
+    for (var p = 0; p < pairChecks.length; p++) {
+      var pair = pairChecks[p];
+      if (!pair.value) continue;
+      if (isNaN(Number(pair.value))) continue;
       
-      // この行に通貨ペアのキーワードが含まれるか
-      // ★v8.6: 部分一致による誤マッチ防止
-      // 「豪ドル円」の中の「ドル円」をUSD/JPYとして検出しない
-      var hasPairKeyword = false;
       for (var k = 0; k < pair.keywords.length; k++) {
         var kw = pair.keywords[k];
         if (line.indexOf(kw) === -1) continue;
         
-        // 「ドル円」が「豪ドル円」「ポンドドル円」の一部ではないか確認
+        // ★v8.6: 部分一致防止（「豪ドル円」の中の「ドル円」を誤検出しない）
         if (kw === 'ドル円') {
           var stripped = line.replace(/豪ドル円/g, '＿＿＿').replace(/ポンドドル円/g, '＿＿＿＿');
-          if (stripped.indexOf('ドル円') === -1) continue; // 独立した「ドル円」がない
+          var strippedPos = stripped.indexOf('ドル円');
+          if (strippedPos === -1) continue;
+          kwFound.push({ pairIdx: p, position: strippedPos });
+        } else {
+          kwFound.push({ pairIdx: p, position: line.indexOf(kw) });
         }
-        
-        hasPairKeyword = true;
         break;
       }
-      if (!hasPairKeyword) continue;
-      
-      // 行内のレート候補を抽出（数字.数字 + 円/ドル）
-      var ratePattern;
-      if (pair.unit === '円') {
-        // JPYペア: 100〜300の範囲の数値+円
-        ratePattern = /(\d{2,3}\.\d{1,3})円/g;
-      } else {
-        // USDペア: 0.5〜2.0の範囲の数値+ドル
-        ratePattern = /(\d\.\d{2,5})ドル/g;
-      }
-      
-      var match;
-      while ((match = ratePattern.exec(line)) !== null) {
-        var foundRate = parseFloat(match[1]);
-        if (isNaN(foundRate)) continue;
-        
-        // 乖離率を計算
-        var deviation = Math.abs(foundRate - correctRate) / correctRate;
-        
-        // 閾値を超えていたら修正
-        if (deviation > pair.threshold) {
-          var correctStr = correctRate.toFixed(pair.decimals);
-          var oldStr = match[1] + pair.unit;
-          var newStr = correctStr + pair.unit;
-          lines[li] = lines[li].replace(oldStr, newStr);
-          console.log('📌 レート乖離修正: ' + oldStr + ' → ' + newStr + '（' + pair.name + ' 乖離' + (deviation * 100).toFixed(1) + '%）');
-          fixCount++;
+    }
+    
+    if (kwFound.length === 0) continue;
+    kwFound.sort(function(a, b) { return a.position - b.position; });
+    
+    // ===== Step 2: 行内の全レート候補を収集 =====
+    // ★v12.5.5: 「円」「ドル」なしのレートも検出
+    var jpyPattern = /(\d{2,3}\.\d{1,3})(?:円|まで|台|付近|前後|に|を|で|と|、|。|\s|$)/g;
+    var usdPattern = /(\d\.\d{2,5})(?:ドル|台|付近|前後|まで|に|を|で|と|、|。|\s|$)/g;
+    
+    var rateMatches = [];
+    var m;
+    while ((m = jpyPattern.exec(line)) !== null) {
+      rateMatches.push({ value: parseFloat(m[1]), position: m.index, numStr: m[1] });
+    }
+    while ((m = usdPattern.exec(line)) !== null) {
+      // ★v12.6: 位置の重複チェック（JPYマッチ「142.82」の中の「2.82」をUSDとして誤検出しない）
+      var dup = false;
+      for (var rd = 0; rd < rateMatches.length; rd++) {
+        var existing = rateMatches[rd];
+        if (m.index >= existing.position && m.index < existing.position + existing.numStr.length) {
+          dup = true; break;
         }
       }
+      if (!dup) {
+        rateMatches.push({ value: parseFloat(m[1]), position: m.index, numStr: m[1] });
+      }
+    }
+    
+    if (rateMatches.length === 0) continue;
+    
+    // ===== Step 3: 各レートを直前で最も近いキーワードに割り当てて検証 =====
+    var corrections = [];
+    
+    for (var ri = 0; ri < rateMatches.length; ri++) {
+      var rate = rateMatches[ri];
+      
+      // 直前で最も近いキーワードを探す
+      var nearest = null;
+      for (var ki = kwFound.length - 1; ki >= 0; ki--) {
+        if (kwFound[ki].position <= rate.position) {
+          nearest = kwFound[ki];
+          break;
+        }
+      }
+      if (!nearest) continue;
+      
+      var assignedPair = pairChecks[nearest.pairIdx];
+      var correctRate = Number(assignedPair.value);
+      var deviation = Math.abs(rate.value - correctRate) / correctRate;
+      
+      if (deviation > assignedPair.threshold) {
+        var correctStr = correctRate.toFixed(assignedPair.decimals);
+        corrections.push({
+          position: rate.position,
+          oldStr: rate.numStr,
+          newStr: correctStr,
+          pairName: assignedPair.name,
+          deviation: deviation
+        });
+        fixCount++;
+      }
+    }
+    
+    // ===== Step 4: 後ろから順に位置ベースで置換（位置ズレ防止） =====
+    if (corrections.length > 0) {
+      corrections.sort(function(a, b) { return b.position - a.position; });
+      var correctedLine = line;
+      for (var ci = 0; ci < corrections.length; ci++) {
+        var c = corrections[ci];
+        correctedLine = correctedLine.substring(0, c.position) + c.newStr + correctedLine.substring(c.position + c.oldStr.length);
+        console.log('📌 レート乖離修正: ' + c.oldStr + ' → ' + c.newStr + '（' + c.pairName + ' 乖離' + (c.deviation * 100).toFixed(1) + '%）');
+      }
+      lines[li] = correctedLine;
     }
   }
   
@@ -1859,7 +1905,45 @@ function applyPostProcessingChain_(text, postType, rates) {
     text = fixMissingDecimalPoint_(text, rates);
     text = fixHallucinatedRates_(text, rates);
     text = normalizeRateDecimals_(text);
+    text = convertExactRatesToRange_(text, postType);  // ★v12.6: TOKYO/LUNCHのレート台変換
     text = validateFinalFormat_(text, rates);
+  }
+  
+  return text;
+}
+
+
+// ===== ★v12.6: TOKYO/LUNCHのレート数値を「台」表現に変換 =====
+/**
+ * 100〜180字の短い投稿で具体的なレート数値（158.97等）は不要。
+ * 「158円台」「0.71ドル台」のようにレベル感で伝える。
+ * 
+ * プロンプトで指示しても守られないケースの安全網。
+ * fixHallucinatedRates_・normalizeRateDecimals_の後に実行する。
+ * 
+ * @param {string} text - 投稿テキスト
+ * @param {string} postType - 投稿タイプ
+ * @return {string} 変換後テキスト
+ */
+function convertExactRatesToRange_(text, postType) {
+  if (postType !== 'TOKYO' && postType !== 'LUNCH') return text;
+  
+  var original = text;
+  
+  // Pattern 1: 「158.97円」→「158円台」（「円」付き。「円台」は除外）
+  text = text.replace(/(\d{2,3})\.\d{1,3}円(?!台)/g, '$1円台');
+  
+  // Pattern 2: 「0.7125ドル」→「0.71ドル台」（「ドル」付き。「ドル台」は除外）
+  text = text.replace(/(\d\.\d{2})\d*ドル(?!台)/g, '$1ドル台');
+  
+  // Pattern 3: 通貨ペアキーワード直後の数値（「円」なし）
+  // 「ドル円158.97、」→「ドル円158円台、」
+  // ★長いキーワードを先に配置（「豪ドル円」が「ドル円」より優先されるように）
+  // ★v12.6: スペース区切り「豪ドル円 113.39」にも対応
+  text = text.replace(/(豪ドル円|ポンド円|ユーロ円|ドル円)(は|が|,|、| )?(\d{2,3})\.\d{1,3}/g, '$1$2$3円台');
+  
+  if (text !== original) {
+    console.log('📌 レート数値を「台」表現に変換しました（' + postType + '）');
   }
   
   return text;
