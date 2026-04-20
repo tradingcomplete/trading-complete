@@ -51,12 +51,12 @@ function scheduleTodayPosts() {
   var today = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
   var triggersCreated = 0;
   
-  // ★v12.5.2: サマータイム判定（LONDON/NYの投稿時刻を1時間前倒し）
+  // ★v12.5.2: サマータイム判定（LONDON/GOLDENの投稿時刻を1時間前倒し）
   var isSummer = isSummerTime_(now);
   if (isSummer) {
-    console.log('☀️ サマータイム期間: LONDON/NYを' + Math.abs(SUMMER_TIME_OFFSET_MIN) + '分前倒し');
+    console.log('☀️ サマータイム期間: LONDON/GOLDENを' + Math.abs(SUMMER_TIME_OFFSET_MIN) + '分前倒し');
   } else {
-    console.log('❄️ 冬時間期間: LONDON/NYは通常時刻');
+    console.log('❄️ 冬時間期間: LONDON/GOLDENは通常時刻');
   }
   console.log('');
   
@@ -70,7 +70,7 @@ function scheduleTodayPosts() {
     var hour = parseInt(parts[0], 10);
     var minute = parseInt(parts[1], 10);
     
-    // ★v12.5.2: サマータイムオフセット適用（LONDON/NYのみ）
+    // ★v12.5.2: サマータイムオフセット適用（LONDON/GOLDENのみ）
     var summerAdjusted = false;
     if (isSummer && SUMMER_TIME_TYPES.indexOf(postType) !== -1) {
       minute += SUMMER_TIME_OFFSET_MIN; // -60分
@@ -116,6 +116,22 @@ function scheduleTodayPosts() {
   console.log('');
   console.log('トリガー設定完了: ' + triggersCreated + '/' + schedule.postCount + '件');
   
+  // ★v12.7: トリガー登録上限監視（GASは1プロジェクト最大20個）
+  var currentTriggerCount = ScriptApp.getProjectTriggers().length;
+  console.log('📊 現在のトリガー数: ' + currentTriggerCount + '/20');
+  if (currentTriggerCount > 15) {
+    console.log('⚠️ トリガー数が15を超えています（' + currentTriggerCount + '個）→ 警告メール送信');
+    try {
+      sendErrorEmail('⚠️ トリガー上限警告',
+        'トリガー数が' + currentTriggerCount + '個に到達しました。\n' +
+        'GAS上限は20個です。\n\n' +
+        '不要なトリガーが残存している可能性があります。\n' +
+        'GASエディタの「トリガー」画面で確認してください。');
+    } catch (e) {
+      console.log('⚠️ 警告メール送信失敗: ' + e.message);
+    }
+  }
+
   console.log('=== 全トリガー設定完了 ===');
 }
 
@@ -193,7 +209,7 @@ function getFunctionName_(postType) {
     'LUNCH': 'runLunch',
     'LONDON': 'runLondon',
     'GOLDEN': 'runGolden',
-    'NY': 'runNy',
+    // ★v12.7: NY削除
     'WEEKLY_REVIEW': 'runWeeklyReview',
     'RULE_1': 'runRule1',
     'RULE_2': 'runRule2',
@@ -360,7 +376,7 @@ function testScheduleDryRun() {
     var typeConfig = POST_TYPES[postType];
     var emoji = typeConfig ? typeConfig.emoji : '';
     var label = typeConfig ? typeConfig.label : postType;
-    var hasImage = typeConfig ? (typeConfig.hasImage ? '📷' : '  ') : '  ';
+    var hasImage = isImageGenerationType(postType) ? '📷' : '  ';  // ★v12.6.1: imageGenerator.gs IMAGE_TYPE_COLORS参照
     
     console.log(hasImage + ' ' + minTime + '〜' + maxTime + ' | ' + emoji + ' ' + label + summerTag + ' → ' + functionName + '()');
   }
@@ -596,4 +612,141 @@ function scheduleIndicatorTriggers_() {
 
   console.log('');
   console.log('⚡ 指標連動トリガー: ' + triggerCount + '件設定完了');
+}
+
+
+// ========================================
+// ★v12.7: ハートビート監視（Phase 3分割対応）
+// ========================================
+
+/**
+ * ★v12.7: ハートビート監視（システム沈黙の検知）
+ *
+ * 15分おきに実行され、投稿予定時刻から30分以上経過しているのに
+ * 下書きもエラーメールもない場合に異常通知する。
+ *
+ * Phase A/B/Cの全フローが接続されてから有効化。
+ * 現段階では骨組みのみ（方針B並行実装: フロー未接続のため）。
+ *
+ * 有効化タイミング: 全タスク完了後の統合テスト時に実装を追加
+ * トリガー設定: scheduleTodayPosts 内で15分おきに登録（有効化時に追加）
+ */
+function heartbeatCheck_() {
+  // Phase A/B/C全フロー接続後に以下を実装:
+  //
+  // 1. 今日の投稿予定時刻を走査
+  //    var schedule = getTodaySchedule();
+  //    for each 予定時刻:
+  //
+  // 2. 各投稿予定時刻から30分以上経過しているのに:
+  //    - 下書きシートに該当投稿がない（Phase A未完了）
+  //    - かつエラーメールも送られていない
+  //    の場合:
+  //
+  // 3. 「システム沈黙検知」として異常メール通知
+  //    sendErrorEmail('⚠️ システム沈黙検知', ...);
+  //
+  // 注意: Phase Aが正常に失敗（try-catch内でエラーメール送信）した場合は
+  //       「下書きなし + エラーメールあり」なので沈黙ではない。
+  //       ハートビートが検知するのは「何も起きていない」状態のみ。
+
+  console.log('heartbeatCheck_: 現段階では未実装（Phase A/B/C全フロー接続後に有効化）');
+}
+
+
+// ===== ★v12.7 タスク7動作確認用テスト関数 =====
+/**
+ * トリガー登録上限監視のテスト。
+ * 現在のトリガー一覧を表示し、上限に対する余裕度を確認する。
+ * トリガーの追加・削除は行わない（副作用なし）。
+ */
+function testTask7TriggerMonitor() {
+  console.log('=== タスク7: トリガー登録上限監視テスト ===');
+  console.log('');
+
+  // 1. 現在のトリガー一覧
+  var triggers = ScriptApp.getProjectTriggers();
+  console.log('1. 現在のトリガー数: ' + triggers.length + '/20（GAS上限）');
+  console.log('');
+
+  if (triggers.length === 0) {
+    console.log('   （トリガーなし）');
+  } else {
+    for (var i = 0; i < triggers.length; i++) {
+      var t = triggers[i];
+      console.log('   ' + (i + 1) + '. ' + t.getHandlerFunction() +
+        ' | タイプ: ' + t.getEventType() +
+        ' | ソース: ' + t.getTriggerSource());
+    }
+  }
+
+  // 2. 上限チェック
+  console.log('');
+  console.log('2. 上限チェック');
+  if (triggers.length > 15) {
+    console.log('   ⚠️ ' + triggers.length + '個 → 15個超！ 警告対象');
+    console.log('   本番の scheduleTodayPosts 実行時に警告メールが送信されます');
+  } else {
+    console.log('   ✅ ' + triggers.length + '個 → 正常範囲（15個以内）');
+  }
+
+  // 3. Phase B/C 関連の一時トリガーが残っていないか確認
+  console.log('');
+  console.log('3. Phase B/C 一時トリガー残存チェック');
+  var phaseTriggers = ['executePhaseBQualityReview', 'executePhaseCImageAndPost', 'executePhaseBImageAndEmail'];
+  var foundPhase = false;
+  for (var i = 0; i < triggers.length; i++) {
+    var funcName = triggers[i].getHandlerFunction();
+    if (phaseTriggers.indexOf(funcName) !== -1) {
+      console.log('   ⚠️ 残存: ' + funcName);
+      foundPhase = true;
+    }
+  }
+  if (!foundPhase) {
+    console.log('   ✅ Phase B/C 一時トリガーの残存なし');
+  }
+
+  // 4. heartbeatCheck_ の存在確認
+  console.log('');
+  console.log('4. heartbeatCheck_ 関数存在確認');
+  if (typeof heartbeatCheck_ === 'function') {
+    console.log('   ✅ heartbeatCheck_ 関数が定義されています（骨組みのみ）');
+  } else {
+    console.log('   ❌ heartbeatCheck_ 関数が見つかりません');
+  }
+
+  console.log('');
+  console.log('🎉 タスク7完了: トリガー登録上限監視が設定されました');
+  console.log('  毎朝5:00の scheduleTodayPosts 実行時に自動でトリガー数チェック');
+  console.log('  15個超で警告メール送信');
+}
+// ===== 手動実行用: トリガー全リセット =====
+// 2026-04-17 金曜 22:11 runMorning 異常発火の対処用
+function resetAllPostTriggers() {
+  cleanupPostTriggers_();
+  scheduleTodayPosts();
+}
+
+// ===== 手動実行用: トリガー一覧確認 =====
+function checkTriggers() {
+  var triggers = ScriptApp.getProjectTriggers();
+  console.log('=== 現在のトリガー(' + triggers.length + '件) ===');
+  triggers.forEach(function(t) {
+    console.log(t.getHandlerFunction() + ' : ' + t.getEventType());
+  });
+}
+
+function verifyScheduleIntegrity() {
+  var days = ['日', '月', '火', '水', '木', '金', '土'];
+  var allOk = true;
+  for (var d = 0; d < 7; d++) {
+    var s = SCHEDULE[d];
+    if (!s) continue;
+    var match = (s.times.length === s.types.length);
+    if (!match) allOk = false;
+    console.log(days[d] + ': times=' + s.times.length + ' types=' + s.types.length + 
+                ' ' + (match ? '✅' : '🚨 不整合!'));
+  }
+  console.log('');
+  console.log(allOk ? '✅ 全曜日の整合性OK' : '🚨 不整合あり');
 }

@@ -16,11 +16,14 @@
  *   indicatorManager.gs: fetchIndicatorResults_, formatIndicatorPreview_, formatWeeklyRateTrend_,
  *                        formatWeeklyIndicatorSummary_, formatIndicatorTrend_, getLatestIndicators_
  *   config.gs: getPolicyRatesText_
- *   sheetsManager.gs: getCharacterPrompt
+ *   sheetsManager.gs: getCharacterPrompt, getOngoingEvents_
+ *   geminiApi.gs: callClaudeApi_ (★v14.0 Phase 1: selectHotTopic_で使用)
  * 
  * プロンプト肥大化の監視:
- *   現在のプロンプト総文字数は約23,000文字（約11,500トークン）。
- *   セクション数は93-97個。肥大化が進行中のため、定期的な見直しが必要。
+ *   現在のプロンプト総文字数は約24,000文字（約12,000トークン）。
+ *   セクション数は70-73個。肥大化に注意。
+ *   ★v14.0 Phase 1(2026-04-20): ホットトピック事前選定機構を追加。
+ *     2セクション増(【★今日書くべきトピック1つ】【書く手順】)・約+600字。
  */
 
 
@@ -89,7 +92,11 @@ function getTCOverview() {
     
     var text = '\n\n【Trading Complete（TC）について - 投稿に自然に織り込むための参考情報】\n';
     text += sections.join('\n') + '\n';
-    text += '\n【TCの主な機能（投稿内で1つだけ自然に触れろ。押し売り厳禁）】\n';
+    // ★v12.10: 診断書 Phase 1-2 重複削除
+    //   旧: 【TCの主な機能(投稿内で1つだけ自然に触れろ)】ヘッダを独立セクションで配置
+    //   新: ヘッダ削除。機能リストは【Trading Complete(TC)について】の一部として自然に続ける
+    //   削減: 1セクション・約50字
+    text += '\n■ 機能リスト(投稿内で1つだけ自然に触れろ。押し売り厳禁):\n';
     
     // 8機能を定義
     var features = [
@@ -115,7 +122,7 @@ function getTCOverview() {
         text += '・' + features[g] + '\n';
       }
     }
-    text += '\n【TC導線の入れ方（自然に1箇所だけ）】\n';
+    text += '\n■ 導線の入れ方(自然に1箇所だけ):\n';
     text += '・宣伝感は絶対に出さない。自分の体験→課題→TCの機能で解決、の自然な流れ\n';
     text += '・投稿の主題はあくまで市場情報や心得。TC言及は脇役として自然に添える程度\n';
     text += '・★印の機能を具体的に紹介すること（毎回違う機能になる）\n';
@@ -380,6 +387,143 @@ function getEconomicCalendar_(scope) {
   }
 }
 
+// ===== 夜の材料ヒント（GOLDEN投稿向け）★v12.9追加 =====
+/**
+ * ★v12.9: GOLDEN投稿向けの「夜の材料ヒント」を動的生成
+ * 
+ * 経済カレンダーから、GOLDEN投稿(20-21時台)以降の時刻に発表される材料を抽出し、
+ * 重要度別に分類してプロンプトヒントを構築する。
+ * 
+ * 分類ルール:
+ *   ・重要度「高」→ INDICATOR投稿で詳述されるため、GOLDENは軽く触れる程度に留めさせる
+ *   ・重要度「中」→ GOLDENで目線を述べてよい（指標名 + どこを見るか）
+ *   ・重要度「低」→ 触れなくてよい（非表示）
+ *   ・要人発言（指標名に「発言/証言/会見/スピーチ/講演」を含む）→ 別カテゴリで表示
+ * 
+ * 時刻範囲:
+ *   ・今日の現在時刻より後のイベント
+ *   ・明日の深夜・早朝（0-5時台）のイベント（FOMC/ECB等で日本時間が翌日未明のケース）
+ * 
+ * 発表済み（I列に結果あり）のイベントは除外。
+ * 
+ * @param {string} postType - 投稿タイプ
+ * @return {string} プロンプト注入用テキスト（GOLDEN以外は空文字、材料なしも空文字）
+ */
+function buildEveningMaterialHint_(postType) {
+  // GOLDEN専用
+  if (postType !== 'GOLDEN') return '';
+  
+  try {
+    var keys = getApiKeys();
+    var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('経済カレンダー');
+    
+    if (!sheet || sheet.getLastRow() < 2) return '';
+    
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+    var now = new Date();
+    var today = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd');
+    var tomorrow = new Date(now.getTime() + 86400000);
+    var tomorrowStr = Utilities.formatDate(tomorrow, 'Asia/Tokyo', 'yyyy/MM/dd');
+    
+    var majorIndicators = [];   // 重要度「高」
+    var mediumIndicators = [];  // 重要度「中」
+    var speakers = [];          // 要人発言
+    
+    for (var i = 0; i < data.length; i++) {
+      if (!data[i][0] || !data[i][3]) continue;
+      
+      var eventDate = new Date(data[i][0]);
+      var eventDateStr = Utilities.formatDate(eventDate, 'Asia/Tokyo', 'yyyy/MM/dd');
+      
+      // 今日または明日(深夜)のみ対象
+      var isToday = (eventDateStr === today);
+      var isTomorrow = (eventDateStr === tomorrowStr);
+      if (!isToday && !isTomorrow) continue;
+      
+      // 時刻パース（B列はDate型 or 文字列）
+      var rawTime = data[i][1];
+      var hour, minute, timeStr;
+      if (rawTime instanceof Date) {
+        hour = rawTime.getHours();
+        minute = rawTime.getMinutes();
+        timeStr = hour + ':' + (minute < 10 ? '0' + minute : minute);
+      } else {
+        timeStr = String(rawTime || '').trim();
+        if (!timeStr || timeStr === '0:00' || timeStr === '00:00') continue;
+        var parts = timeStr.split(':');
+        hour = parseInt(parts[0], 10);
+        minute = parseInt(parts[1] || '0', 10);
+      }
+      if (isNaN(hour) || isNaN(minute)) continue;
+      
+      // 今日の場合: 現在時刻より後のイベントのみ
+      // 明日の場合: 深夜・早朝(0-5時)のみ (FOMC等で日本時間が翌日未明のケース)
+      if (isToday) {
+        var nowHour = now.getHours();
+        var nowMin = now.getMinutes();
+        if (hour < nowHour || (hour === nowHour && minute <= nowMin)) continue;
+      } else { // isTomorrow
+        if (hour >= 6) continue;
+      }
+      
+      // 発表済み(I列に結果あり)はスキップ
+      var result = String(data[i][8] || '').trim();
+      if (result) continue;
+      
+      var country = String(data[i][2] || '').trim();
+      var indicator = String(data[i][3]).trim();
+      var importance = String(data[i][6] || '中').trim();
+      
+      var dayLabel = isTomorrow ? '【翌日未明】' : '';
+      var line = dayLabel + timeStr + ' [' + country + '] ' + indicator;
+      
+      // 要人発言判定
+      var isSpeaker = /(発言|証言|会見|スピーチ|講演)/.test(indicator);
+      
+      if (isSpeaker) {
+        speakers.push(line + (importance === '高' ? ' ★重要' : ''));
+      } else if (importance === '高') {
+        majorIndicators.push(line + ' ★重要');
+      } else if (importance === '中') {
+        mediumIndicators.push(line);
+      }
+      // 重要度「低」は無視
+    }
+    
+    // 材料なし → 空文字返却（GOLDENでは「今夜の材料」セクションを省略）
+    if (majorIndicators.length === 0 && mediumIndicators.length === 0 && speakers.length === 0) {
+      return '';
+    }
+    
+    var text = '\n【夜の材料ヒント（GOLDEN投稿以降の注目・動的生成）】\n';
+    
+    if (majorIndicators.length > 0) {
+      text += '■ 最重要指標（INDICATOR投稿で詳述されるため、GOLDENでは「〜の発表控え」程度に軽く触れる）:\n';
+      text += '  ' + majorIndicators.join('\n  ') + '\n';
+    }
+    
+    if (mediumIndicators.length > 0) {
+      text += '■ 中堅指標（GOLDENで目線を述べてよい。指標名 + どこを見るかを1〜2行で）:\n';
+      text += '  ' + mediumIndicators.join('\n  ') + '\n';
+    }
+    
+    if (speakers.length > 0) {
+      text += '■ 要人発言（発言者名 + 注目点を短く。予想はするな）:\n';
+      text += '  ' + speakers.join('\n  ') + '\n';
+    }
+    
+    text += '※「目線」「材料」「注目点」「見どころ」「反応をみたい」の語彙で書け。\n';
+    text += '※「〜するはず」「〜になる」「〜が確実」等の断定禁止。\n';
+    text += '※時間指定の決め打ち（「21:30に大きく動く」）禁止。\n';
+    
+    return text;
+  } catch (e) {
+    console.log('夜の材料ヒント生成エラー: ' + e.message);
+    return '';
+  }
+}
+
 // ===== 学びログをSheetsから取得 =====
 function getLearningLog_(postType, maxItems) {
   try {
@@ -458,11 +602,20 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   var timeStr = Utilities.formatDate(now, 'Asia/Tokyo', 'HH:mm');
   var keys = getApiKeys(); // ★v5.4: ホットペア検出で使用
   
+  // ★v14.0 Phase 1(2026-04-20): ホットトピック選定で使うデータを保持
+  //   buildPrompt_の下流でこれらの変数に「ついでに」値を保存し、
+  //   ニュース取得後に selectHotTopic_ へ渡す。
+  //   各既存のデータ取得処理はそのまま維持(重複取得を避ける)。
+  var _hotTopicCurrencyStrength = '';
+  var _hotTopicRateDirection    = '';
+  var _hotTopicDowTheory        = '';
+  var _hotTopicOngoingEvents    = '';
+  
   // ① キャラクター定義（Sheetsから）
   var characterPrompt = getCharacterPrompt();
   
   // ★v8.6: TC言及禁止タイプではTC導線セクションを除外（不要な指示でGeminiの注意を分散させない）
-  var tcProhibitedTypes = ['MORNING', 'TOKYO', 'LONDON', 'NY', 'INDICATOR', 'KNOWLEDGE'];
+  var tcProhibitedTypes = ['MORNING', 'TOKYO', 'LONDON', 'INDICATOR', 'KNOWLEDGE'];
   if (tcProhibitedTypes.indexOf(postType) !== -1) {
     characterPrompt = characterPrompt.replace(/【TC導線】[\s\S]*?(?=【|$)/, '');
     characterPrompt = characterPrompt.replace(/【TC導線のトーン】[\s\S]*?(?=【|$)/, '');
@@ -506,6 +659,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       var direction = calculateRateDirection_(rates, keys.SPREADSHEET_ID);
       if (direction) {
         prompt += direction;
+        _hotTopicRateDirection = direction;  // ★v14.0 Phase 1: ホットトピック選定でも使う
       }
       
       
@@ -547,6 +701,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       var hotPairResult = detectHotPair_(rates, keys.SPREADSHEET_ID);
       if (hotPairResult) {
         prompt += hotPairResult.text;
+        _hotTopicCurrencyStrength = hotPairResult.text;  // ★v14.0 Phase 1: ホットトピック選定でも使う
       }
     }
   } else {
@@ -599,6 +754,13 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     prompt += '※「日銀のハト派姿勢」「日銀の緩和政策」は過去の話。現在は利上げ路線。間違えるな。\n';
     prompt += '※ 上記と矛盾する金融政策スタンスを書くな（例: 日銀がハト派、FRBが利上げ中 等は誤り）。\n\n';
 
+    // ★v13.0.11 ロールバック(2026-04-20):
+    //   要人データ + 継続中重大事象の生成時点注入を削除(Stage 1検証で既にカバー済みのため)
+    //   理由: プロンプト文字数が 20,800→30,994字まで膨張(特にLUNCH)し、
+    //         「100-180字」「ランチタイムらしく」等の役割指示が attention から希薄化。
+    //         Stage 1 の toFactString() が worldLeaders / ongoingEvents を含んで検証するため、
+    //         生成時点注入は冗長な二重化だった。
+
     // ★v12.1.1: 商品データ注入（BTC/GOLD=Twelve Data のみ。WTI/天然ガスはAlpha Vantageデータが古いため停止）
     var btcForPrompt   = fetchCommodityPrices_();
     var commoditiesForPrompt = {
@@ -621,18 +783,94 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       prompt += '※使い方: FX値動きの背景・理由説明に使え。商品価格自体を投稿の主役にするな。\n';
       prompt += '※OK: 「原油安を背景に豪ドルが軟調」 NG: 「WTIが85ドル台で推移」を冒頭に持ってくる\n\n';
     }
+
+    // ★v13.1 Phase 6 再設計 S6: ダウ理論(日足SH/SL)を投稿生成プロンプトに注入
+    //   目的: コンパナはデイ〜スイングトレーダー。時間軸は基本日足で語る必要がある
+    //   現状: Claude市場分析(geminiApi.gs L825)では使用済みだが、投稿生成プロンプトでは未注入
+    //   効果: 「日足はまだ下降トレンド」等の時間軸表現を Claude が確実に書ける
+    try {
+      if (typeof getDowTheorySummary_ === 'function') {
+        var dowTheoryText = getDowTheorySummary_(keys.SPREADSHEET_ID);
+        if (dowTheoryText) {
+          prompt += dowTheoryText + '\n';
+          prompt += '※時間軸の原則: コンパナはデイ〜スイングトレーダー。基本は日足の視点で語れ。\n';
+          prompt += '※週足と日足のトレンドが一致している方が確度が高い。逆行している場合は「転換の可能性」として言及せよ。\n';
+          prompt += '※SH/SL の数値を根拠に語れ。例: 「日足SH 158.97を超えれば高値更新」「SL 157.50を割れば下降転換」\n\n';
+          _hotTopicDowTheory = dowTheoryText;  // ★v14.0 Phase 1: ホットトピック選定でも使う
+        }
+      }
+    } catch (dowErr) {
+      console.log('⚠️ ダウ理論取得失敗(続行): ' + dowErr.message);
+    }
   }
   
   // ①-b4 市場ニュースTOP5（★v5.5 Phase 7: ニュース取得レイヤー）
   // ★v5.5.3: RULE系・WEEKLY_LEARNINGには注入しない（心得・学びが主題であるべき）
   var noNewsTypes = ['RULE_1', 'RULE_2', 'RULE_3', 'RULE_4', 'WEEKLY_LEARNING'];
   var skipNews = noNewsTypes.indexOf(postType) !== -1;
+  var _hotTopicMarketNews = '';  // ★v14.0 Phase 1: ホットトピック選定用
   if (!skipNews) {
     var marketNews = fetchMarketNews_(keys);
     if (marketNews) {
       prompt += marketNews;
+      _hotTopicMarketNews = marketNews;
     }
   }
+  
+  // ★★v14.0 Phase 1(2026-04-20): ホットトピック事前選定 ★★
+  //   目的: 毎日同じ静的データ(ゴトー日・通貨強弱%のみ)を選ぶ現象を解消し、
+  //         「今この瞬間のホットな材料」を起点にした投稿を実現する。
+  //   背景: TCAX_REFERENCE.md 事件8 参照。
+  //   対象: 市場系投稿(MORNING/TOKYO/LUNCH/LONDON/GOLDEN)のみ。
+  //   失敗時: null が返るので従来動作にフォールバック(従来のプロンプトがそのまま使われる)。
+  var hotTopicEnabledTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
+  if (hotTopicEnabledTypes.indexOf(postType) !== -1 && _hotTopicMarketNews) {
+    try {
+      // 継続中重大事象を取得(Stage 1 で既に使われているが、選定にも渡す)
+      if (typeof getOngoingEvents_ === 'function') {
+        var ongoingList = getOngoingEvents_() || [];
+        if (ongoingList.length > 0) {
+          var ongoingText = '';
+          for (var _oe = 0; _oe < ongoingList.length; _oe++) {
+            var _ev = ongoingList[_oe];
+            ongoingText += '・' + _ev.name;
+            if (_ev.startDate) ongoingText += '(' + _ev.startDate + '〜継続中)';
+            if (_ev.summary) ongoingText += ': ' + _ev.summary;
+            ongoingText += '\n';
+          }
+          _hotTopicOngoingEvents = ongoingText;
+        }
+      }
+      
+      // Claude API キー取得
+      var _claudeKey = (keys && keys.CLAUDE_API_KEY) 
+        || PropertiesService.getScriptProperties().getProperty('CLAUDE_API_KEY');
+      
+      if (_claudeKey) {
+        var hotTopic = selectHotTopic_({
+          marketNews:       _hotTopicMarketNews,
+          currencyStrength: _hotTopicCurrencyStrength,
+          rateDirection:    _hotTopicRateDirection,
+          dowTheory:        _hotTopicDowTheory,
+          ongoingEvents:    _hotTopicOngoingEvents,
+          postType:         postType,
+          claudeApiKey:     _claudeKey
+        });
+        
+        if (hotTopic) {
+          // 選定成功 → プロンプトに構造化テキストを注入
+          prompt += formatHotTopicForPrompt_(hotTopic);
+        } else {
+          console.log('ℹ️ ホットトピック選定はスキップ → 従来動作で続行');
+        }
+      } else {
+        console.log('ℹ️ CLAUDE_API_KEY未設定のためホットトピック選定スキップ');
+      }
+    } catch (htErr) {
+      console.log('⚠️ ホットトピック選定処理エラー(続行): ' + htErr.message);
+    }
+  }
+  // ★★v14.0 Phase 1 ここまで ★★
   
   // ①-c 参照ソース（市況やニュースの取得先）※RULE系には不要
   if (!isRuleType) {
@@ -648,7 +886,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     var calScope = 'today'; // デフォルト: 今日のみ
     
     // タイプ別にスコープを変える
-    var dailyTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY'];
+    var dailyTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
     if (dailyTypes.indexOf(postType) !== -1) {
       calScope = 'today';
     } else if (postType === 'INDICATOR') {
@@ -699,7 +937,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   
   // ★v8.8.1: スプレッドシートの投稿プロンプトに古い構造指示が含まれている場合、
   // 以下のコード側の構造指示が最終版。矛盾する場合はコード側を100%優先。
-  var hypothesisTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY'];
+  var hypothesisTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
   if (hypothesisTypes.indexOf(postType) !== -1) {
     prompt += '\n【★重要: 以下の構造指示が最終版。上のシート指示と矛盾する場合、以下を100%優先せよ】\n';
   }
@@ -778,7 +1016,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
 
   // ★v8.16: 仮説的中率サマリーを全市場投稿に拡大（以前はWEEKLY_HYPOTHESISのみ）
   // AIが「自分が最近何を外しているか」を知ることで、仮説の精度が向上する
-  var verifTargetTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY',
+  var verifTargetTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN',
                           'WEEKLY_REVIEW', 'WEEKLY_HYPOTHESIS'];
   if (verifTargetTypes.indexOf(postType) !== -1) {
     var verifSummary = getHypothesisVerificationSummary_();
@@ -808,7 +1046,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
 
   // ④-b 学びログ（過去の引き出しを注入）★v5.5: 全タイプに拡張
   var learningMaxMap = {
-    'MORNING': 2, 'TOKYO': 1, 'LUNCH': 1, 'LONDON': 1, 'GOLDEN': 2, 'NY': 1,
+    'MORNING': 2, 'TOKYO': 1, 'LUNCH': 1, 'LONDON': 1, 'GOLDEN': 2,
     'INDICATOR': 1, 'NEXT_WEEK': 2,
     'WEEKLY_REVIEW': 3, 'WEEKLY_LEARNING': 5, 'WEEKLY_HYPOTHESIS': 3,
     'RULE_1': 3, 'RULE_2': 3, 'RULE_3': 3, 'RULE_4': 3,
@@ -827,7 +1065,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   
   // ⑥ コンテキスト（仮説・学びを投稿履歴シート＋レートキャッシュから自動取得）
   // 仮説は市場系・週末系のみ注入（RULE系・KNOWLEDGEには不要）
-  var hypothesisTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY',
+  var hypothesisTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN',
                          'WEEKLY_REVIEW', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
   var needsHypothesis = hypothesisTypes.indexOf(postType) !== -1;
   
@@ -835,7 +1073,7 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   
   // ★v8.16: 仮説の振り返りは1日1回だけ（平日市場系のみ）
   // 2投稿目以降は「振り返り済み」指示に切り替え、同じ答え合わせの繰り返しを防ぐ
-  var dailyMarketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY'];
+  var dailyMarketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
   var isDailyMarket = dailyMarketTypes.indexOf(postType) !== -1;
   var alreadyReviewed = false;
   
@@ -906,27 +1144,33 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     }
   }
   
-  // ★v12.4→v12.5.4: キャラクター口調リマインダー（プロンプト最末尾に配置）
-  // LLMは最初と最後を最も重視する。24,000文字のデータ・ルールを処理した後、
+  // ★v12.4→v12.5.4→v12.10: キャラクター口調リマインダー（プロンプト最末尾に配置）
+  // LLMは最初と最後を最も重視する。長文のデータ・ルールを処理した後、
   // 最後に「コンパナとして書け」を念押しすることでキャラクター口調を維持する。
-  // ★v12.5.4: キャラクターシートから動的読み込み（口調の一元管理）
-  prompt += '\n【★★★最終確認: コンパナの口調で書け（この指示が全てに優先する）】\n';
-  prompt += 'ここまでのデータとルールを踏まえた上で、最も重要なのは「コンパナとして自然に話す」ことだ。\n';
-  prompt += '■ アナリストレポートではない。友達に話すように書け。\n';
-  prompt += '■ 「市場では〇〇が後退。」← NG（ニュース記事）。「利上げの話、正直ちょっと遠のいた感じですね。」← OK（コンパナ）\n';
-  prompt += '■ 「到達。」「推移。」← NG（乾いた報告）。「0.71台まで来てますね。」← OK（体感がある）\n';
-  
-  // キャラクターシートの口調定義を末尾に再注入（LLMの recency effect を活用）
-  try {
-    var charForReminder = getCharacterPrompt();
-    if (charForReminder) {
-      prompt += '\n' + charForReminder + '\n';
-    }
-  } catch (charRemErr) { /* 取得失敗は無視 */ }
-  
-  prompt += '■ 上記の口調定義が絶対。同じ語尾2回連続禁止。\n';
-  prompt += '■ 自分の言葉で語れ。「正直」「マジで」「ぶっちゃけ」を自然に使え。\n';
-  prompt += '■ 絵文字行は体言止め・動詞止めで速報調。→行で人間味を出せ。\n';
+  //
+  // ★v12.10: 診断書 水準2-2「プロンプト肥大化」対応
+  //   旧: キャラクターシート全体を末尾で再注入 → 91セクション中12セクションが重複
+  //       プロンプト総文字数 26,000〜29,000文字に膨張し attention が希薄化
+  //   新: 冒頭でキャラクターシート全文を注入し、末尾は「核心の口調例3行」のみ
+  //       プロンプト約12,000文字削減・セクション数約60個に減少見込み
+
+  // ★v13.1 Phase 6 再設計 S1: Before/After 実例セクションを末尾直前に追加
+  //   目的: few-shot learning によるコンパナ口調の具体的手本を提示
+  //   位置: 【★★★最終確認】の直前 = Claude が最後に見る具体例
+  //   8組の「アナリスト調 → コンパナ口調」変換例 + 5つの核ルール
+  prompt += buildBeforeAfterExamples_();
+
+  // ★v13.1 Phase 6 再設計 S2: 最終確認の強化
+  //   変更: Before/After との連携を強化、「データは背景」の原則を追加
+  //   ★v13.1 S6 追加: 時間軸の原則を追加(デイ〜スイング目線)
+  prompt += '\n【★★★最終確認(この指示が全てに優先する)】\n';
+  prompt += '1. 上記 Before/After 実例のトーンで書け。漢語・名詞化・堅い文末は絶対禁止。\n';
+  prompt += '2. データは「使う」もの。「報告」するものではない。会話の中に織り込め。\n';
+  prompt += '3. 「〜ですね」「〜かなと思います」「〜とこですね」「〜感じですね」で文末を崩せ。「〜です/ます」の連続は禁止。\n';
+  prompt += '4. ★文末は必ず動詞で完結させろ。「〜かなと。」「〜とこ。」で切るな。「〜かなと思います」「〜とこですね」まで書け。\n';
+  prompt += '5. 絵文字行は体言止め・動詞止めで短く。→行で人間味を出せ。\n';
+  prompt += '6. ★時間軸は基本「日足」(デイ〜スイング目線)。短期(数時間)は補足で触れる程度にせよ。\n';
+  prompt += '7. 完成したら声に出して読め。硬い文が1文でもあれば書き直せ。\n';
   
   // ★v5.9.3: プロンプト文字数測定（デバッグ用）
   console.log('📏 プロンプト総文字数: ' + prompt.length + '文字（約' + Math.round(prompt.length / 2) + 'トークン）');
@@ -1258,6 +1502,83 @@ function getHypothesisContext_(rates) {
 }
 
 // ========================================
+// ★v13.1 Phase 6 再設計 S1: Before/After 実例セクション
+// ========================================
+//
+// 目的: few-shot learning によるコンパナ口調の具体的手本を提示
+// 配置: プロンプト末尾の【★★★最終確認】直前(Claude が最後に見る実例)
+//
+// 設計思想:
+//   - 禁止指示より実例による誘導(LLMは few-shot に強く反応)
+//   - アナリスト調/AI翻訳調 → コンパナ口調 の変換例 8組
+//   - 末尾に「コンパナらしさの核 5原則」を配置
+//
+// 実例の出典:
+//   2026-04-19 のコンパナとClaudeの対話で合意された書き直し例を元に構成
+//   実際のコンパナの校正案(アナリスト調→コンパナ口調)を収録
+//
+function buildBeforeAfterExamples_() {
+  var s = '';
+  s += '\n【★★★Before/After(必ずこのトーンで書け・最優先)】\n';
+  s += 'アナリスト調やAI翻訳調ではなく、友達に話すコンパナ口調で書け。以下の変換例を手本にせよ:\n\n';
+
+  s += '■ 例1(「〜を確認」の堅さ):\n';
+  s += '  NG: 「豪ドル円、114円手前で週中に一時的な上値の重さを確認。」\n';
+  s += '  OK: 「豪ドル円、114円手前で一時ちょっと上が重かったですね。」\n\n';
+
+  s += '■ 例2(AI翻訳調・漢語過多):\n';
+  s += '  NG: 「対円でも週間ベースでは上昇優位でしたが、特定時間帯では戻り売り圧力が散見された局面がありました。」\n';
+  s += '  OK: 「対円でも週間で見れば優位でしたが、時間帯によっては戻り売りがちらほら入ってた感じ。」\n\n';
+
+  s += '■ 例3(報告調・名詞化):\n';
+  s += '  NG: 「来週の最大テーマは4/24(金)の日本CPI。」\n';
+  s += '  OK: 「来週の本丸は4/24(金)の日本CPI、これに尽きます。」\n\n';
+
+  s += '■ 例4(堅い文末「〜はずです」):\n';
+  s += '  NG: 「住宅ローンを変動で組んでいる人にとっては他人事じゃないはずです。」\n';
+  s += '  OK: 「住宅ローンを変動で組んでる人にとっては、正直他人事じゃない話。」\n\n';
+
+  s += '■ 例5(堅い文末「〜ましょう」):\n';
+  s += '  NG: 「仲値に向けたドル買いフローが9〜10時台に走りやすい傾向は覚えときましょう。」\n';
+  s += '  OK: 「仲値に向けたドル買いフローが9〜10時台に出やすいのは頭に入れときたいところ。」\n\n';
+
+  s += '■ 例6(漢語多用・名詞化過剰):\n';
+  s += '  NG: 「ドライバーが複合的だった点が読みと違った部分です。」\n';
+  s += '  OK: 「読み違えたとこは、ドライバーが絡んでたかなと思います。」\n\n';
+
+  s += '■ 例7(堅い体言止め+カタカナ):\n';
+  s += '  NG: 「豪ドルは+3.74%で主要通貨最強クラス。」\n';
+  s += '  OK: 「豪ドル、4%近く上がって主役クラスですね。」\n\n';
+
+  s += '■ 例8(「〜します」の謙譲):\n';
+  s += '  NG: 「週明けで答え合わせします。」\n';
+  s += '  OK: 「週明け、答え合わせしたいとこですね。」\n\n';
+
+  // ★v13.0.10(2026-04-20): 文末未完結「〜かなと。」再発防止の実例追加
+  // 背景: 2026-04-20 の MORNING 投稿で「〜見えてくるかなと。」が再発。
+  // Stage 1 Q5 とプロンプト最終確認の2層ですり抜けたため、few-shot 実例で駄目押し。
+  s += '■ 例9(★文末未完結・v13.0.10 再発防止):\n';
+  s += '  NG: 「東京市場の反応でドル売りの本物度が見えてくるかなと。」\n';
+  s += '  OK: 「東京市場の反応でドル売りの本物度が見えてくるかなと思います。」\n';
+  s += '  NG: 「強い数字ならドル買い優勢とみているとこ。」\n';
+  s += '  OK: 「強い数字ならドル買い優勢とみているとこですね。」\n';
+  s += '  NG: 「値動きが重い感じ。」\n';
+  s += '  OK: 「値動きが重い感じですね。」\n\n';
+
+  s += '■ コンパナらしさの核(この6つを全て守れ):\n';
+  s += '  1. 漢語より和語(「複合的」→「絡んでる」、「局面」→「ところ」、「確認」→「確かめる」)\n';
+  s += '  2. 名詞化より動詞化(「上値の重さ」→「上が重い」、「未確定ながら」→「まだわかんないけど」)\n';
+  s += '  3. 「〜です/ます」だけで終わらせず「〜ですね」「〜かなと思います」「〜とこですね」「〜感じですね」で崩せ\n';
+  s += '  4. ★文末は必ず動詞で完結させろ。「〜かなと。」「〜とこ。」「〜感じ。」で切るな。「〜かなと思います/思ってます」「〜とこですね」「〜感じですね」まで書け（例9参照）\n';
+  s += '  5. 「正直」「ちょっと」「ぶっちゃけ」を自然に挿入\n';
+  s += '  6. 同じ語尾2回連続は禁止(「〜です。〜です。」「〜ますね。〜ますね。」)\n';
+  s += '\n';
+
+  return s;
+}
+
+
+// ========================================
 // フォーマットルール（非公開・コード内）
 // ========================================
 
@@ -1282,37 +1603,40 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '  NG: 「豪ドル円が面白い動きになっています」（何が面白いのか不明。読者は何も学べない）\n';
   rules += '  NG: 「注目の展開ですね」「興味深い値動き」（感想であって情報ではない）\n';
   rules += '  OK: 「豪ドル円が110円台前半で揉み合い。原油高の豪ドル買いとリスクオフの円買いがぶつかってる構図ですね」\n';
-  rules += '  OK: 「ドル円159円台で膠着。160円台の介入警戒が上値を抑えてる感じかなと」\n';
+  rules += '  OK: 「ドル円159円台で膠着。160円台の介入警戒が上値を抑えてる感じかなと思います」\n';
   rules += '  → 短い投稿でも「何が」「どう動いて」「なぜか」の3点は必ず含めろ。これが読者の学びになる。\n';
   rules += '8. ★ネガティブ感情禁止。「疲れた」「胃が痛い」「怖い」「辛い」は書くな。外れたら「切り替える」。\n';
+  rules += '9. 口調:冒頭【ペルソナ】【発信の原則と口調】が唯一の基準。アナリスト調(〜である/〜と見られる/推察される)は禁止。同じ語尾2回連続禁止。\n';
   
-  // === コンパナの口調（★v12.5.4: キャラクターシートに一元化。ここは最低限のリマインダーのみ） ===
-  rules += '\n【コンパナの口調（絶対遵守）】\n';
-  rules += '上記【ペルソナ】のキャラクター定義が口調の唯一の基準。\n';
-  rules += '禁止口調: 「〜である」「〜であろう」「〜と見られる」「推察される」「渦巻いている」→アナリスト/新聞記者\n';
-  rules += 'ルール: 同じ語尾2回連続禁止。語尾バリエーション最低3種類使え。\n';
+  // ★v12.10: 診断書 Phase 1-1 重複削除
+  //   旧: 【コンパナの口調(絶対遵守)】セクションを独立セクションとして配置(3行)
+  //   新: 最優先ルール9.に統合。冒頭キャラクターシートの【発信の原則と口調】が唯一の基準であることを明示。
+  //   削減: 3行・約120字・1セクション
   
-  // === ノート構造（全投稿統一）★v6.0.2 ===
-  rules += '\n【フォーマット構造（全投稿で守れ）】\n';
-  rules += '■ 全投稿が同じ「ノート形式」になるように書け。投稿タイプごとに構造を変えるな。\n';
+  // === ★v13.1 Phase 6 再設計 S4 統合案A: フォーマット5セクション → 1統合セクション ===
+  //   旧: 【フォーマット構造】+【絵文字の位置】+【投稿の構造】+【フォーマットルール】+【絵文字行と→行の書き分けルール】
+  //   新: 【投稿フォーマット(見た目・構造・絵文字・書き分け)】1セクション
+  //   削減: -4セクション・約-500字
+  rules += '\n【投稿フォーマット(見た目・構造・絵文字・書き分け)】\n';
+  rules += '■ 基本単位 =「絵文字ブロック」:\n';
+  rules += '  絵文字行: 絵文字+事実(短く・体言止め or 動詞止め・「〜しました/しています」は冗長で禁止・感想入れるな)\n';
+  rules += '  →行: 話題の背景・分析・意見・読み・感想(1ブロックに→は1つだけ・1〜2文で完結)\n';
+  rules += '  補足行: →なし・最大1行・なくてもよい\n';
   rules += '\n';
-  rules += '■ ノートの基本単位 = 「絵文字ブロック」:\n';
-  rules += '  絵文字行: 絵文字+事実（1行で短く。体言止め or 動詞止め。「〜しました。」「〜しています。」は冗長。速報ヘッドライン調で。感想は入れるな）\n';
-  rules += '  →行: その話題の背景・分析・感想。1ブロックに→は1つだけ。1〜2文で完結させろ。\n';
-  rules += '  補足行: →なしの通常テキスト。最大1行。なくてもよい。\n';
-  rules += '\n';
-  rules += '■ ルール:\n';
-  rules += '  ・1投稿 = 3〜4ブロック（絵文字3個が基本）\n';
-  rules += '  ・絵文字0個は絶対禁止。最低でも3個の絵文字ブロックで構成しろ。\n';
-  rules += '  ・1ブロック = 1つの話題。話題が変わったら空行を入れて次の絵文字。\n';
-  rules += '  ・→は1ブロックに1つだけ。2つ以上の→は禁止。\n';
-  rules += '  ・絵文字行の上には必ず空行（先頭ブロック除く）\n';
+  rules += '■ 構造ルール:\n';
+  rules += '  ・1投稿 = 3〜4ブロック(絵文字3個が基本・0個は絶対禁止)\n';
+  rules += '  ・絵文字は必ず行頭(行末・文中への配置は絶対禁止)。NG「地味だけど効果絶大✅」/ OK「✅地味だけど効果絶大」\n';
+  rules += '  ・使える絵文字: 📕📝📋☕💡⚠️✅の7種のみ\n';
+  rules += '  ・1ブロック = 1話題。話題が変わったら空行を入れて次の絵文字\n';
+  rules += '  ・絵文字行の上には必ず空行(先頭除く)\n';
   rules += '  ・最後は絵文字なし・→なしでコンパナの感想1〜2行で締める\n';
-  rules += '  ・改行: 「。」「？」の後で改行。\n';
-  rules += '  ・絵文字: 📕📝📋☕💡⚠️✅の7種のみ。\n';
-  rules += '  ・カレンダーや日付の羅列に→を使うな。→は分析・感想専用。\n';
+  rules += '  ・改行: 「。」「?」の後で改行\n';
   rules += '\n';
-  rules += '■ OK例（このレイアウトを全投稿で守れ）:\n';
+  rules += '■ 絵文字行の書き方(事実のメモ・見出し調):\n';
+  rules += '  OK: 「📝米イラン交渉が決裂。」「🛢原油、100ドル突破。」「💡植田総裁の発言を控える。」\n';
+  rules += '  NG: 「📝米イラン交渉が決裂しました。」「🛢原油が100ドルを突破しています。」\n';
+  rules += '\n';
+  rules += '■ OK例(このレイアウトを全投稿で守れ):\n';
   rules += '  ☕パウエル、まだ利下げしない。\n';
   rules += '  →タカ派的な発言で市場の期待を冷ました感じですね。\n';
   rules += '  米ドルが買われ、ドル円は一時157円割れ。\n';
@@ -1326,22 +1650,30 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '  原油価格と各国の金融政策、答え合わせは今夜ですね。\n';
   rules += '\n';
   rules += '■ NG例:\n';
-  rules += '  × 1ブロックに→が2つ以上ある（→は1つだけ。残りは→なしテキスト）\n';
-  rules += '  × カレンダーの日付に→を使う（→は分析用。日付は普通のテキストで並べろ）\n';
-  rules += '  × 絵文字が最初の1個だけ、あとはダラダラ文章が続く\n';
-  rules += '  × 絵文字なしの行が5行以上連続する\n';
-  rules += '  × →がない絵文字ブロック（事実だけ書いて分析がない）\n';
-  rules += '  × 1ブロック内で話題が変わる（話題ごとに絵文字で区切れ）\n';
-  rules += '  × 絵文字0個で文章だけがダラダラ続く（これは最悪。絵文字で区切れ）\n';
-  rules += '  × プロンプトのセクション名（【現在のレート】等）やリスト記号（・）を本文に書く\n';
-  rules += '  × 絵文字を行末に置く（「地味だけど効果絶大✅」はNG。「✅地味だけど効果絶大」が正しい）\n';
-  rules += '\n【絵文字の位置（絶対ルール）】\n';
-  rules += '絵文字は必ず行頭に置け。行末・文中への絵文字配置は絶対禁止。\n';
-  rules += 'NG: 「地味だけど効果絶大✅」「テクニックは場面とセットで📝」\n';
-  rules += 'OK: 「✅地味だけど効果絶大」「📝テクニックは場面とセットで」\n';
+  rules += '  × 1ブロックに→が2つ以上(→は1つだけ)\n';
+  rules += '  × カレンダーの日付に→を使う(→は分析用)\n';
+  rules += '  × 絵文字なしの行が5行以上連続\n';
+  rules += '  × →がない絵文字ブロック(事実だけで分析なし)\n';
+  rules += '  × 1ブロック内で話題が変わる(話題ごとに絵文字)\n';
+  rules += '  × セクション名(【現在のレート】等)やリスト記号(・)を本文に書く\n';
+  rules += '\n';
+
+  // ★v13.0.8 段階1: 鉤括弧の整合性ルール(構造破綻の予防)
+  //   背景: 17:48投稿で「原油下落\n→反落」のように鉤括弧内に改行と→が入り論理破綻
+  //   目的: 生成時点で鉤括弧『』「」の中に改行・→を入れさせない
+  rules += '■ ★鉤括弧の整合性(絶対遵守・構造破綻防止):\n';
+  rules += '  ・鉤括弧(「」『』)は必ず同じ行の中で開いて閉じろ。改行を挟むな\n';
+  rules += '  ・鉤括弧の中に「→」を入れるな。→は鉤括弧の外で使え\n';
+  rules += '  ・鉤括弧の中に絵文字(📕📝📋☕💡⚠️✅)を入れるな\n';
+  rules += '  ・NG: 「原油下落\\n→反落」(鉤括弧の中で改行+→)\n';
+  rules += '  ・NG: 「停戦延長で豪ドル買い継続」か「原油下落\\n→反落」か(鉤括弧の中断)\n';
+  rules += '  ・OK: 「原油下落で豪ドル反落」(鉤括弧内で完結)\n';
+  rules += '  ・OK: 「停戦延長で豪ドル買い継続」か「決裂で原油下落+豪ドル反落」か(両方の鉤括弧が同じ行で閉じている)\n';
+  rules += '  ・複数の鉤括弧を並べる時は、それぞれが独立した1文として閉じろ\n';
+  rules += '\n';
   
   // ★v8.6: 投稿タイプ分類（セクションの条件分岐用）
-  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR'];
+  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   var isMarketType = marketTypes.indexOf(postType) !== -1;
   var weekendMarketTypes = ['WEEKLY_REVIEW', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
   var isWeekendMarket = weekendMarketTypes.indexOf(postType) !== -1;
@@ -1376,15 +1708,14 @@ function buildFormatRules_(charMin, charMax, postType) {
     rules += '・ニュースなし/低ボラ日はドル円でよいが、政治・地政学の背景を必ず添えろ。\n';
   }
   
-  // === 投稿の構造（市場系・週末系のみ。RULE系は別途buildPrompt_で構造指示あり） ===
+  // === ★v13.1 S4 統合案A: 【投稿の構造】は【投稿フォーマット】に統合されたため削除 ===
+  //   ただし「因果チェーン」の鉄則は重要なので、市場系のみ維持
   if (isMarketType || isWeekendMarket) {
-    rules += '\n【投稿の構造】\n';
-    rules += '★投稿の骨格は「因果チェーン」。これが全て。\n';
-    rules += '  原因（何が起きた）→ 経路（なぜ・どう波及する）→ 為替への影響（だからこう動いている）\n';
-    rules += '  例: 「米イラン協議決裂（原因）→ ホルムズ封鎖でエネルギー供給不安（経路）→ 原油高で資源国通貨買い・リスクオフで円買い（影響）」\n';
-    rules += '冒頭1行が全て。「世界で今起きている出来事」のインパクトで始めろ。レートの数字で始めるな。\n';
+    rules += '\n【投稿の骨格は因果チェーン(市場系のみ・最重要)】\n';
+    rules += '★原因(何が起きた)→ 経路(なぜ・どう波及)→ 為替への影響(だからこう動いている)\n';
+    rules += '例: 「米イラン協議決裂(原因)→ ホルムズ封鎖でエネルギー供給不安(経路)→ 原油高で資源国通貨買い・リスクオフで円買い(影響)」\n';
+    rules += '冒頭1行は「世界で今起きている出来事」のインパクトで始めろ。レートの数字で始めるな。\n';
     rules += '仮説の答え合わせがある場合は冒頭1ブロックで。その後すぐにストーリーへ。\n';
-    rules += 'レートの数字を並べるな。方向感（上昇基調/売られっぱなし/大台に迫る等）で語れ。\n';
   }
   
   // === ★v12.1.1: 環境認識の原則（全投稿タイプ共通） ===
@@ -1396,42 +1727,44 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '  「方向は合った」と判定されているのに「逆方向でした」と書くのは絶対禁止。\n';
   rules += '・未来は誰にも分からない。「〜になるだろう」ではなく「〜の可能性が高い環境」と書け。\n';
   
-  // === 事実・数値の正確性（★v8.6: タイプ別に分岐。重複レート桁数ルールをbuildPrompt_に一本化） ===
+  // === ★v13.1 Phase 6 再設計 S3 統合案D: 事実・論理3セクション → 1セクション統合 ===
+  //   旧: 【事実とフィクションの区別】+【論理の一貫性】(+ 別所の【レートデータの使い方】)
+  //   新: 【事実・論理・データの使い方】1セクションに統合
+  //   削減: -1セクション・約-100字
   if (needsMarketRules) {
-    // 市場系・週末系: フル版（カレンダー・レート・指標のルールが全て必要）
-    rules += '\n【事実とフィクションの区別 / 数値の正確性（絶対遵守）】\n';
-    rules += '・架空のトレード結果、架空のニュース、架空の指標日程は絶対禁止。\n';
-    rules += '・経済指標の日付・名称は上記の経済カレンダー記載のもののみ。\n';
-    rules += '・経済指標を書く際は必ず国名を明記せよ。\n';
-    rules += '・指標名を混同するな。CPI（消費者物価指数）とPPI（卸売物価指数/生産者物価指数）は別物。HICP（統合消費者物価指数）もCPIやPPIとは別指標。カレンダー記載の正式名称をそのまま使え。\n';
-    rules += '・複数国の指標をまとめる際、名前のすり替えに注意。NG: 「ユーロ圏と米国のCPI」（米国はPPI）。\n';
-    rules += 'NG: 「GDP改定値が発表されます」→OK: 「日本の10-12月期GDP改定値が発表されます」\n';
-    rules += 'NG: 「CPI発表を控えて」→OK: 「米2月CPI発表を控えて」\n';
-    rules += '・為替レートは上記の確定レート、株価等は上記の市場環境データの数値のみ使え。\n';
-    rules += '・Gemini検索で得た数値は使うな。注入データのみが正確。\n';
+    // 市場系・週末系: フル版
+    rules += '\n【事実・論理・数値の正確性(絶対遵守)】\n';
+    rules += '■ 事実:\n';
+    rules += '  ・架空のトレード/ニュース/指標日程/要人発言は禁止\n';
+    rules += '  ・経済指標の日付・名称は上記カレンダー記載のもののみ。国名を必ず明記\n';
+    rules += '  ・指標名を混同するな(CPI/PPI/HICP は別物)。正式名称を使え\n';
+    rules += '  ・為替レートは上記の確定レート、株価等は市場環境データの数値のみ使え\n';
+    rules += '  ・Gemini検索で得た数値は使うな。注入データのみが正確\n';
+    rules += '■ 論理:\n';
+    rules += '  ・中銀と通貨の対応: 日銀→円/FRB→ドル/ECB→ユーロ/BOE→ポンド/RBA→豪ドル\n';
+    rules += '  ・因果関係を間違えるな(詳細は別途、因果関係のセクションを参照)\n';
+    rules += '■ 数値の書き方:\n';
+    rules += '  ・レート・指標データは「方向感の把握」に使え。数字の羅列は禁止\n';
+    rules += '  ・OK: 「ドル円は上昇基調が続いていて」「ユーロは先週から売られっぱなし」\n';
+    rules += '  ・NG: 「ドル円は159.27円」「EUR/USDは1.1568ドル」(数字の羅列)\n';
+    rules += '  ・数字を使うのは大台(160円)や大きな変動幅の説明時だけ\n';
   } else {
-    // RULE系・KNOWLEDGE: 最小版（市場データが注入されないのでカレンダー・レート参照は不要）
-    rules += '\n【事実とフィクションの区別（絶対遵守）】\n';
-    rules += '・架空のトレード結果、架空のニュース、架空の要人発言は絶対禁止。\n';
-    rules += '・体験談はコンパナ自身の実体験のみ。架空の失敗談を創作するな。\n';
+    // RULE系・KNOWLEDGE: 最小版
+    rules += '\n【事実とフィクションの区別(絶対遵守)】\n';
+    rules += '・架空のトレード結果、架空のニュース、架空の要人発言は絶対禁止\n';
+    rules += '・体験談はコンパナ自身の実体験のみ。架空の失敗談を創作するな\n';
   }
   
-  // === 論理の一貫性（市場データが注入されるタイプのみ） ===
-  if (needsMarketRules) {
-    rules += '\n【論理の一貫性】\n';
-    rules += '日銀→円 / FRB→ドル / ECB→ユーロ / BOE→ポンド / RBA→豪ドル。因果関係を間違えるな。\n';
-  }
-  
-  // === フォーマットルール（全タイプ共通） ===
-  rules += '\n【フォーマットルール】\n';
-  rules += '・ハッシュタグは書くな（システムが自動付与）。リスト記号（・●1.-）禁止。\n';
-  rules += '・ピリオド不可、句点「。」使用。URL禁止。全て日本語で書け。\n';
+  // === 表記ルール(全タイプ共通・★v13.1 S4: 【フォーマットルール】から改名して統合セクションと区別) ===
+  rules += '\n【表記ルール】\n'; 
+  rules += '・ハッシュタグは書くな(システムが自動付与)。リスト記号(・●1.-)禁止\n';
+  rules += '・ピリオド不可、句点「。」使用。URL禁止。全て日本語で書け\n';
   if (needsMarketRules) {
     rules += '・通貨ペアは日本語名で書け: USD/JPY→ドル円、EUR/USD→ユーロドル、GBP/USD→ポンドドル、EUR/JPY→ユーロ円、GBP/JPY→ポンド円、AUD/JPY→豪ドル円、AUD/USD→豪ドル米ドル\n';
-    rules += '・言及できる通貨ペアは上記7ペアのみ。カナダドル（CAD）・スイスフラン（CHF）・NZドル（NZD）・人民元（CNY）等はデータが存在しないため言及禁止。\n';
-    rules += '・例外: 原油高とCADの関係等、背景説明として通貨名のみ触れるのはOK。レート数値を書くのは禁止。\n';
+    rules += '・言及できる通貨ペアは上記7ペアのみ。カナダドル(CAD)・スイスフラン(CHF)・NZドル(NZD)・人民元(CNY)等はデータが存在しないため言及禁止\n';
+    rules += '・例外: 原油高とCADの関係等、背景説明として通貨名のみ触れるのはOK。レート数値を書くのは禁止\n';
   }
-  rules += '・マークダウン記法（---、**、##）禁止。\n';
+  rules += '・マークダウン記法(---、**、##)禁止\n';
   
   // === 禁止事項（★v8.6: 共通部分とタイプ別で分離） ===
   rules += '\n【禁止事項（即やり直し）】\n';
@@ -1449,11 +1782,8 @@ function buildFormatRules_(charMin, charMax, postType) {
   if (needsMarketRules) {
     rules += '始値/終値断言禁止: NG「155.36円でスタート」→OK「155円台で推移」\n';
     rules += '商品価格は背景のみ: WTI・BTC・天然ガスを投稿の主役にするな。FXへの影響として1文で触れる程度にとどめよ。\n';
-    rules += '【WTI原油と為替の因果関係（間違えると致命的）】\n';
-    rules += '原油高 → 資源国通貨（豪ドル・カナダドル）の買い要因。円は輸入コスト増で売られやすい。\n';
-    rules += '原油安 → 資源国通貨の売り要因。円は輸入コスト減で買われやすい。\n';
-    rules += '× 絶対NG: 「原油下落がドル高につながった」（原油とドルは別の話。因果関係を捏造するな）\n';
-    rules += '× 絶対NG: 「WTI下落で円安」（原油安は円高要因。逆）\n';
+    // ★v12.11 Phase 6-1 統合案C: WTI因果・経済指標・リスクセンチメントを【因果関係ルール】1セクションに統合
+    // WTI関連はここから削除し、下の統合セクションで集約
   }
   
   // === TC言及制限 ===
@@ -1463,7 +1793,7 @@ function buildFormatRules_(charMin, charMax, postType) {
   }
   
   var tcWeekdayTypes = ['GOLDEN', 'LUNCH'];
-  var tcNoTypes = ['MORNING', 'TOKYO', 'LONDON', 'NY', 'INDICATOR', 'KNOWLEDGE'];
+  var tcNoTypes = ['MORNING', 'TOKYO', 'LONDON', 'INDICATOR', 'KNOWLEDGE'];
   if (tcWeekdayTypes.indexOf(postType) !== -1) {
     rules += '\n【TC導線（AI自律判断・週1〜2回・投稿の20%以下）】\n';
     rules += '宣伝感NG。「記録が大事→面倒→ツールで仕組み化」の自然な流れで。\n';
@@ -1471,32 +1801,33 @@ function buildFormatRules_(charMin, charMax, postType) {
     rules += '\n【TC言及禁止。純粋な価値提供のみ。】\n';
   }
   
-  // === 経済指標・リスクセンチメント（市場データが注入されるタイプのみ） ===
+  // === ★v12.11 Phase 6-1 統合案C: 因果関係ルール(市場データが注入されるタイプのみ) ===
+  //   旧: 【WTI原油と為替の因果関係】+【経済指標の方向性ルール】+【リスクセンチメントと円の方向性】の3セクション(約460字)
+  //   新: 【因果関係ルール】1セクション(約280字)
+  //   削減: -2セクション・約-180字(-39%)・情報量は全て保持
   if (needsMarketRules) {
-    rules += '\n【経済指標の方向性ルール（誤解釈は致命的）】\n';
-    rules += '通常指標（GDP,PMI,CPI等）: 予想より高い=上振れ=買い要因、低い=下振れ=売り要因\n';
-    rules += '逆指標（失業率等）: 予想より低い=改善=買い要因、高い=悪化=売り要因\n';
-    rules += '「上振れ」=数字が大きい。失業率の上振れ＝悪化。注入データの（買い/売り要因）判定をそのまま使え。\n';
-    rules += '\n【リスクセンチメントと円の方向性（絶対に間違えるな）】\n';
-    rules += 'リスクオフ（戦争・地政学リスク・株安・景気悪化）= 安全通貨の円が買われる = 円高方向\n';
-    rules += 'リスクオン（株高・景気回復期待・楽観ムード）= 円が売られる = 円安方向\n';
-    rules += '× 絶対NG: 「リスク回避で円売り」「リスクオフで円安」は真逆。使うな。\n';
+    rules += '\n【因果関係ルール(最重要・間違えたら致命的)】\n';
+    rules += '■ リスクセンチメント:\n';
+    rules += '  リスクオフ(戦争・地政学・株安)= 円高・安全通貨買い / リスクオン(株高・楽観)= 円安・リスク通貨買い\n';
+    rules += '  × 絶対NG「リスクオフで円安」「リスク回避で円売り」は真逆\n';
+    rules += '■ 経済指標:\n';
+    rules += '  通常(GDP/PMI/CPI等): 予想超=買い要因・予想下=売り要因\n';
+    rules += '  逆指標(失業率等): 予想下=改善=買い要因・予想上=悪化=売り要因\n';
+    rules += '  注入データの(買い/売り要因)判定をそのまま使え。「上振れ」=数字が大きい。失業率の上振れ=悪化。\n';
+    rules += '■ WTI原油:\n';
+    rules += '  原油高→資源国通貨(豪ドル/CAD)買い・円は輸入コスト増で売られやすい\n';
+    rules += '  原油安→資源国通貨売り・円は輸入コスト減で買われやすい\n';
+    rules += '  × 絶対NG「原油下落がドル高」「WTI下落で円安」(原油とドルは別の話・原油安は円高要因)\n';
   }
   
   // === 断言ルールと人間味ルール ===
-  var assertTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR',
+  var assertTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR',
                      'WEEKLY_REVIEW', 'WEEKLY_LEARNING', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
   if (assertTypes.indexOf(postType) !== -1) {
-    rules += '\n【絵文字行と→行の書き分けルール（最重要）】\n';
-    rules += '投稿は「絵文字行（事実）」と「→行（意見・背景・感想）」の2層構造で書け。\n';
-    rules += '\n';
-    rules += '■ 絵文字行（📕📝💡等で始まる行）= 事実のメモ。体言止め or 動詞止めで短く。「〜しました。」「〜しています。」は冗長なので禁止。感想・意見は入れるな。\n';
-    rules += '  OK: 「📝米イラン交渉が決裂。」「🛢原油、100ドル突破。」「💡植田総裁の発言を控える。」\n';
-    rules += '  NG: 「📝米イラン交渉が決裂しました。」「🛢原油が100ドルを突破しています。」「💡植田総裁の発言が控えてますね。」\n';
-    rules += '\n';
-    rules += '■ →行（→で始まる行）= コンパナの意見・背景・読み・感想。人間味はここで出せ。\n';
-    rules += '\n';
-    rules += '■ その他: 「要確認」は投稿に書くな。「かもしれません」は→行のみ。\n';
+    // ★v13.1 S4 統合案A: 【絵文字行と→行の書き分けルール】は【投稿フォーマット】に統合済み
+    //   ここでは「要確認禁止」「かもしれません限定」の補足ルールのみ残す
+    rules += '\n【書き分け補足ルール】\n';
+    rules += '・「要確認」は投稿に書くな。「かもしれません」は→行のみ\n';
   }
 
   // === NG例（★v8.6: 市場系とRULE系で分離） ===
@@ -1584,14 +1915,15 @@ function getQualityFeedback_(postType) {
 
 /**
  * ★v8.10: 市場系投稿の方針（②-c〜②-c2）
- * 対象: MORNING, TOKYO, LUNCH, LONDON, GOLDEN, NY, INDICATOR
+ * 対象: MORNING, TOKYO, LUNCH, LONDON, GOLDEN, INDICATOR
  * 仮説ベース構造、レートデータ使い方、月曜コンテキスト等を含む
+ * ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
  */
 function buildMarketTypePolicy_(postType, now) {
   var text = '';
   
   // ②-c 市場系投稿の方針（buildFormatRules_と重複しない項目のみ）
-  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR'];
+  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   if (marketTypes.indexOf(postType) !== -1) {
     text += '\n【市場系投稿の方針（最重要）】\n';
     text += '■ ★v12.3【ストーリー主導の鉄則】\n';
@@ -1605,8 +1937,7 @@ function buildMarketTypePolicy_(postType, now) {
     text += '  ・コンパナなら「ドルが売られて豪ドルが買われてる。シンプルに金利差ですね」と一言で言い切る。\n';
     text += '  ・1文で事実を言い切り、→行で「なぜ」を補足。これだけ。\n';
     text += '■ 指標に言及する場合は時刻を含めて正確に。上記「今日の経済指標」の時刻を使え。\n';
-    text += '■ 【最重要】レートの事実とニュース解釈を一致させろ。矛盾したらレート優先。\n';
-    text += '■ 【通貨の動きとの整合】売られている通貨を「買い」、買われている通貨を「売り」と書くのは絶対禁止。データが事実。\n';
+    text += '■ レート・ニュース解釈・通貨の売買方向は確定データに必ず従え。売られている通貨を「買い」、買われている通貨を「売り」と書くのは絶対禁止。矛盾したらデータ優先。\n';
     text += '■ ★v10.1【抽象的な値動き描写の禁止】\n';
     text += '  ・「面白い動き」「注目の動き」「興味深い展開」等の抽象的な形容詞で値動きを描写するな。\n';
     text += '  ・値動きには必ずファンダメンタルズの因果関係を添えろ。「なぜその動きが起きているのか」が読者の学びになる。\n';
@@ -1637,7 +1968,7 @@ function buildMarketTypePolicy_(postType, now) {
     text += '    ・例: 「今夜の失業保険は、上の構造（FRBの利下げ観測）が正しいかのテスト。強い数字なのにドルが売られたら、市場は利下げを既定路線と見ている証拠」\n';
     text += '    ・ポイント: 構造仮説を「検証するための観察ポイント」として書くと、外れても学びになる。\n';
     text += '  投稿では両方を全て書く必要はない。構造仮説を頭に置いた上で、今日の仮説を自然に語れ。\n';
-    text += '  ただしNY・GOLDENでは構造仮説に触れるチャンスがある。大きな読みを語れ。\n';
+    text += '  ただしGOLDENでは構造仮説に触れるチャンスがある。大きな読みを語れ。\n';
     text += '■ ★v8.11: 仮説は「条件分岐型」で書け（一方向の賭けは禁止）:\n';
     text += '  ・仮説 = 市場の読み解き方を示すこと。「当たるか外れるか」の賭けではない。\n';
     text += '  ・「結果が出た後の市場の反応」を読む仮説が最上。どう転んでも学びになる。\n';
@@ -1651,78 +1982,56 @@ function buildMarketTypePolicy_(postType, now) {
     text += '■ 負けた（外れた）時は正直に書け。「読み違えた」「反省ポイント」も投稿の価値。\n';
     text += '■ ★「トレードした」「エントリーした」「利確した」は禁止（実際にトレードしていない）。\n';
     text += '  ・「自分はこう読んでいる」「こう見ている」「こういう展開を想定している」で表現。\n';
-    text += '\n【レートデータの使い方（最重要）】\n';
-    text += '■ 注入されたレート・指標データは「方向感の把握」に使え。数字を投稿に並べる目的ではない。\n';
-    text += '■ OK: 「ドル円は上昇基調が続いていて」「ユーロは先週から売られっぱなし」\n';
-    text += '■ NG: 「ドル円は159.27円」「EUR/USDは1.1568ドル」（数字の羅列）\n';
-    text += '■ レート数字を使うのは、大台（160円）や大きな変動幅の説明時だけに限定せよ。\n';
+    // ★v13.1 S3 統合案D: 【レートデータの使い方】は【事実・論理・数値の正確性】に統合されたため削除
     if (postType === 'TOKYO' || postType === 'LUNCH') {
       text += '■ ★v12.6【TOKYO/LUNCH専用】具体的なレート数値（158.97等）は一切書くな。「158円台」「0.71ドル台」のようにレベル感で伝えよ。\n';
     }
-    text += '\n【経済イベント・指標の日付確認ルール（最重要）】\n';
-    text += '・「〜が控えています」「〜の発表があります」と書く場合、必ず上記の経済カレンダーで今日の日付を確認せよ。\n';
-    text += '・今日の日付に載っていないイベントを「今日控えている」「東京時間中に発表」と書くな。\n';
-    text += '・NG例: 今日が3月17日なのに「日銀会合が控えています」（日銀会合は3月19日）\n';
-    text += '・OK例: 「今日12:30にRBA政策金利発表が予定されています」（カレンダーに今日の日付で記載あり）\n';
-    text += '・今週の指標に触れたい場合は「今週19日に日銀会合が予定されています」と日付を明記せよ。\n';
-    text += '\n★★★【未発表イベントを過去形で書くな（絶対禁止・ハルシネーション防止）】\n';
-    text += '・経済カレンダーの「結果」列が空欄の指標はまだ発表されていない。\n';
-    text += '・未発表の指標やイベントを「〜を受けて」「〜の結果」「〜が示された」等の過去形で書くな。\n';
-    text += '・ニュース検索で事前報道や観測記事が見つかっても、それは「発表された結果」ではない。\n';
-    text += '・例: FOMC議事要旨が今夜3:00発表予定 → 「FOMC議事要旨を受けてドル安」は絶対禁止。まだ出ていない。\n';
-    text += '  OK: 「今夜FOMC議事要旨が控えている。ハト派なら〜の可能性」（未来形・条件分岐型）\n';
-    text += '  NG: 「FOMC議事要旨でハト派な見解が示された」（まだ発表されていない）\n';
-    text += '・環境認識の原則: データが示す事実だけを書け。まだ起きていないことを起きたように書くな。\n';
+    text += '\n【経済イベントの日付・時制(絶対遵守)】\n';
+    text += '■ 日付:「〜が控えています」と書くときは必ず経済カレンダーで今日の日付を確認。今日の日付に載っていないイベントを「今日控えている」と書くな。\n';
+    text += '  NG: 今日が3月17日なのに「日銀会合が控えています」(日銀会合は3月19日)\n';
+    text += '  OK: 「今日12:30にRBA政策金利発表」(カレンダーに今日の日付で記載あり)\n';
+    text += '■ 時制(★ハルシネーション防止): 経済カレンダーの「結果」列が空欄の指標はまだ発表されていない。\n';
+    text += '  未発表の指標を「〜を受けて」「〜の結果」「〜が示された」等の過去形で書くな。\n';
+    text += '  ニュース検索で事前報道が見つかっても、それは「発表された結果」ではない。\n';
+    text += '  NG: 「FOMC議事要旨でハト派な見解が示された」(まだ発表されていない)\n';
+    text += '  OK: 「今夜FOMC議事要旨が控えている。ハト派なら〜の可能性」(未来形・条件分岐型)\n';
   }
   
   // ②-c1.5 MORNING共通: 東京市場オープン前の認識 ★v5.6追加
   if (postType === 'MORNING') {
-    text += '\n【MORNING投稿の時間帯と役割（重要 - 全曜日共通）】\n';
-    text += '■ この投稿は朝7:30〜8:00頃の配信。東京市場（9:00）オープンの約1時間前。\n';
-    text += '■ 構成の基本フレーム:\n';
-    text += '  ①【昨夜の世界で何が起きたか】政治・地政学・中銀の姿勢変化を語れ。\n';
-    text += '  ②【今日の仮説】条件分岐型で。「もしAならB、もしCならD」の構造。一方向の賭けは禁止。\n';
-    text += '  ③【仮説答え合わせ】前回の仮説データが注入されていれば。最長1文。\n';
-    text += '■ 【通貨ペア混同禁止】同じ段落で異なる通貨ペアのレートを混ぜるな。\n';
+    text += '\n【MORNING投稿の役割】\n';
+    text += '■ 朝7:30〜8:00頃配信。東京市場(9:00)オープンの約1時間前。\n';
+    text += '■ 構成:①昨夜の世界で何が起きたか(政治・地政学・中銀) → ②今日の仮説(条件分岐型) → ③前回仮説の答え合わせ(データ注入時のみ・最長1文)\n';
+    text += '■ 同じ段落で異なる通貨ペアのレートを混ぜるな。\n';
   }
   
   // ②-c1.6 TOKYO共通: 東京市場序盤の認識（全曜日共通） ★v6.6追加 ★v10.1: 理由必須
   if (postType === 'TOKYO') {
-    text += '\n【TOKYO投稿の時間帯と役割（重要 - 全曜日共通）】\n';
+    text += '\n【TOKYO投稿の役割】\n';
     text += '■ 朝9:11〜9:43頃配信。東京オープン後10〜40分。「予想」ではなく「観察」。\n';
-    text += '■ MORNINGの仮説の「途中経過」を1文入れろ。\n';
-    text += '■ 東京勢の空気感を描写（実需の動き、輸出勢の売り等）。数字ではなく行動を語れ。\n';
+    text += '■ MORNINGの仮説の「途中経過」を1文入れろ。東京勢の空気感を描写(実需の動き・輸出勢の売り等)。\n';
     text += '■ 8:50の日本指標が発表済みなら結果に触れよ。\n';
-    text += '■ 【通貨ペア混同禁止】同じ→の前後で異なる通貨ペアのレートを引用するな。\n';
-    text += '■ ★v12.6【レートは「台」で表現】具体的な数値（158.97等）は書くな。「158円台」「0.71ドル台」のようにレベル感で伝えよ。100〜180字の短い投稿で5分後に変わる数字に字数を使うな。\n';
+    text += '■ ★v12.6【レートは「台」で表現】具体的な数値(158.97等)は書くな。「158円台」「0.71ドル台」のようにレベル感で伝えよ。100〜180字の短い投稿で5分後に変わる数字に字数を使うな。\n';
   }
   if (postType === 'GOLDEN') {
-    text += '\n【GOLDEN投稿の時間帯と役割（重要）】\n';
+    text += '\n【GOLDEN投稿の役割】\n';
     text += '■ 夜20-21時台配信。1日の振り返りを冷静に。\n';
     text += '■ ①仮説スコアカード: 朝の仮説がどうなったか。当たり外れを正直に。\n';
     text += '■ ②今日一番の学び: 数字ではなく「世界の動き」から何を学んだか。\n';
     text += '■ ③明日への視点: 今日の結果を踏まえて世界がどう動きそうか。\n';
     text += '■ ★未発表指標の答え合わせ禁止: 仮説の条件に含まれる経済指標がまだ未発表なら、答え合わせは保留。\n';
+    
+    // ★v12.9: 夜の材料ヒント（経済カレンダーから動的生成）
+    text += buildEveningMaterialHint_(postType);
   }
   
-  // ②-c1.8 NY: 今夜の焦点と仮説 ★v8.8.1追加 ★v8.9: 未発表指標ルール追加
-  if (postType === 'NY') {
-    text += '\n【NY投稿の時間帯と役割（重要）】\n';
-    text += '■ 夜22時台配信。NY市場オープン前の緊張感。\n';
-    text += '■ ①今日の仮説進捗: 朝からの読みがどうなっているか。\n';
-    text += '■ ②今夜の焦点: 指標の「本質」を語れ。数字の予想値ではなく「この結果が出たら世界がどう変わるか」。\n';
-    text += '■ ③今夜の仮説: 翌朝の答え合わせ前提。★条件分岐型で残せ。\n';
-    text += '  → OK: 「本当に大事なのは継続受給者数の方。ここが増えていたら景気の底割れサイン」\n';
-    text += '  → OK: 「強い数字なのにドルが売られたら、市場の目線が変わった証拠。素直にドル買いなら、まだインフレ退治モード」\n';
-    text += '  → NG: 「予想21.1万件に対して上振れならドル買い」（当たり前すぎる。一方向の賭けは禁止）\n';
-    text += '■ ★未発表指標の答え合わせ禁止: 仮説の条件に未発表指標が含まれていたら答え合わせ不可。「結果を待つ」スタンスで書け。\n';
-  }
+  // ★v12.7: NY投稿セクション削除（NYタイプ廃止のため）
   
   // ②-c2 月曜日コンテキスト（市場系全投稿共通）★v5.6追加
   var todayDayOfWeek = now.getDay(); // 0=日, 1=月, ..., 6=土
-  var mondayMarketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR'];
+  var mondayMarketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   if (todayDayOfWeek === 1 && mondayMarketTypes.indexOf(postType) !== -1) {
-    text += '\n【月曜日の投稿方針（最重要 - 本日は週明け。全市場系投稿で厳守）】\n';
+    text += '\n【月曜日の投稿方針(本日は週明け・全市場系投稿で厳守)】\n';
     text += '■ 今日は月曜日。土日は為替市場が閉まっていた。\n';
     text += '■ 「昨日」「昨夜」は絶対禁止（昨日＝日曜で市場は閉まっている）。\n';
     text += '  → NG: 「昨日のNY市場では〜」「昨夜のNYで〜」「昨日の流れを引き継ぎ〜」\n';
@@ -1985,3 +2294,237 @@ function buildRulePolicy_(postType, isRuleType) {
   
   return text;
 }
+
+
+// ==========================================================================
+// ★v14.0 Phase 1 (2026-04-20): ホットトピック事前選定機構
+// ==========================================================================
+//
+// 背景(TCAX_REFERENCE.md 事件8):
+//   従来は「全データを Claude に投げて、その中から自由に選ばせる」設計だった。
+//   結果として毎日似たような静的データ(ゴトー日・通貨強弱%の羅列)を選びがちで、
+//   「今この瞬間の新鮮な材料」が投稿に入らず「面白くない」と評価された。
+//
+//   コンパナの本質: 「事実を収集する → コンパナ風にユーザーに有益に伝える」
+//   対話時は人間が「今日のホットな材料」を選んで Claude に渡していた。
+//   自動化でもこの「材料選定を先に機械的に実行する」を再現する。
+//
+// 設計思想:
+//   1. 材料(ニュース・通貨強弱・ダウ理論・継続中事象)を構造化して Claude に渡す
+//   2. Claude が「今最も語るべきトピック1つ」を選ぶ
+//   3. 構造化JSON(headline / background / causalChain / mainPair / dowContext / nextView)を返す
+//   4. これを投稿生成プロンプトの最優先ブロックに注入
+//   5. 投稿生成 Claude は「選ぶタスク」を免除され「書くタスク」に集中できる
+//
+// API 呼び出し: +1回(約15-30秒追加・GAS 6分制限に注意)
+// フォールバック: 失敗したら null を返し、呼び出し元は従来動作に戻る
+//
+// 呼び出し元: buildPrompt_ 内(fetchMarketNews_ の直後)
+//
+/**
+ * 【v14.0 Phase 1】ホットトピック事前選定
+ * 
+ * @param {Object} params
+ *   - marketNews:        string  - fetchMarketNews_ の結果(TOP5テキスト)
+ *   - currencyStrength:  string  - 通貨強弱ランキングテキスト(例: "AUD(+3.48%) > GBP ...")
+ *   - rateDirection:     string  - レート方向テキスト(例: "USD/JPY: 始値→現在 円安方向")
+ *   - dowTheory:         string  - ダウ理論 SH/SL テキスト
+ *   - ongoingEvents:     string  - 継続中重大事象テキスト(任意)
+ *   - postType:          string  - 投稿タイプ('MORNING' 等・時間帯のヒント)
+ *   - claudeApiKey:      string  - Claude API キー
+ * 
+ * @return {Object|null}
+ *   成功: {
+ *     headline:     string (20文字以内)
+ *     background:   string (80文字程度)
+ *     causalChain:  string (60文字程度)
+ *     mainPair:     string (通貨ペア日本語名)
+ *     dowContext:   string (40文字程度)
+ *     nextView:     string (60文字程度)
+ *     confidence:   'high' | 'medium' | 'low'
+ *   }
+ *   失敗: null (呼び出し元は従来動作にフォールバック)
+ */
+function selectHotTopic_(params) {
+  params = params || {};
+  var marketNews       = params.marketNews       || '';
+  var currencyStrength = params.currencyStrength || '';
+  var rateDirection    = params.rateDirection    || '';
+  var dowTheory        = params.dowTheory        || '';
+  var ongoingEvents    = params.ongoingEvents    || '';
+  var postType         = params.postType         || 'MORNING';
+  var claudeApiKey     = params.claudeApiKey     || '';
+  
+  if (!claudeApiKey) {
+    console.log('⚠️ selectHotTopic_: CLAUDE_API_KEY 未指定 → スキップ');
+    return null;
+  }
+  
+  // ニュースがない場合は選定しても意味がない
+  if (!marketNews || marketNews.length < 50) {
+    console.log('⚠️ selectHotTopic_: ニュース情報が不足 → スキップ');
+    return null;
+  }
+  
+  var today = new Date();
+  var dateStr = Utilities.formatDate(today, 'Asia/Tokyo', 'yyyy年M月d日(E)');
+  
+  // ===== プロンプト組み立て =====
+  var prompt = '';
+  prompt += '【タスク】\n';
+  prompt += 'あなたはベテランFXアナリスト。今この瞬間、日本のFXトレーダーに\n';
+  prompt += '「これを知らないと損する」と思わせる材料を1つ選び、構造化して返せ。\n\n';
+  
+  prompt += '【本日の日付】\n' + dateStr + '\n\n';
+  prompt += '【投稿タイプ】' + postType + '(時間帯のヒント・絶対のルールではない)\n\n';
+  
+  prompt += '【判断材料1: 直近の市場ニュースTOP5】\n';
+  prompt += marketNews + '\n\n';
+  
+  if (currencyStrength) {
+    prompt += '【判断材料2: 現在の通貨強弱(実測値)】\n';
+    prompt += currencyStrength + '\n\n';
+  }
+  
+  if (rateDirection) {
+    prompt += '【判断材料3: 本日の方向性】\n';
+    prompt += rateDirection + '\n\n';
+  }
+  
+  if (dowTheory) {
+    prompt += '【判断材料4: ダウ理論(日足SH/SL)】\n';
+    prompt += dowTheory + '\n\n';
+  }
+  
+  if (ongoingEvents) {
+    prompt += '【判断材料5: 継続中の重大事象】\n';
+    prompt += ongoingEvents + '\n\n';
+  }
+  
+  prompt += '【判断の軸】\n';
+  prompt += '1. FXトレーダーが知らないと損する材料か?\n';
+  prompt += '2. 今日の値動きの因果を説明できるか?\n';
+  prompt += '3. 具体的な通貨ペアに影響があるか?\n';
+  prompt += '4. 「次の見方」を示せるか?(このラインを抜けたら転換 など)\n\n';
+  
+  prompt += '【出力形式(必ずこのJSON形式で返せ・余計な説明は不要・コードブロック記法も不要)】\n';
+  prompt += '{\n';
+  prompt += '  "headline":    "20文字以内で簡潔に。キャッチーに",\n';
+  prompt += '  "background":  "80文字程度。いつ何が起きたか・現状どう進行しているか",\n';
+  prompt += '  "causalChain": "60文字程度。原因→経路→為替への影響の順",\n';
+  prompt += '  "mainPair":    "通貨ペア日本語名(ドル円/豪ドル米ドル/ユーロドル等)",\n';
+  prompt += '  "dowContext":  "40文字程度。日足のトレンド状況を具体値で",\n';
+  prompt += '  "nextView":    "60文字程度。XX抜けたらYY形式で具体レベルを示す",\n';
+  prompt += '  "confidence":  "high/medium/low(この材料の影響確度)"\n';
+  prompt += '}\n\n';
+  
+  prompt += '【注意】\n';
+  prompt += '- 毎日同じネタ(ゴトー日・通貨強弱%のみ)を選ぶな。新鮮なニュース由来の材料を優先\n';
+  prompt += '- 静的データではなく、今この瞬間のホットな材料を選べ\n';
+  prompt += '- トレーダーが「人より早く知りたい」情報を優先\n';
+  prompt += '- JSON以外の文字(コードブロック、説明文、マークダウン)は一切出力するな\n';
+  
+  // ===== Claude API 呼び出し =====
+  console.log('🎯 selectHotTopic_: ホットトピック選定中...');
+  console.log('   プロンプト長: ' + prompt.length + '文字');
+  
+  var result;
+  try {
+    result = callClaudeApi_(prompt, claudeApiKey, {
+      maxTokens: 1024,            // 構造化JSONなので少なめで十分
+      maxRetries: 2,              // API回数節約
+      logPrefix: 'ホットトピック選定',
+      systemPrompt: 'あなたはFX市場の材料選定エキスパート。トレーダーが最も知りたい材料を1つ選び、指定されたJSON形式のみで返す。'
+    });
+  } catch (e) {
+    console.log('⚠️ selectHotTopic_: API呼び出しエラー → null 返却: ' + e.message);
+    return null;
+  }
+  
+  if (!result || !result.text) {
+    console.log('⚠️ selectHotTopic_: レスポンスが空 → null 返却');
+    return null;
+  }
+  
+  // ===== JSON パース(防御的) =====
+  var rawText = result.text.trim();
+  
+  // コードブロック記法が混入している場合は除去
+  rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  
+  // JSON の先頭{から最後の}までを抽出(前後の説明文を除去)
+  var firstBrace = rawText.indexOf('{');
+  var lastBrace  = rawText.lastIndexOf('}');
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    console.log('⚠️ selectHotTopic_: JSONブロックが見つからない → null 返却');
+    console.log('   レスポンス先頭: ' + rawText.substring(0, 200));
+    return null;
+  }
+  rawText = rawText.substring(firstBrace, lastBrace + 1);
+  
+  var parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (e) {
+    console.log('⚠️ selectHotTopic_: JSONパース失敗 → null 返却: ' + e.message);
+    console.log('   パース試行対象: ' + rawText.substring(0, 300));
+    return null;
+  }
+  
+  // ===== 必須フィールド検証 =====
+  var requiredFields = ['headline', 'background', 'causalChain', 'mainPair', 'dowContext', 'nextView'];
+  for (var i = 0; i < requiredFields.length; i++) {
+    var field = requiredFields[i];
+    if (!parsed[field] || typeof parsed[field] !== 'string' || parsed[field].trim().length === 0) {
+      console.log('⚠️ selectHotTopic_: 必須フィールド ' + field + ' が欠落/不正 → null 返却');
+      return null;
+    }
+  }
+  
+  // confidence はデフォルト値補完
+  if (!parsed.confidence || ['high', 'medium', 'low'].indexOf(parsed.confidence) === -1) {
+    parsed.confidence = 'medium';
+  }
+  
+  console.log('✅ selectHotTopic_: 選定成功');
+  console.log('   ヘッドライン: ' + parsed.headline);
+  console.log('   主役ペア: ' + parsed.mainPair);
+  console.log('   確度: ' + parsed.confidence);
+  
+  return parsed;
+}
+
+
+/**
+ * 【v14.0 Phase 1】ホットトピックをプロンプト用テキストに整形
+ * 
+ * selectHotTopic_ の戻り値を、投稿生成プロンプトへ注入する文字列に変換する。
+ * 
+ * @param {Object} hotTopic - selectHotTopic_ の戻り値
+ * @return {string} プロンプト用テキスト
+ */
+function formatHotTopicForPrompt_(hotTopic) {
+  if (!hotTopic) return '';
+  
+  var text = '';
+  text += '【★今日書くべきトピック1つ(これを核にしろ・ここから逸脱禁止)】\n';
+  text += 'ヘッドライン: ' + hotTopic.headline + '\n';
+  text += '背景: ' + hotTopic.background + '\n';
+  text += '因果チェーン: ' + hotTopic.causalChain + '\n';
+  text += '今日の主役ペア: ' + hotTopic.mainPair + '\n';
+  text += 'ダウ理論の文脈: ' + hotTopic.dowContext + '\n';
+  text += '次の見方: ' + hotTopic.nextView + '\n\n';
+  
+  text += '【書く手順(この順番で構成しろ)】\n';
+  text += '1. 冒頭1行: ヘッドラインをキャッチーに言い換え\n';
+  text += '2. 背景を簡潔に説明(いつ何が起きたか・現状どう進行しているか)\n';
+  text += '3. 因果チェーンで相場への波及を語る\n';
+  text += '4. 主役ペアのダウ理論文脈を具体値で(「日足SH XX を超えたら」等)\n';
+  text += '5. 次の見方を示す(具体レベル + 転換条件)\n\n';
+  
+  text += '※ このトピックを軸に書け。通貨強弱%の羅列や静的データ(ゴトー日のみ等)で投稿を埋めるな。\n';
+  text += '※ MORNING/GOLDEN で仮説振り返りがある場合は、冒頭1ブロックで済ませてから本トピックへ。\n\n';
+  
+  return text;
+}
+

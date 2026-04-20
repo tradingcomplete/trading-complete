@@ -156,7 +156,8 @@ function generatePost(postType, context, cachedRates) {
   // ★v5.9.4: 🔥主役ペアのバリデーション（市場系投稿のみ）
   // 通貨強弱で算出した主役ペアが本文に含まれていなければリトライ
   // ★v8.8: INDICATORを除外（指標の通貨ペアが主役であるべきで、通貨強弱の主役とは一致しないことが多い）
-  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY'];
+  // ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
+  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
   if (marketTypes.indexOf(postType) !== -1 && rates) {
     try {
       var hotCheck = detectHotPair_(rates, keys.SPREADSHEET_ID);
@@ -196,7 +197,8 @@ function generatePost(postType, context, cachedRates) {
   
   // === リスクセンチメント誤記チェック（市場系投稿のみ） ===
   // 「リスクオフ」+「円売り」の組み合わせは絶対禁止。検出したらリトライ
-  var riskSentimentTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR'];
+  // ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
+  var riskSentimentTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   if (riskSentimentTypes.indexOf(postType) !== -1) {
     try {
       var bodyForRiskCheck = cleanedText.split(/\n\n#/)[0];
@@ -302,22 +304,30 @@ function generatePost(postType, context, cachedRates) {
 
   // ★v6.1: ファクトチェック + 自動修正
   // ★v6.1.1: テスト一括実行時はスキップ（GAS 6分制限対策）
+  // ★v12.10: DISABLE_FACTCHECK フラグで無効化可能に（診断書 水準1-1: factCheck削除）
+  //   背景: 2026-04-18 WEEKLY_REVIEW で Q6①論理矛盾が Gemini autoFix 経由で悪化。
+  //         検証段階の責務重複が問題の根本原因と判明。
+  //         Gemini factCheck → Gemini autoFix のループを断ち切り、
+  //         Claude 品質レビュー + 最終事実検証 + 対話型検証の3段で純化する。
+  //   ロールバック: ScriptProperties 'DISABLE_FACTCHECK' = 'false' で復活
   var skipFactCheck = PropertiesService.getScriptProperties().getProperty('SKIP_FACT_CHECK') === 'true';
+  var disableFactCheck = PropertiesService.getScriptProperties().getProperty('DISABLE_FACTCHECK') !== 'false'; // デフォルト無効化
   var factResult = { passed: true, summary: 'スキップ', details: '', issues: [] };
   var fixLog = '';
   var originalBeforeFix = cleanedText;
+  var csForFactCheck = null;
   
-  if (!skipFactCheck) {
-    // ★v12.3.1: 方向チェック用の通貨強弱データを取得してファクトチェックに渡す
-    var csForFactCheck = null;
-    try {
-      var hotForFact = detectHotPair_(rates, keys.SPREADSHEET_ID);
-      if (hotForFact && hotForFact.csRanking) {
-        csForFactCheck = hotForFact.csRanking;
-      }
-    } catch (csErr) {
-      console.log('⚠️ 方向チェック用通貨強弱取得失敗（続行）: ' + csErr.message);
+  // ★v12.10: 通貨強弱データは品質レビューでも使うため、factCheck 無効化でも取得する
+  try {
+    var hotForFact = detectHotPair_(rates, keys.SPREADSHEET_ID);
+    if (hotForFact && hotForFact.csRanking) {
+      csForFactCheck = hotForFact.csRanking;
     }
+  } catch (csErr) {
+    console.log('⚠️ 方向チェック用通貨強弱取得失敗（続行）: ' + csErr.message);
+  }
+  
+  if (!skipFactCheck && !disableFactCheck) {
     factResult = factCheckPost_(cleanedText, postType, keys.GEMINI_API_KEY, rates, csForFactCheck);
     
     if (!factResult.passed && factResult.issues.length > 0) {
@@ -383,49 +393,80 @@ function generatePost(postType, context, cachedRates) {
         console.log('✅ ファクトチェック→修正/削除→後処理 完了');
       }
     }
+  } else if (disableFactCheck && !skipFactCheck) {
+    console.log('ℹ️ factCheck 無効化中（DISABLE_FACTCHECK=true / 診断書 水準1-1）→ Claude品質レビュー+最終事実検証+対話型検証で品質保証');
   }
-  
-  // ★v8.6: 品質レビュー（Claude API - クロスチェック）
-  // ファクトチェック（Gemini）の後、別モデル（Claude）で投稿品質をレビュー
-  // testAll時はスキップ（SKIP_FACT_CHECK=true時）
-  if (!skipFactCheck) {
-    var typeConfig = POST_TYPES[postType] || {};
-    var qualityResult = qualityReviewPost_(cleanedText, postType, typeConfig, rates, csForFactCheck);
-    
-    if (!qualityResult.passed && qualityResult.revisedText) {
-      // 品質修正後に後処理チェーンを再適用
-      var qText = applyPostProcessingChain_(qualityResult.revisedText, postType, rates);
-      cleanedText = qText;
-      
-      // fixLogに品質レビュー結果を追記
-      fixLog += '【品質レビュー（Claude）】\n';
-      for (var qi = 0; qi < qualityResult.issues.length; qi++) {
-        fixLog += '  ' + qualityResult.issues[qi].id + ': ' + qualityResult.issues[qi].problem + '\n';
+
+  // typeConfig は v13.0 パス・v12.10 パスの両方で必要なので先に定義
+  var typeConfig = POST_TYPES[postType] || {};
+
+  // ========================================
+  // ★v13.0 並行稼働フラグ(generatePost 経路・2026-04-19追加)
+  // USE_V13_VALIDATION=true かつ executeValidationV13_ 定義済みなら
+  // 品質レビュー+最終事実検証+対話型検証を1関数で実行する(4段→2段統合)
+  // false/未設定/例外時は以下の従来 v12.10 ロジックが動く(完全後方互換)
+  // ========================================
+  var useV13Gen = PropertiesService.getScriptProperties().getProperty('USE_V13_VALIDATION') === 'true';
+  var v13GenSucceeded = false;
+  if (useV13Gen && typeof executeValidationV13_ === 'function' && !skipFactCheck) {
+    console.log('🚀 USE_V13_VALIDATION=true (generatePost経路) → validationV13.gs へ処理委譲');
+    try {
+      var v13GenResult = executeValidationV13_(cleanedText, factResult, postType, rates, keys, csForFactCheck, startTime, TIME_LIMIT_SEC);
+      if (v13GenResult && v13GenResult.text) {
+        cleanedText = v13GenResult.text;
+        fixLog = v13GenResult.fixLog || fixLog;
+        v13GenSucceeded = true;
       }
-      console.log('✅ 品質レビュー（Claude）→修正→後処理 完了');
+    } catch (v13GenErr) {
+      console.log('❌ v13.0 例外発生(generatePost経路) → v12.10 従来フローへフォールバック: ' + v13GenErr.message);
     }
-    
-    // 今日の投稿キャッシュに保存（次の投稿の重複チェック用）
-    cacheTodayPost_(postType, cleanedText);
+  } else if (useV13Gen && typeof executeValidationV13_ !== 'function' && !skipFactCheck) {
+    console.log('⚠️ USE_V13_VALIDATION=true だが executeValidationV13_ 未定義 → v12.10従来フローへフォールバック');
   }
-  
-  // ★v12.6: 最終事実検証（事実だけに集中した専用チェック+修正）
-  // 品質レビュー（Q1-Q7同時）は注意が分散し、事実誤りを見逃すことがある。
-  // 全処理が終わった最終テキストに対して「事実だけ」を検証し、問題があれば修正する。
-  // 設計思想: このチャットでユーザーが「承認OKか？」と聞いた時と同じ仕事を自動化
-  if (!skipFactCheck) {
-    var elapsedBeforeFinal = (new Date() - startTime) / 1000;
-    if (elapsedBeforeFinal < TIME_LIMIT_SEC - 30) { // 残り30秒以上あれば実行
-      var finalResult = finalFactVerify_(cleanedText, postType, rates, keys);
-      if (finalResult && finalResult !== cleanedText) {
-        cleanedText = applyPostProcessingChain_(finalResult, postType, rates);
-        fixLog += '【最終事実検証（Claude）】修正あり\n';
-        console.log('✅ 最終事実検証 → 修正 → 後処理 完了');
-        // キャッシュも更新
-        cacheTodayPost_(postType, cleanedText);
+
+  // ★v13.0 が OFF または失敗した場合のみ、以下の v12.10 ロジックが動く
+  if (!v13GenSucceeded) {
+    // ★v8.6: 品質レビュー（Claude API - クロスチェック）
+    // ファクトチェック（Gemini）の後、別モデル（Claude）で投稿品質をレビュー
+    // testAll時はスキップ（SKIP_FACT_CHECK=true時）
+    if (!skipFactCheck) {
+      var qualityResult = qualityReviewPost_(cleanedText, postType, typeConfig, rates, csForFactCheck);
+
+      if (!qualityResult.passed && qualityResult.revisedText) {
+        // 品質修正後に後処理チェーンを再適用
+        var qText = applyPostProcessingChain_(qualityResult.revisedText, postType, rates);
+        cleanedText = qText;
+
+        // fixLogに品質レビュー結果を追記
+        fixLog += '【品質レビュー（Claude）】\n';
+        for (var qi = 0; qi < qualityResult.issues.length; qi++) {
+          fixLog += '  ' + qualityResult.issues[qi].id + ': ' + qualityResult.issues[qi].problem + '\n';
+        }
+        console.log('✅ 品質レビュー（Claude）→修正→後処理 完了');
       }
-    } else {
-      console.log('⏱️ 経過' + Math.round(elapsedBeforeFinal) + '秒 → 最終事実検証をスキップ（時間制限）');
+
+      // 今日の投稿キャッシュに保存（次の投稿の重複チェック用）
+      cacheTodayPost_(postType, cleanedText);
+    }
+
+    // ★v12.6: 最終事実検証（事実だけに集中した専用チェック+修正）
+    // 品質レビュー（Q1-Q7同時）は注意が分散し、事実誤りを見逃すことがある。
+    // 全処理が終わった最終テキストに対して「事実だけ」を検証し、問題があれば修正する。
+    // 設計思想: このチャットでユーザーが「承認OKか？」と聞いた時と同じ仕事を自動化
+    if (!skipFactCheck) {
+      var elapsedBeforeFinal = (new Date() - startTime) / 1000;
+      if (elapsedBeforeFinal < TIME_LIMIT_SEC - 30) { // 残り30秒以上あれば実行
+        var finalResult = finalFactVerify_(cleanedText, postType, rates, keys);
+        if (finalResult && finalResult !== cleanedText) {
+          cleanedText = applyPostProcessingChain_(finalResult, postType, rates);
+          fixLog += '【最終事実検証（Claude）】修正あり\n';
+          console.log('✅ 最終事実検証 → 修正 → 後処理 完了');
+          // キャッシュも更新
+          cacheTodayPost_(postType, cleanedText);
+        }
+      } else {
+        console.log('⏱️ 経過' + Math.round(elapsedBeforeFinal) + '秒 → 最終事実検証をスキップ（時間制限）');
+      }
     }
   }
   
@@ -452,6 +493,229 @@ function generatePost(postType, context, cachedRates) {
     label: typeConfig.label,
     emoji: typeConfig.emoji,
     factCheckSkipped: factCheckSkipped  // ★v12.2: ファクトチェック失敗フラグ
+  };
+}
+
+
+// ===== ★v12.7 Phase 3分割: Phase B用品質レビューチェーン =====
+/**
+ * ★v12.7 Phase 3分割: Phase A後のテキストを受け取り、修正処理チェーンを実行
+ *
+ * この関数は generatePost() 内の [修正フェーズ] を切り出したもので、
+ * タスク3時点では誰からも呼ばれない（並行実装）。
+ * タスク4で executePhaseBQualityReview から呼ばれるようになる。
+ *
+ * 処理フロー:
+ *   1. factResult に基づく修正
+ *      - 検証不能（removable）: forceRemoveIssueLines_ で強制削除
+ *      - 修正可能（fixable）: autoFixPost_ + verifyAutoFix_ でリトライ
+ *      - 修正後に applyPostProcessingChain_ で再後処理
+ *   2. 品質レビュー（qualityReviewPost_ Claude Q1-Q7）
+ *      - 問題あれば修正版テキストで上書き + 後処理
+ *   3. 最終事実検証（finalFactVerify_ Claude JSON検出+コード置換）
+ *      - 問題あれば修正版テキストで上書き + 後処理
+ *
+ * @param {string} cleanedText - Phase A完了時点のテキスト
+ * @param {Object} factResult - Phase Aで実行した factCheckPost_ の結果
+ * @param {string} postType - 投稿タイプ (MORNING, INDICATOR, 等)
+ * @param {Object} rates - レートオブジェクト
+ * @param {Object} keys - APIキー群 (GEMINI_API_KEY, CLAUDE_API_KEY, SPREADSHEET_ID)
+ * @param {Array|null} csForFactCheck - 通貨強弱ランキング（方向チェック用）
+ * @param {Date} startTime - 生成開始時刻（時間制限判定用）
+ * @param {number} TIME_LIMIT_SEC - 時間制限（秒）
+ *
+ * @return {Object} { text, fixLog, wasFixed, originalBeforeFix }
+ *   - text: 修正後の最終テキスト
+ *   - fixLog: 修正履歴（承認メール表示用）
+ *   - wasFixed: 何らかの修正があったか
+ *   - originalBeforeFix: 修正前の元テキスト（本文のみ、ハッシュタグ除く）
+ */
+function executeQualityReviewChain_(cleanedText, factResult, postType, rates, keys, csForFactCheck, startTime, TIME_LIMIT_SEC) {
+  // ========================================
+  // ★v13.0 並行稼働フラグ(2026-04-19追加)
+  // USE_V13_VALIDATION=true の場合、validationV13.gs の新検証フローを呼ぶ。
+  // false/未設定の場合は従来 v12.10 ロジックが動く(完全後方互換)。
+  // validationV13.gs 未追加の環境でも typeof チェックで安全にフォールバック。
+  // ========================================
+  var useV13 = PropertiesService.getScriptProperties().getProperty('USE_V13_VALIDATION') === 'true';
+  if (useV13 && typeof executeValidationV13_ === 'function') {
+    console.log('🚀 USE_V13_VALIDATION=true → validationV13.gs へ処理委譲');
+    try {
+      return executeValidationV13_(cleanedText, factResult, postType, rates, keys, csForFactCheck, startTime, TIME_LIMIT_SEC);
+    } catch (v13Err) {
+      console.log('❌ v13.0 例外発生 → v12.10 従来フローへフォールバック: ' + v13Err.message);
+      // フォールバック: 以下の従来ロジックが走る
+    }
+  } else if (useV13 && typeof executeValidationV13_ !== 'function') {
+    console.log('⚠️ USE_V13_VALIDATION=true だが executeValidationV13_ 未定義 → v12.10従来フローへフォールバック');
+  }
+
+  var fixLog = '';
+  var originalBeforeFix = cleanedText;
+  var wasFixed = false;
+
+  // テスト一括実行時は修正処理を全スキップ（GAS 6分制限対策）
+  var skipFactCheck = PropertiesService.getScriptProperties().getProperty('SKIP_FACT_CHECK') === 'true';
+  if (skipFactCheck) {
+    console.log('⚠️ SKIP_FACT_CHECK=true → executeQualityReviewChain_ 全処理スキップ');
+    return { text: cleanedText, fixLog: fixLog, wasFixed: false, originalBeforeFix: originalBeforeFix };
+  }
+  
+  // ★v12.10: DISABLE_FACTCHECK 状態のログ（診断書 水準1-1）
+  var disableFactCheck = PropertiesService.getScriptProperties().getProperty('DISABLE_FACTCHECK') !== 'false';
+  if (disableFactCheck && factResult && factResult.passed) {
+    console.log('ℹ️ factCheck 無効化中 → Step 1 (factCheckベース修正) は自動スキップ');
+  }
+
+  // ===== Step 1: factResult に基づく修正（removable削除 + fixable修正） =====
+  if (!factResult.passed && factResult.issues && factResult.issues.length > 0) {
+    var fixableIssues = [];
+    var removableIssues = [];
+    for (var fi = 0; fi < factResult.issues.length; fi++) {
+      if (factResult.issues[fi].removable) {
+        removableIssues.push(factResult.issues[fi]);
+      } else {
+        fixableIssues.push(factResult.issues[fi]);
+      }
+    }
+
+    // Step 1a: 検証不能な記述は即削除（機械的処理）
+    if (removableIssues.length > 0) {
+      cleanedText = forceRemoveIssueLines_(cleanedText, removableIssues);
+      fixLog += '【検証不能→削除 ' + removableIssues.length + '件】\n';
+      for (var rmi = 0; rmi < removableIssues.length; rmi++) {
+        fixLog += '  🗑️ ' + (removableIssues[rmi].claim || '').substring(0, 50) + '\n';
+      }
+      console.log('🗑️ 検証不能な記述を' + removableIssues.length + '件削除');
+    }
+
+    // Step 1b: 修正可能な❌はautoFixPost_に渡す
+    if (fixableIssues.length > 0) {
+      var fixResult = autoFixPost_(cleanedText, fixableIssues, postType, keys.GEMINI_API_KEY, rates, csForFactCheck);
+
+      // ★v8.0: 自動修正後に問題の表現がまだ残っていないか検証+リトライ
+      if (fixResult.fixed) {
+        var remainingIssues = verifyAutoFix_(fixResult.text, fixableIssues);
+        if (remainingIssues.length > 0) {
+          console.log('⚠️ 自動修正後も' + remainingIssues.length + '件の問題が残存 → リトライ');
+          for (var ri = 0; ri < remainingIssues.length; ri++) {
+            console.log('  残存: ' + remainingIssues[ri].claim);
+          }
+          var retryFixResult = autoFixPost_(fixResult.text, remainingIssues, postType, keys.GEMINI_API_KEY, rates, csForFactCheck);
+          if (retryFixResult.fixed) {
+            var stillRemaining = verifyAutoFix_(retryFixResult.text, remainingIssues);
+            if (stillRemaining.length > 0) {
+              console.log('⚠️ リトライ後も' + stillRemaining.length + '件残存（強制削除で対応）');
+              var forcedText = forceRemoveIssueLines_(retryFixResult.text, stillRemaining);
+              fixResult = { text: forcedText, fixed: true, fixLog: retryFixResult.fixLog + '\n⚠️ 残存問題を強制削除' };
+            } else {
+              console.log('✅ リトライで全件修正完了');
+              fixResult = retryFixResult;
+            }
+          }
+        }
+      }
+
+      if (fixResult.fixed) {
+        cleanedText = fixResult.text;
+        fixLog += fixResult.fixLog;
+      }
+    }
+
+    // 修正・削除があった場合、再度後処理を適用
+    if (removableIssues.length > 0 || fixableIssues.length > 0) {
+      cleanedText = applyPostProcessingChain_(cleanedText, postType, rates);
+      wasFixed = true;
+      console.log('✅ ファクトチェック→修正/削除→後処理 完了');
+    }
+  }
+
+  // ===== Step 2: 品質レビュー（Claude API - クロスチェック） =====
+  var typeConfig = POST_TYPES[postType] || {};
+  var qualityResult = qualityReviewPost_(cleanedText, postType, typeConfig, rates, csForFactCheck);
+
+  if (!qualityResult.passed && qualityResult.revisedText) {
+    // 品質修正後に後処理チェーンを再適用
+    cleanedText = applyPostProcessingChain_(qualityResult.revisedText, postType, rates);
+
+    // fixLogに品質レビュー結果を追記
+    fixLog += '【品質レビュー（Claude）】\n';
+    for (var qi = 0; qi < qualityResult.issues.length; qi++) {
+      fixLog += '  ' + qualityResult.issues[qi].id + ': ' + qualityResult.issues[qi].problem + '\n';
+    }
+    wasFixed = true;
+    console.log('✅ 品質レビュー（Claude）→修正→後処理 完了');
+  }
+
+  // 今日の投稿キャッシュに保存（次の投稿の重複チェック用）
+  cacheTodayPost_(postType, cleanedText);
+
+  // ===== Step 3: 最終事実検証（★v12.6: 事実だけに集中した専用チェック+修正） =====
+  // 品質レビュー（Q1-Q7同時）は注意が分散し、事実誤りを見逃すことがある。
+  // 全処理が終わった最終テキストに対して「事実だけ」を検証し、問題があれば修正する。
+  var elapsedBeforeFinal = (new Date() - startTime) / 1000;
+  if (elapsedBeforeFinal < TIME_LIMIT_SEC - 30) {
+    var finalResult = finalFactVerify_(cleanedText, postType, rates, keys);
+    if (finalResult && finalResult !== cleanedText) {
+      cleanedText = applyPostProcessingChain_(finalResult, postType, rates);
+      fixLog += '【最終事実検証（Claude）】修正あり\n';
+      wasFixed = true;
+      console.log('✅ 最終事実検証 → 修正 → 後処理 完了');
+      // キャッシュも更新
+      cacheTodayPost_(postType, cleanedText);
+    }
+  } else {
+    console.log('⏱️ 経過' + Math.round(elapsedBeforeFinal) + '秒 → 最終事実検証をスキップ（時間制限）');
+  }
+
+  // ===== ★v12.7 タスク17-19: Step 4 - 対話型検証（投稿本文から検証質問を抽出→Web検証→修正） =====
+  // 既存の3段検証(factCheck/qualityReview/finalFactVerify)はチェックリスト型。
+  // 対話型検証は投稿本文から独自に検証質問を抽出し、既存検証で見逃される
+  // 「継続事象への時制付き言及」「要人発言の捏造」等を補完検出する。
+  //
+  // 有効化制御: ScriptProperties 'INTERACTIVE_VERIFY_ENABLED' = 'true' の場合のみ実行
+  //   デフォルト(未設定): 有効(true相当)
+  //   緊急ロールバック: 'false' に設定すれば即座に無効化
+  //
+  // 時間制限: 最終検証完了後、残り180秒以上ある場合のみ実行
+  var interactiveVerifyEnabled = PropertiesService.getScriptProperties().getProperty('INTERACTIVE_VERIFY_ENABLED');
+  var shouldRunInteractive = (interactiveVerifyEnabled !== 'false'); // デフォルト有効
+  var elapsedBeforeInteractive = (new Date() - startTime) / 1000;
+
+  if (shouldRunInteractive && elapsedBeforeInteractive < TIME_LIMIT_SEC - 180) {
+    if (typeof executeInteractiveVerify_ === 'function') {
+      try {
+        var verifyResult = executeInteractiveVerify_(cleanedText, postType, rates, keys);
+        if (verifyResult && verifyResult.fixApplied && verifyResult.fixedText && verifyResult.fixedText !== cleanedText) {
+          cleanedText = applyPostProcessingChain_(verifyResult.fixedText, postType, rates);
+          fixLog += '【対話型検証（Claude+Web検索）】❌' + verifyResult.ngCount +
+                    '件/⚠️' + verifyResult.warnCount + '件 → 修正あり\n';
+          wasFixed = true;
+          console.log('✅ 対話型検証 → 修正 → 後処理 完了');
+          // キャッシュも更新
+          cacheTodayPost_(postType, cleanedText);
+        } else if (verifyResult && verifyResult.extractedCount === 0) {
+          console.log('ℹ️ 対話型検証: 検証対象のclaim抽出ゼロ(相場観・感想のみ)');
+        } else if (verifyResult && !verifyResult.fixApplied) {
+          console.log('ℹ️ 対話型検証: 問題検出されず(全claim ✅ 判定)');
+        }
+      } catch (interactiveErr) {
+        console.log('⚠️ 対話型検証エラー（投稿には影響なし、既存フローで継続）: ' + interactiveErr.message);
+      }
+    } else {
+      console.log('ℹ️ executeInteractiveVerify_ 未定義 → 対話型検証スキップ(interactiveVerify.gs未更新)');
+    }
+  } else if (!shouldRunInteractive) {
+    console.log('ℹ️ INTERACTIVE_VERIFY_ENABLED=false → 対話型検証スキップ(手動無効化)');
+  } else {
+    console.log('⏱️ 経過' + Math.round(elapsedBeforeInteractive) + '秒 → 対話型検証をスキップ（時間制限）');
+  }
+
+  return {
+    text: cleanedText,
+    fixLog: fixLog,
+    wasFixed: wasFixed,
+    originalBeforeFix: originalBeforeFix
   };
 }
 
@@ -610,7 +874,7 @@ function analyzeMarketWithClaude_(rates, postType, keys) {
     try {
       var dowSummary = getDowTheorySummary_(keys.SPREADSHEET_ID);
       if (dowSummary) dataSummary += '\n' + dowSummary;
-    } catch (dowErr) { /* SH/SL未バックフィルの場合はスキップ */ }
+    } catch (dowErr) { console.log('⚠️ ダウ理論取得失敗（続行）: ' + dowErr.message); }
     
     // 商品価格（BTC/GOLDのみ。WTI/天然ガスはAlpha Vantageデータが古いため停止）
     try {
@@ -618,7 +882,7 @@ function analyzeMarketWithClaude_(rates, postType, keys) {
       dataSummary += '\n【商品価格】\n';
       if (btcCom && btcCom.btc) dataSummary += 'BTC: ' + btcCom.btc.toFixed(0) + 'ドル\n';
       if (btcCom && btcCom.gold) dataSummary += 'ゴールド: ' + btcCom.gold.toFixed(2) + 'ドル\n';
-    } catch (e) { /* 取得失敗は無視 */ }
+    } catch (e) { console.log('⚠️ 商品価格取得失敗（続行）: ' + e.message); }
     
     // ニュースキャッシュ（buildPrompt_で取得済みの場合のみ）
     var scriptCache = CacheService.getScriptCache();
@@ -690,6 +954,15 @@ function finalFactVerify_(postText, postType, rates, keys) {
     // ===== 確定データ収集 =====
     var factData = '';
     
+    // ★v12.7: 本日の日付を明示（未来日付ハルシネーション防止のための基準）
+    var todayForVerify = new Date();
+    var todayStr = Utilities.formatDate(todayForVerify, 'Asia/Tokyo', 'yyyy年M月d日（E）');
+    var todayIso = Utilities.formatDate(todayForVerify, 'Asia/Tokyo', 'yyyy-MM-dd');
+    factData += '【本日の日付（最重要の基準）】\n';
+    factData += todayStr + '（ISO: ' + todayIso + '）\n';
+    factData += '→ この日付より後の日付の出来事を「起きた」「発言した」等の過去形・完了形で書いていたらハルシネーション（誤り）。\n';
+    factData += '→ ただし「〜発表予定」「〜に注目」「〜を控える」等の未来予定は正しい記述。\n\n';
+    
     // 現在レート
     if (rates) {
       factData += '【確定レート（APIリアルタイム値）】\n';
@@ -716,7 +989,7 @@ function finalFactVerify_(postText, postType, rates, keys) {
           factData += '→ 本日のドル円は始値より下落（= 円高方向）。「円安」と書いたら誤り\n';
         }
       }
-    } catch (e) { /* 始値取得失敗は無視 */ }
+    } catch (e) { console.log('⚠️ 始値取得失敗（続行）: ' + e.message); }
     
     // 通貨強弱
     try {
@@ -728,7 +1001,7 @@ function finalFactVerify_(postText, postType, rates, keys) {
           factData += cs.currency + ': ' + (cs.score >= 0 ? '+' : '') + cs.score.toFixed(2) + '% ' + cs.direction + '\n';
         }
       }
-    } catch (e) { /* 通貨強弱取得失敗は無視 */ }
+    } catch (e) { console.log('⚠️ 通貨強弱取得失敗（続行）: ' + e.message); }
     
     // 経済カレンダー
     try {
@@ -736,7 +1009,7 @@ function finalFactVerify_(postText, postType, rates, keys) {
       if (cal) {
         factData += '\n【経済カレンダー（結果欄が空=未発表）】\n' + cal + '\n';
       }
-    } catch (e) { /* カレンダー取得失敗は無視 */ }
+    } catch (e) { console.log('⚠️ カレンダー取得失敗（続行）: ' + e.message); }
     
     // 政策金利（★v12.6: RBA 4.10%等の事実誤認防止）
     try {
@@ -744,7 +1017,7 @@ function finalFactVerify_(postText, postType, rates, keys) {
       if (policyRates) {
         factData += '\n【政策金利（確定データシートの値が正しい。お前の内部知識より優先）】\n' + policyRates;
       }
-    } catch (e) { /* 取得失敗は無視 */ }
+    } catch (e) { console.log('⚠️ 政策金利取得失敗（続行）: ' + e.message); }
     
     // 要人
     try {
@@ -752,7 +1025,27 @@ function finalFactVerify_(postText, postType, rates, keys) {
       if (leaders) {
         factData += '\n【要人（確定データシートの値が正しい）】\n' + leaders;
       }
-    } catch (e) { /* 取得失敗は無視 */ }
+    } catch (e) { console.log('⚠️ 要人取得失敗（続行）: ' + e.message); }
+    
+    // ★v12.7: 継続中重大事象（「関税ショック前」等のハルシネーション防止）
+    try {
+      var ongoingEvents = getOngoingEvents_();
+      if (ongoingEvents.length > 0) {
+        factData += '\n【継続中重大事象チェック（最重要: これらは投稿時点で継続中）】\n';
+        for (var ei = 0; ei < ongoingEvents.length; ei++) {
+          var ev = ongoingEvents[ei];
+          factData += '・' + ev.name + '（開始: ' + ev.startDate + '、現在も継続中）\n';
+          if (ev.summary) factData += '  概要: ' + ev.summary + '\n';
+          if (ev.cautionKeywords) factData += '  注意キーワード: ' + ev.cautionKeywords + '\n';
+        }
+        factData += '\n★投稿本文に以下のような表現があれば要警戒:\n';
+        factData += '- 「〜前」「〜以前」「〜発動前」「〜ショック前」「〜が起きる前」\n';
+        factData += '- 「〜が来る前」「〜が始まる前」\n';
+        factData += '継続中事象を「まだ来ていない」「起きていない」と書いていたら\n';
+        factData += 'ハルシネーション。correctには「〜が続く中」「〜の影響下で」等に書き換えよ。\n';
+        factData += '※「2024年当時」「パンデミック前の」等、時期を明示する表現は保持してよい。\n';
+      }
+    } catch (e) { console.log('⚠️ 継続中重大事象取得失敗（続行）: ' + e.message); }
     
     // ===== Step 1: Claude APIで事実誤りを検出（JSON出力強制） =====
     var prompt = '以下のFX投稿テキストに事実の誤りがないか検証せよ。\n';
@@ -765,7 +1058,15 @@ function finalFactVerify_(postText, postType, rates, keys) {
     prompt += '2. 通貨強弱と「最強」「最弱」の記述が整合しているか\n';
     prompt += '3. 未発表指標を発表済みと書いていないか\n';
     prompt += '4. 要人名・政策の事実誤認がないか\n';
-    prompt += '5. レート水準とペア名が一致しているか\n\n';
+    prompt += '5. レート水準とペア名が一致しているか\n';
+    prompt += '6. ★v12.7: 本日の日付より後の日付の出来事を過去形で書いていないか（最重要）\n';
+    prompt += '   例（誤り）: 「4/17、トランプが解任示唆」「4月17日、米CPIが上振れ」\n';
+    prompt += '   例（正しい）: 「4/17の米CPIに注目」「4月17日発表予定」\n';
+    prompt += '   誤りの場合、correctには該当部分を丸ごと削除するか、未来予定の表現に書き換えよ\n\n';
+    prompt += '7. ★v12.7: 継続中重大事象を「未発生」扱いしていないか\n';
+    prompt += '   例（誤り）: 「関税ショック前の数字」→実際は関税ショックは2025年3月から継続中\n';
+    prompt += '   例（正しい）: 「関税ショックの最中の数字」「関税の影響下での数字」\n';
+    prompt += '   誤りの場合、correctには「〜が続く中」「〜の影響下で」等の書き換えを指定せよ\n\n';
     prompt += '★出力は以下のJSON形式のみ。JSON以外の文字を1文字でも出力したら失敗。\n';
     prompt += '問題なし: {"hasErrors": false}\n';
     prompt += '問題あり: {"hasErrors": true, "errors": [\n';
@@ -777,6 +1078,8 @@ function finalFactVerify_(postText, postType, rates, keys) {
     prompt += '・correctはwrongの「差し替え」。投稿テキスト内でそのまま入れ替えても文章が成立する表現だけ書け\n';
     prompt += '・correctに括弧付き説明（〜＝円安）や理由を絶対に入れるな。理由はreasonに書け\n';
     prompt += '・問題のない箇所をerrorsに入れるな。事実誤りがある箇所だけ\n';
+    prompt += '・四捨五入・丸め誤差（0.7138 vs 0.71376）は誤りではない。errorsに入れるな\n';
+    prompt += '・wrongとcorrectが同じになるなら、それは誤りではない。errorsに入れるな\n';
     prompt += '例: wrong="159円台まで円高" → correct="159円台まで円安" reason="始値158.72→159は上昇=円安"\n';
     prompt += '例: wrong="円も対ドルでは強いけど" → correct="円も対ドルでは弱いけど" reason="ドル円上昇=円安=円は弱い"\n';
     prompt += 'NG: correct="円も対ドルでは弱い（始値158.72→159.00＝円安）" ← 説明が混入。投稿が壊れる\n';
@@ -801,14 +1104,27 @@ function finalFactVerify_(postText, postType, rates, keys) {
       var cleaned = result.text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch (parseErr) {
-      // フォールバック: 文章中からJSON部分を抽出
+      // フォールバック1: 文章中からJSON部分を抽出
       try {
         var jsonMatch = result.text.match(/\{[\s\S]*"hasErrors"[\s\S]*\}/);
         if (jsonMatch) {
           parsed = JSON.parse(jsonMatch[0]);
           console.log('✅ 最終事実検証: フォールバックJSON抽出成功');
         }
-      } catch (e2) { /* フォールバックも失敗 */ }
+      } catch (e2) { console.log('⚠️ 最終事実検証: JSON抽出失敗（続行）: ' + e2.message); }
+      
+      // フォールバック2: 切れたJSONを修復（reason途中で切れた場合）
+      if (!parsed) {
+        try {
+          var raw = result.text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+          // 不完全なJSON末尾を補完: "}]}" で閉じてみる
+          var repaired = raw.replace(/,?\s*"reason"\s*:\s*"[^"]*$/, '"reason": ""') + ']}';
+          // さらに余分な閉じ括弧を除去
+          repaired = repaired.replace(/\]\}(\]\})+$/, ']}');
+          parsed = JSON.parse(repaired);
+          console.log('✅ 最終事実検証: 切れたJSON修復成功');
+        } catch (e3) { console.log('⚠️ 最終事実検証: JSON修復失敗（続行）: ' + e3.message); }
+      }
     }
     
     if (!parsed) {
@@ -817,7 +1133,7 @@ function finalFactVerify_(postText, postType, rates, keys) {
       return null;
     }
     
-    // 問題なし
+    // hasErrors=falseが明示されていなくても、errorsが空なら問題なし
     if (!parsed.hasErrors || !parsed.errors || parsed.errors.length === 0) {
       console.log('✅ 最終事実検証: 問題なし');
       return null;
@@ -831,6 +1147,12 @@ function finalFactVerify_(postText, postType, rates, keys) {
     for (var ei = 0; ei < parsed.errors.length; ei++) {
       var err = parsed.errors[ei];
       if (!err.wrong || !err.correct) continue;
+      
+      // ★v12.6: wrongとcorrectが同一なら修正不要 → スキップ
+      if (err.wrong === err.correct) {
+        console.log('  ⏭️ wrong===correct → スキップ: 「' + err.wrong + '」');
+        continue;
+      }
       
       // ★安全弁: correctフィールドに説明が混入していたらスキップ
       // 「（...）」付き説明、wrongの2倍以上の長さ、「問題ない」等のメタ表現を検出
@@ -898,17 +1220,21 @@ function callClaudeApi_(prompt, apiKey, options) {
   var url = 'https://api.anthropic.com/v1/messages';
   
   var requestBody = {
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    model: CLAUDE_MODEL,  // ★v12.6.1: config.gs定数参照（ハードコード廃止）
+    max_tokens: opts.maxTokens || 4096,  // ★v13.0: Stage 1総合レビュー用に可変化(デフォルト4096・Stage1で8192指定)
     messages: [
       { role: 'user', content: prompt }
     ]
   };
   
-  // Web検索ツール（品質レビューQ6用）
+  // Web検索ツール（品質レビューQ6用・ニュース取得用）
+  // ★v12.10: max_uses 可変化
+  // 注: web_search は server-side tool のため tool_choice による強制は非対応。
+  //     検索を使わせたい場合はプロンプトで強く指示する方式で対応する。
   if (opts.useWebSearch) {
+    var maxSearchUses = opts.maxSearchUses || 3;
     requestBody.tools = [
-      { type: 'web_search_20250305', name: 'web_search', max_uses: 3 }
+      { type: 'web_search_20250305', name: 'web_search', max_uses: maxSearchUses }
     ];
   }
   
@@ -1093,3 +1419,545 @@ function extractTextFromResponse_(body) {
   }
   return null;
 }
+
+
+// ===== ★v12.7 タスク3動作確認用テスト関数 =====
+/**
+ * executeQualityReviewChain_ 関数が正しく定義され、基本動作するかを検証。
+ * GASエディタのプルダウンから実行してください。
+ *
+ * タスク3では関数の存在確認と、SKIP_FACT_CHECK=true時の即return動作のみ検証。
+ * 実際の修正処理のテストはタスク4（Phase B新設）以降で行う。
+ */
+function testTask3QualityReviewChainExists() {
+  console.log('=== タスク3: executeQualityReviewChain_ 関数存在確認テスト ===');
+  console.log('');
+
+  // 1. 関数が存在するか
+  console.log('1. 関数定義の確認');
+  if (typeof executeQualityReviewChain_ !== 'function') {
+    console.log('❌ executeQualityReviewChain_ 関数が見つかりません');
+    return;
+  }
+  console.log('   ✅ executeQualityReviewChain_ 関数が定義されています');
+
+  // 2. SKIP_FACT_CHECK=true で呼び出してスルーすることを確認
+  console.log('');
+  console.log('2. スキップモード動作確認（SKIP_FACT_CHECK=true）');
+  var props = PropertiesService.getScriptProperties();
+  var originalSkip = props.getProperty('SKIP_FACT_CHECK');
+  props.setProperty('SKIP_FACT_CHECK', 'true');
+
+  try {
+    var dummyFactResult = { passed: true, summary: 'スキップ', details: '', issues: [] };
+    var dummyText = 'テスト投稿本文';
+    var result = executeQualityReviewChain_(
+      dummyText,
+      dummyFactResult,
+      'MORNING',
+      {},  // rates
+      { GEMINI_API_KEY: '', CLAUDE_API_KEY: '', SPREADSHEET_ID: '' },  // keys
+      null,  // csForFactCheck
+      new Date(),  // startTime
+      300  // TIME_LIMIT_SEC
+    );
+
+    if (result.text === dummyText) {
+      console.log('   ✅ テキストは変更されていない');
+    } else {
+      console.log('   ❌ テキストが変更されている（スキップモードのはず）');
+      return;
+    }
+    if (result.wasFixed === false) {
+      console.log('   ✅ wasFixed=false');
+    } else {
+      console.log('   ❌ wasFixed=' + result.wasFixed + '（falseのはず）');
+      return;
+    }
+    if (result.fixLog === '') {
+      console.log('   ✅ fixLog=空文字');
+    } else {
+      console.log('   ❌ fixLog="' + result.fixLog + '"（空のはず）');
+      return;
+    }
+    if (result.originalBeforeFix === dummyText) {
+      console.log('   ✅ originalBeforeFixは入力テキストと一致');
+    } else {
+      console.log('   ❌ originalBeforeFix不一致');
+      return;
+    }
+  } catch (e) {
+    console.log('   ❌ エラー: ' + e.message);
+    console.log('   Stack: ' + e.stack);
+    return;
+  } finally {
+    // スキップフラグを元の状態に戻す
+    if (originalSkip) {
+      props.setProperty('SKIP_FACT_CHECK', originalSkip);
+    } else {
+      props.deleteProperty('SKIP_FACT_CHECK');
+    }
+  }
+
+  // 3. 戻り値のオブジェクト構造確認
+  console.log('');
+  console.log('3. 戻り値のフィールド構造確認');
+  console.log('   期待フィールド: text, fixLog, wasFixed, originalBeforeFix');
+  console.log('   ✅ 全フィールドが存在');
+
+  console.log('');
+  console.log('🎉 タスク3完了: executeQualityReviewChain_ 関数が正常に定義されています');
+  console.log('  （タスク4で Phase B 新設時に呼ばれるようになります）');
+  console.log('  （generatePost() の既存処理は一切変更されていないため、本番運用に影響なし）');
+}
+
+
+// ========================================
+// ★v12.7 タスク17-a: 確定データ収集の一元化（collectAnchorData_）
+// ========================================
+
+/**
+ * 現在レートと始値から、各通貨ペアの方向(up/down)を算出
+ * @param {Object} currentRates - 現在レート（rates.usdjpy 等）
+ * @param {Object} openRates - 始値（openRates.usdjpy 等）
+ * @return {Object} { usdjpy: 'up'|'down', eurjpy: 'up'|'down', ... }
+ */
+function computeRateDirection_(currentRates, openRates) {
+  var direction = {};
+  if (!currentRates || !openRates) return direction;
+
+  for (var key in openRates) {
+    if (openRates.hasOwnProperty(key) && currentRates[key] && openRates[key]) {
+      var current = Number(currentRates[key]);
+      var open = Number(openRates[key]);
+      if (!isNaN(current) && !isNaN(open)) {
+        direction[key] = current > open ? 'up' : 'down';
+      }
+    }
+  }
+  return direction;
+}
+
+
+/**
+ * 確定データ(Anchor Data)を構造化オブジェクトとして収集する共通関数
+ *
+ * 対話型検証 Step2・Step3、finalFactVerify_、将来的にbuildPrompt_から呼ばれる
+ * 「真実のアンカー」を返す唯一の関数。
+ *
+ * 設計思想(v1.9):
+ *   - 確定データの取得ロジックを1箇所に集約
+ *   - 構造化オブジェクト + フォーマッターで、用途別のテキスト変換が可能
+ *   - モック注入がしやすく、単体テストに優しい
+ *   - 新しい確定データ(VIX等)を追加する時、この関数だけ修正すればよい
+ *
+ * @param {Object} rates - Twelve Data APIから取得した現在レート
+ * @param {Object} keys - getApiKeys()の戻り値
+ * @param {Object} [options] - オプション
+ * @param {boolean} [options.includeCalendar=true] - 経済カレンダーを含めるか
+ * @param {boolean} [options.includeOngoingEvents=true] - 継続中事象を含めるか
+ * @param {string} [options.calendarScope='today'] - 'today'|'this_week'|'next_week'
+ * @return {Object} 構造化された確定データオブジェクト + フォーマッターメソッド
+ */
+function collectAnchorData_(rates, keys, options) {
+  var opts = options || {};
+  var includeCalendar = opts.includeCalendar !== false;
+  var includeOngoingEvents = opts.includeOngoingEvents !== false;
+  var calendarScope = opts.calendarScope || 'today';
+
+  // === 1. 基本情報（本日の日付） ===
+  var now = new Date();
+  var today = {
+    iso: Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd'),
+    jp: Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy年M月d日（E）'),
+    timestamp: now.getTime()
+  };
+
+  // === 2. 確定レート（現在レート + 始値 + 方向） ===
+  var rateData = {
+    current: rates || {},
+    open: null,
+    direction: null
+  };
+
+  try {
+    if (keys && keys.SPREADSHEET_ID) {
+      var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+      var openRates = getTodayOpenRates_(ss);
+      if (openRates) {
+        rateData.open = openRates;
+        rateData.direction = computeRateDirection_(rates, openRates);
+      }
+    }
+  } catch (e) {
+    console.log('⚠️ collectAnchorData_: 始値取得失敗（続行）: ' + e.message);
+  }
+
+  // === 3. 通貨強弱ランキング ===
+  var currencyStrength = [];
+  try {
+    if (keys && keys.SPREADSHEET_ID) {
+      var hotPairResult = detectHotPair_(rates, keys.SPREADSHEET_ID);
+      if (hotPairResult && hotPairResult.csRanking) {
+        currencyStrength = hotPairResult.csRanking;
+      }
+    }
+  } catch (e) {
+    console.log('⚠️ collectAnchorData_: 通貨強弱取得失敗（続行）: ' + e.message);
+  }
+
+  // === 4. 政策金利（テキスト形式、既存関数流用） ===
+  var policyRates = '';
+  try {
+    policyRates = getPolicyRatesText_();
+  } catch (e) {
+    console.log('⚠️ collectAnchorData_: 政策金利取得失敗（続行）: ' + e.message);
+  }
+
+  // === 5. 要人リスト（テキスト形式、既存関数流用） ===
+  var worldLeaders = '';
+  try {
+    worldLeaders = getWorldLeadersText_();
+  } catch (e) {
+    console.log('⚠️ collectAnchorData_: 要人リスト取得失敗（続行）: ' + e.message);
+  }
+
+  // === 6. 経済カレンダー（optional） ===
+  var calendar = null;
+  if (includeCalendar) {
+    try {
+      calendar = getEconomicCalendar_(calendarScope);
+    } catch (e) {
+      console.log('⚠️ collectAnchorData_: 経済カレンダー取得失敗（続行）: ' + e.message);
+    }
+  }
+
+  // === 7. 継続中事象（v12.7タスク13-15で実装済み） ===
+  var ongoingEvents = [];
+  if (includeOngoingEvents) {
+    try {
+      // getOngoingEvents_ は sheetsManager.gs にある
+      // 戻り値: [{ name, startDate, lastUpdated, status, summary, affectedTypes, cautionKeywords }, ...]
+      if (typeof getOngoingEvents_ === 'function') {
+        ongoingEvents = getOngoingEvents_() || [];
+      }
+    } catch (e) {
+      console.log('⚠️ collectAnchorData_: 継続中事象取得失敗（続行）: ' + e.message);
+    }
+  }
+
+  // === 8. 構造化オブジェクトを返却（フォーマッター付き） ===
+  var anchorData = {
+    today: today,
+    rates: rateData,
+    currencyStrength: currencyStrength,
+    policyRates: policyRates,
+    worldLeaders: worldLeaders,
+    calendar: calendar,
+    ongoingEvents: ongoingEvents,
+
+    // ===== フォーマッターメソッド =====
+
+    /**
+     * 汎用の「確定データ」文字列形式
+     * finalFactVerify_, factCheckPost_ スタイル
+     */
+    toFactString: function() {
+      var txt = '';
+
+      // 本日の日付（最優先）
+      txt += '【本日の日付（最重要の基準）】\n';
+      txt += this.today.jp + '（ISO: ' + this.today.iso + '）\n';
+      txt += '→ この日付より後の日付の出来事を「起きた」「発言した」等の過去形・完了形で書いていたらハルシネーション（誤り）。\n';
+      txt += '→ ただし「〜発表予定」「〜に注目」「〜を控える」等の未来予定は正しい記述。\n\n';
+
+      // 確定レート
+      if (this.rates.current && Object.keys(this.rates.current).length > 0) {
+        txt += '【確定レート（APIリアルタイム値）】\n';
+        if (typeof CURRENCY_PAIRS !== 'undefined' && CURRENCY_PAIRS && CURRENCY_PAIRS.length > 0) {
+          for (var i = 0; i < CURRENCY_PAIRS.length; i++) {
+            var p = CURRENCY_PAIRS[i];
+            if (this.rates.current[p.key]) {
+              txt += p.symbol + '（' + p.label + '）: ' + formatRate_(this.rates.current[p.key], p.key, 'verify') + '\n';
+            }
+          }
+        }
+        txt += '\n';
+      }
+
+      // 本日始値（方向判定）
+      if (this.rates.open && this.rates.direction && this.rates.open.usdjpy) {
+        txt += '【本日始値（方向判定の基準）】\n';
+        txt += 'USD/JPY始値: ' + formatRate_(this.rates.open.usdjpy, 'usdjpy', 'verify') + '\n';
+        if (this.rates.direction.usdjpy === 'up') {
+          txt += '→ 本日のドル円は始値より上昇（= 円安方向）。「円高」と書いたら誤り\n';
+        } else {
+          txt += '→ 本日のドル円は始値より下落（= 円高方向）。「円安」と書いたら誤り\n';
+        }
+        txt += '\n';
+      }
+
+      // 通貨強弱
+      if (this.currencyStrength.length > 0) {
+        txt += '【通貨強弱（実測値）】\n';
+        for (var ci = 0; ci < this.currencyStrength.length; ci++) {
+          var cs = this.currencyStrength[ci];
+          txt += cs.currency + ': ' + (cs.score >= 0 ? '+' : '') + cs.score.toFixed(2) + '% ' + cs.direction + '\n';
+        }
+        txt += '\n';
+      }
+
+      // 政策金利
+      if (this.policyRates) {
+        txt += '【主要中銀の政策金利】\n' + this.policyRates + '\n';
+      }
+
+      // 要人
+      if (this.worldLeaders) {
+        txt += '【主要国の首脳・要人】\n' + this.worldLeaders + '\n';
+      }
+
+      // 経済カレンダー
+      if (this.calendar) {
+        txt += '【経済カレンダー】\n' + this.calendar + '\n';
+      }
+
+      // 継続中事象
+      if (this.ongoingEvents.length > 0) {
+        txt += '【継続中の重大事象（誤った時制で書かないこと）】\n';
+        for (var oi = 0; oi < this.ongoingEvents.length; oi++) {
+          var ev = this.ongoingEvents[oi];
+          txt += '- ' + ev.name;
+          if (ev.startDate) txt += '（' + ev.startDate + '〜継続中）';
+          if (ev.summary) txt += ': ' + ev.summary;
+          txt += '\n';
+          if (ev.cautionKeywords) {
+            txt += '  ⚠️ 誤用注意: ' + ev.cautionKeywords + '\n';
+          }
+        }
+        txt += '\n';
+      }
+
+      return txt;
+    },
+
+    /**
+     * 対話型検証 Step2（Web検証）に最適化した文字列
+     * 「これを基準に主張を検証せよ」の指示に使う
+     */
+    toVerifyPrompt: function() {
+      var txt = '【検証の基準となる確定データ】\n';
+      txt += 'Web検索結果がこの確定データと矛盾する場合は、確定データを優先せよ。\n';
+      txt += '確定データはTwelve Data APIやスプレッドシートの人間管理データで、最も信頼できる情報源。\n\n';
+      txt += this.toFactString();
+      return txt;
+    },
+
+    /**
+     * 対話型検証 Step3（修正）に最適化した文字列
+     * 「この確定データを守って修正せよ」の指示に使う
+     */
+    toFixPrompt: function() {
+      var txt = '【修正時に守るべき確定データ】\n';
+      txt += 'この数値・方向・日付を変えてはならない。\n';
+      txt += '修正の結果、これらと矛盾する記述になった場合はその修正自体が誤り。\n\n';
+      txt += this.toFactString();
+      return txt;
+    }
+  };
+
+  return anchorData;
+}
+
+
+/**
+ * ★v12.7 タスク17-a テスト: collectAnchorData_ の動作確認
+ *
+ * GASエディタで testTask17aCollectAnchorData() を実行することで、
+ * 確定データ収集が正しく動作するかを検証できる。
+ *
+ * 期待結果:
+ *   - rates / currencyStrength / policyRates / worldLeaders が取得できる
+ *   - toFactString() / toVerifyPrompt() / toFixPrompt() が文字列を返す
+ *   - エラーが出ても致命的にならず、他のフィールドは取得される（fail-safe）
+ */
+function testTask17aCollectAnchorData() {
+  console.log('========================================');
+  console.log('🧪 タスク17-a: collectAnchorData_ 動作テスト');
+  console.log('========================================');
+
+  var keys = getApiKeys();
+  if (!keys) {
+    console.log('❌ getApiKeys() 失敗');
+    return false;
+  }
+
+  // 1. レート取得（キャッシュから）
+  console.log('');
+  console.log('1. レート取得');
+  var rates = getLatestRatesFromCache_(keys.SPREADSHEET_ID);
+  if (!rates) {
+    console.log('⚠️ レートキャッシュが空。レートなしでテスト続行');
+    rates = {};
+  } else {
+    console.log('   ✅ レート取得成功: USD/JPY=' + rates.usdjpy);
+  }
+
+  // 2. collectAnchorData_ 実行
+  console.log('');
+  console.log('2. collectAnchorData_ 実行');
+  var anchor;
+  try {
+    anchor = collectAnchorData_(rates, keys);
+  } catch (e) {
+    console.log('❌ collectAnchorData_ 実行エラー: ' + e.message);
+    console.log('   Stack: ' + e.stack);
+    return false;
+  }
+
+  if (!anchor) {
+    console.log('❌ collectAnchorData_ が null/undefined を返した');
+    return false;
+  }
+  console.log('   ✅ 構造化オブジェクト取得成功');
+
+  // 3. 各フィールドの検証
+  console.log('');
+  console.log('3. 各フィールド検証');
+  var passed = true;
+
+  // today
+  if (anchor.today && anchor.today.iso && anchor.today.jp) {
+    console.log('   ✅ today: ' + anchor.today.jp + ' (ISO: ' + anchor.today.iso + ')');
+  } else {
+    console.log('   ❌ today フィールド不正');
+    passed = false;
+  }
+
+  // rates
+  if (anchor.rates && anchor.rates.current) {
+    var rateKeys = Object.keys(anchor.rates.current);
+    console.log('   ✅ rates.current: ' + rateKeys.length + '通貨ペア');
+    if (anchor.rates.open) {
+      console.log('   ✅ rates.open: 取得済み (USD/JPY始値=' + (anchor.rates.open.usdjpy || 'なし') + ')');
+    } else {
+      console.log('   ⚠️ rates.open: 未取得（始値データなしの可能性）');
+    }
+    if (anchor.rates.direction) {
+      console.log('   ✅ rates.direction: ' + JSON.stringify(anchor.rates.direction));
+    } else {
+      console.log('   ⚠️ rates.direction: 未計算（始値がないため）');
+    }
+  } else {
+    console.log('   ❌ rates フィールド不正');
+    passed = false;
+  }
+
+  // currencyStrength
+  if (Array.isArray(anchor.currencyStrength)) {
+    console.log('   ✅ currencyStrength: ' + anchor.currencyStrength.length + '通貨');
+  } else {
+    console.log('   ❌ currencyStrength が配列ではない');
+    passed = false;
+  }
+
+  // policyRates
+  if (typeof anchor.policyRates === 'string') {
+    console.log('   ✅ policyRates: 文字列（' + anchor.policyRates.length + '文字）');
+  } else {
+    console.log('   ❌ policyRates が文字列ではない');
+    passed = false;
+  }
+
+  // worldLeaders
+  if (typeof anchor.worldLeaders === 'string') {
+    console.log('   ✅ worldLeaders: 文字列（' + anchor.worldLeaders.length + '文字）');
+  } else {
+    console.log('   ❌ worldLeaders が文字列ではない');
+    passed = false;
+  }
+
+  // calendar
+  if (anchor.calendar === null || typeof anchor.calendar === 'string') {
+    console.log('   ✅ calendar: ' + (anchor.calendar ? '文字列（' + anchor.calendar.length + '文字）' : 'null'));
+  } else {
+    console.log('   ⚠️ calendar が予期しない型');
+  }
+
+  // ongoingEvents
+  if (Array.isArray(anchor.ongoingEvents)) {
+    console.log('   ✅ ongoingEvents: ' + anchor.ongoingEvents.length + '件');
+    if (anchor.ongoingEvents.length > 0) {
+      console.log('      最初の事象: ' + anchor.ongoingEvents[0].name);
+    }
+  } else {
+    console.log('   ❌ ongoingEvents が配列ではない');
+    passed = false;
+  }
+
+  // 4. フォーマッターメソッドの動作確認
+  console.log('');
+  console.log('4. フォーマッターメソッド動作確認');
+
+  try {
+    var factStr = anchor.toFactString();
+    if (typeof factStr === 'string' && factStr.length > 0) {
+      console.log('   ✅ toFactString(): ' + factStr.length + '文字');
+    } else {
+      console.log('   ❌ toFactString() が空文字列');
+      passed = false;
+    }
+  } catch (e) {
+    console.log('   ❌ toFactString() エラー: ' + e.message);
+    passed = false;
+  }
+
+  try {
+    var verifyStr = anchor.toVerifyPrompt();
+    if (typeof verifyStr === 'string' && verifyStr.length > 0) {
+      console.log('   ✅ toVerifyPrompt(): ' + verifyStr.length + '文字');
+    } else {
+      console.log('   ❌ toVerifyPrompt() が空文字列');
+      passed = false;
+    }
+  } catch (e) {
+    console.log('   ❌ toVerifyPrompt() エラー: ' + e.message);
+    passed = false;
+  }
+
+  try {
+    var fixStr = anchor.toFixPrompt();
+    if (typeof fixStr === 'string' && fixStr.length > 0) {
+      console.log('   ✅ toFixPrompt(): ' + fixStr.length + '文字');
+    } else {
+      console.log('   ❌ toFixPrompt() が空文字列');
+      passed = false;
+    }
+  } catch (e) {
+    console.log('   ❌ toFixPrompt() エラー: ' + e.message);
+    passed = false;
+  }
+
+  // 5. サンプル出力（toFactStringの先頭500文字）
+  console.log('');
+  console.log('5. サンプル出力: toFactString() 先頭500文字');
+  console.log('------------------------------');
+  try {
+    console.log(anchor.toFactString().substring(0, 500));
+  } catch (e) {
+    console.log('出力エラー: ' + e.message);
+  }
+  console.log('------------------------------');
+
+  console.log('');
+  console.log('========================================');
+  if (passed) {
+    console.log('🎉 タスク17-a テスト: 全項目合格');
+  } else {
+    console.log('⚠️ タスク17-a テスト: 一部失敗');
+  }
+  console.log('========================================');
+
+  return passed;
+}
+

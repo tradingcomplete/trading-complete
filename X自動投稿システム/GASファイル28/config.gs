@@ -11,6 +11,29 @@
  * ★ v8.16: POST_TYPES文字数を全タイプ軽量化（スクロール不要の共感重視設計）
  */
 
+// ===== ★v12.6.1: ScriptProperties キー一覧（全24キー） =====
+// 新しいプロパティを追加する際は、既存キーとの衝突を避けるためここを確認すること
+//
+// 【永続設定（13キー）】手動で1回設定。APIキー・ID・モード
+//   X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET  ← xApi.gs
+//   GEMINI_API_KEY                                                ← geminiApi.gs / factCheck.gs
+//   CLAUDE_API_KEY                                                ← geminiApi.gs / qualityReview.gs
+//   TWELVE_DATA_API_KEY / ALPHA_VANTAGE_API_KEY                   ← rateManager.gs
+//   SPREADSHEET_ID / IMAGE_FOLDER_ID / WATERMARK_IMAGE_ID         ← 複数ファイル
+//   WEBAPP_URL                                                    ← approval.gs
+//   POST_MODE                                                     ← main.gs（manual/validate/auto）
+//
+// 【揮発性ランタイム（11キー）】実行中に自動で読み書き
+//   PHASE_B_POST_ID / PHASE_B_POST_TYPE / PHASE_B_POST_TEXT       ← main.gs（Phase Bパイプライン。1分後に消費）
+//   LAST_FACT_CHECK_ + postType                                   ← geminiApi.gs（承認メール用。動的サフィックス）
+//   REGEN_REQUEST_ + postId                                       ← approval.gs（画像再生成要求。動的サフィックス）
+//   FLASH_FALLBACK_USED                                           ← geminiApi.gs（Claudeフォールバック使用フラグ）
+//   TODAY_QUESTION_COUNT                                          ← promptBuilder.gs（問いかけ回数。毎朝リセット）
+//   SKIP_FACT_CHECK                                               ← testFunctions.gs（テスト用スキップ）
+//   TC_FEATURE_INDEX                                              ← promptBuilder.gs（TC機能紹介の順序）
+//   INDICATOR_TARGET                                              ← scheduler.gs（指標アラート対象指標名）
+//   HOLIDAY_NOTIFIED_YEAR                                         ← anomalyManager.gs（祝日通知済み年）
+
 // ===== 通貨ペア定義（全システム共通） =====
 var CURRENCY_PAIRS = [
   { symbol: 'USD/JPY', key: 'usdjpy', label: 'ドル円', min: 100, max: 200, decimals: 3 },
@@ -177,12 +200,12 @@ var POST_MODE = PropertiesService.getScriptProperties().getProperty('POST_MODE')
 
 // ===== 投稿タイプの定義 =====
 // ★v8.16: 文字数を全タイプ軽量化（1投稿1ネタ・140字以内ならスクロール不要）
+// ★v12.6.1: hasImageフィールド廃止。画像対象タイプはimageGenerator.gs IMAGE_TYPE_COLORSで一元管理
 var POST_TYPES = {
   MORNING: {
     id: 'morning',
     label: 'MORNING BRIEF',
     emoji: '🌅',
-    hasImage: false,
     frameColor: '#00e5ff',
     charMin: 150,
     charMax: 300
@@ -191,7 +214,6 @@ var POST_TYPES = {
     id: 'tokyo',
     label: 'TOKYO OPEN',
     emoji: '📊',
-    hasImage: false,
     frameColor: null,
     charMin: 100,
     charMax: 180
@@ -200,7 +222,6 @@ var POST_TYPES = {
     id: 'lunch',
     label: 'LUNCH',
     emoji: '🍱',
-    hasImage: false,
     frameColor: null,
     charMin: 100,
     charMax: 180
@@ -209,7 +230,6 @@ var POST_TYPES = {
     id: 'london',
     label: 'LONDON REPORT',
     emoji: '🌆',
-    hasImage: false,
     frameColor: '#00ff88',
     charMin: 100,
     charMax: 250
@@ -218,25 +238,15 @@ var POST_TYPES = {
     id: 'golden',
     label: 'GOLDEN TIME',
     emoji: '🔥',
-    hasImage: false,
     frameColor: null,
     charMin: 150,
     charMax: 350
   },
-  NY: {
-    id: 'ny',
-    label: 'NY PREVIEW',
-    emoji: '🗽',
-    hasImage: false,
-    frameColor: '#bf5fff',
-    charMin: 100,
-    charMax: 250
-  },
+  // ★v12.7: NY削除（GOLDENと役割重複。1日6投稿→5投稿に削減）
   INDICATOR: {
     id: 'indicator',
     label: 'INDICATOR ALERT',
     emoji: '⚡',
-    hasImage: false,
     frameColor: '#ff3355',
     charMin: 140,
     charMax: 180
@@ -245,7 +255,6 @@ var POST_TYPES = {
     id: 'knowledge',
     label: 'KNOWLEDGE',
     emoji: '📕',
-    hasImage: false,
     frameColor: null,
     charMin: 150,
     charMax: 350
@@ -254,7 +263,6 @@ var POST_TYPES = {
     id: 'weekly_review',
     label: 'WEEKLY REVIEW',
     emoji: '📋',
-    hasImage: false,
     frameColor: '#ffd700',
     charMin: 200,
     charMax: 400
@@ -263,7 +271,6 @@ var POST_TYPES = {
     id: 'rule_1',
     label: 'RULE',
     emoji: '🧠',
-    hasImage: false,
     frameColor: null,
     charMin: 120,
     charMax: 280
@@ -272,7 +279,6 @@ var POST_TYPES = {
     id: 'rule_2',
     label: "TRADER'S RULE",
     emoji: '💪',
-    hasImage: false,
     frameColor: '#00e5ff',
     charMin: 120,
     charMax: 280
@@ -281,7 +287,6 @@ var POST_TYPES = {
     id: 'weekly_learning',
     label: 'LEARNING',
     emoji: '📝',
-    hasImage: false,
     frameColor: null,
     charMin: 150,
     charMax: 300
@@ -290,7 +295,6 @@ var POST_TYPES = {
     id: 'rule_3',
     label: 'RULE',
     emoji: '🧠',
-    hasImage: false,
     frameColor: null,
     charMin: 120,
     charMax: 280
@@ -299,7 +303,6 @@ var POST_TYPES = {
     id: 'next_week',
     label: 'NEXT WEEK',
     emoji: '🔮',
-    hasImage: false,
     frameColor: '#00ff88',
     charMin: 200,
     charMax: 400
@@ -308,7 +311,6 @@ var POST_TYPES = {
     id: 'rule_4',
     label: 'RULE',
     emoji: '💡',
-    hasImage: false,
     frameColor: null,
     charMin: 120,
     charMax: 280
@@ -317,7 +319,6 @@ var POST_TYPES = {
     id: 'weekly_hypothesis',
     label: 'HYPOTHESIS',
     emoji: '💭',
-    hasImage: false,
     frameColor: null,
     charMin: 150,
     charMax: 300
@@ -325,26 +326,28 @@ var POST_TYPES = {
 };
 
 // ===== 曜日別スケジュール（1分単位 + Bot判定回避） =====
+// ★v12.7/v12.8: NYを削除。平日5投稿に統一
+//   types削除 + times削除を完全同期。不整合で undefined → runMorning 誤発火を防止
 var SCHEDULE = {
   1: { // 月曜 ★v12.3.1: MORNING 07:28→08:03（原油先物開場+1h確保。週末ニュースのGrounding精度向上）
-    times: ['08:03', '09:18', '12:08', '17:22', '20:47', '22:13'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
+    times: ['08:03', '09:18', '12:08', '17:22', '20:47'],
+    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   2: { // 火曜
-    times: ['07:43', '09:33', '12:14', '17:18', '20:53', '22:07'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
+    times: ['07:43', '09:33', '12:14', '17:18', '20:53'],
+    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   3: { // 水曜
-    times: ['07:35', '09:11', '12:06', '17:28', '20:42', '22:18'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
+    times: ['07:35', '09:11', '12:06', '17:28', '20:42'],
+    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   4: { // 木曜
-    times: ['07:47', '09:26', '12:19', '17:14', '20:56', '22:04'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
+    times: ['07:47', '09:26', '12:19', '17:14', '20:56'],
+    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   5: { // 金曜
-    times: ['07:22', '09:38', '12:11', '17:24', '20:49', '22:11'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY']
+    times: ['07:22', '09:38', '12:11', '17:24', '20:49'],
+    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   6: { // 土曜
     times: ['08:22', '11:48', '15:14', '20:32'],
@@ -464,7 +467,7 @@ function testFormatRate() {
 // → 欧州基準で判定（ロンドン市場を優先。NY市場は1-2週間のズレがあるが実用上問題なし）
 
 /** サマータイム対象の投稿タイプ（ロンドン・NY市場連動 + GOLDEN） */
-var SUMMER_TIME_TYPES = ['LONDON', 'GOLDEN', 'NY'];
+var SUMMER_TIME_TYPES = ['LONDON', 'GOLDEN'];  // ★v12.7: NY削除
 
 /** サマータイム時のオフセット（分）。マイナス = 前倒し */
 var SUMMER_TIME_OFFSET_MIN = -60;
@@ -533,6 +536,9 @@ var JAPAN_HOLIDAYS = [
 var GEMINI_MODEL = 'gemini-2.5-pro';  // ★v8.8.1: Flash→Pro変更（指示追従・文字数遵守の改善）
 var GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
+// ===== Claude API設定（★v12.6.1: 定数化。geminiApi.gs callClaudeApi_が参照） =====
+var CLAUDE_MODEL = 'claude-sonnet-4-6';
+
 // ===== X API設定 =====
 var X_API_BASE = 'https://api.x.com/2';
 
@@ -564,7 +570,7 @@ var ARCHETYPES = [
 var ARCHETYPE_MAP = {
   MORNING: ['dynamic_action', 'breakthrough_impact', 'atmosphere', 'central_focus'],
   LONDON: ['structured_list', 'dual_contrast', 'dynamic_action'],
-  NY: ['flow_perspective', 'structured_list', 'mind_game'],
+  // ★v12.7: NY削除
   INDICATOR: ['central_focus', 'mind_game', 'structured_list'],
   WEEKLY_REVIEW: ['structured_list', 'cycle_rhythm', 'central_focus'],
   RULE_2: ['central_focus', 'mind_game', 'dual_contrast'],

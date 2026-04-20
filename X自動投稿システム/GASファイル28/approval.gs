@@ -220,10 +220,27 @@ function sendDraftNotification(drafts) {
     html += displayText;
     html += '</div>';
     
+    // ★v12.7: 下書きシートから追加データを取得（FLASH_FALLBACK / FactCheckJSON共用）
+    // Phase 3分割後は下書きシートに全データが保存される。
+    // 旧フロー（ScriptProperties経由）も後方互換として残す。
+    var draftSheetData = null;
+    try {
+      draftSheetData = getDraftById_(draft.postId);
+    } catch (dsErr) {
+      // 取得失敗してもScriptPropertiesフォールバックで続行
+      console.log('⚠️ 下書きシート読み取りスキップ（ScriptPropertiesで代替）: ' + dsErr.message);
+    }
+
     // ★v12.2: Flashフォールバック通知
     try {
       var props = PropertiesService.getScriptProperties();
-      var flashUsed = props.getProperty('FLASH_FALLBACK_USED');
+      // ★v12.7: 下書きシートのFlashFallbackUsed列を優先、ScriptPropertiesはフォールバック
+      var flashUsed = null;
+      if (draftSheetData && draftSheetData.flashFallbackUsed) {
+        flashUsed = 'claude';
+      } else {
+        flashUsed = props.getProperty('FLASH_FALLBACK_USED');
+      }
       if (flashUsed) {
         html += '<div style="margin:10px 0; padding:8px 12px; background:#fff3e0; border-left:4px solid #ff9800; border-radius:4px; font-size:0.9rem; color:#e65100;">';
         if (flashUsed === 'claude') {
@@ -232,7 +249,7 @@ function sendDraftNotification(drafts) {
           html += '&#x26A0;&#xFE0F; Gemini Pro 503 &#x2192; 代替モデルで生成（品質が通常と異なる可能性）';
         }
         html += '</div>';
-        props.deleteProperty('FLASH_FALLBACK_USED');
+        props.deleteProperty('FLASH_FALLBACK_USED');  // 旧フローのクリーンアップ
       }
     } catch (flashErr) {
       // 表示失敗しても投稿処理には影響なし
@@ -241,7 +258,13 @@ function sendDraftNotification(drafts) {
     // ★v6.1: ファクトチェック結果をメールに追加
     try {
       var props = PropertiesService.getScriptProperties();
-      var factCheckJson = props.getProperty('LAST_FACT_CHECK_' + draft.postType);
+      // ★v12.7: 下書きシートのFactCheckJSON列を優先、ScriptPropertiesはフォールバック
+      var factCheckJson = null;
+      if (draftSheetData && draftSheetData.factCheckJson) {
+        factCheckJson = draftSheetData.factCheckJson;
+      } else {
+        factCheckJson = props.getProperty('LAST_FACT_CHECK_' + draft.postType);
+      }
       if (factCheckJson) {
         var fc = JSON.parse(factCheckJson);
         
@@ -356,6 +379,7 @@ function sendDraftNotification(drafts) {
 
 /**
  * 投稿タイプに対応する絵文字を返す
+ * ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
  */
 function getTypeEmoji_(postType) {
   var emojis = {
@@ -364,7 +388,6 @@ function getTypeEmoji_(postType) {
     'LUNCH': '🍱',
     'LONDON': '🌆',
     'GOLDEN': '🔥',
-    'NY': '🗽',
     'INDICATOR': '⚡',
     'WEEKLY_REVIEW': '📋',
     'RULE_1': '🧠',
@@ -594,32 +617,11 @@ function processPendingRegenRequests_() {
 
 /**
  * 下書きデータをIDで取得するヘルパー
- * @param {string} postId - 投稿ID
- * @returns {Object|null} { postId, postType, text, scheduledTime }
+ *
+ * ★v12.7: この関数は sheetsManager.gs に統合されました（全14フィールド対応版）。
+ * 本ファイル内の重複定義を削除し、sheetsManager.gs の getDraftById_ を使用します。
+ * 戻り値の postId/postType/text/scheduledTime は完全に後方互換です。
  */
-function getDraftById_(postId) {
-  try {
-    var ss = SpreadsheetApp.openById(getApiKeys().SPREADSHEET_ID);
-    var sheet = ss.getSheetByName('下書き');
-    if (!sheet) return null;
-    
-    var data = sheet.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === postId) {
-        return {
-          postId: data[i][0],       // A列: 投稿ID
-          postType: data[i][3],     // D列: 投稿タイプ（MORNING等）
-          text: data[i][4] || '',   // E列: 生成テキスト（手動編集済み優先）
-          scheduledTime: data[i][2] || ''  // C列: 投稿予定時刻
-        };
-      }
-    }
-    return null;
-  } catch (e) {
-    console.log('下書き取得エラー: ' + e.message);
-    return null;
-  }
-}
 
 
 /**
@@ -1012,4 +1014,106 @@ function debugRegenRequest() {
   } catch (e) {
     Logger.log('シート読み取りエラー: ' + e.message);
   }
+}
+
+// ===== ★v12.7 タスク6動作確認用テスト関数 =====
+/**
+ * ScriptProperties → 下書きシート移行の動作確認テスト。
+ *
+ * 下書きシートの FactCheckJSON / FlashFallbackUsed 列にデータを書き込み、
+ * ScriptProperties には設定しない状態で sendDraftNotification を呼び出す。
+ * 承認メールに FactCheck 結果が正しく表示されれば、移行成功。
+ *
+ * ⚠️ このテストは本物の承認メールを1通送信します。
+ */
+function testTask6ScriptPropertiesMigration() {
+  console.log('=== タスク6: ScriptProperties移行テスト ===');
+  console.log('  （下書きシートから FactCheckJSON / FlashFallbackUsed を読み込むテスト）');
+  console.log('');
+
+  // 1. テスト下書き作成 + データ書き込み
+  console.log('1. テスト下書き作成 + FactCheckJSON / FlashFallbackUsed 書き込み');
+  var testText = 'タスク6テスト: 下書きシートからFactCheckJSON読み込み確認用投稿。\nこのテキストは実際には投稿されません。';
+  var postId;
+  try {
+    postId = saveDraft({
+      postType: 'MORNING',
+      text: testText,
+      scheduledTime: '07:00',
+      validationResult: '',
+      status: 'Phase B完了'
+    });
+
+    var testFactCheck = {
+      summary: '⚠️ 要確認あり（問題3件）',
+      details: '❌ ドル円レートが155円と記載されているが、実際は159円\n✅ FOMCへの言及は正確\n⚠️ 米CPI発表日が不正確',
+      fixLog: '【最終事実検証（Claude）】修正あり\nドル円レートを159円に修正',
+      wasFixed: true,
+      originalText: '',
+      timestamp: new Date().toISOString()
+    };
+
+    updateDraftContent_(postId, {
+      FACT_CHECK_JSON: JSON.stringify(testFactCheck),
+      FLASH_FALLBACK_USED: true,
+      PHASE_A_COMPLETED_AT: new Date().toISOString(),
+      PHASE_B_COMPLETED_AT: new Date().toISOString()
+    });
+    console.log('   ✅ テスト下書き作成: ' + postId);
+    console.log('   ✅ FactCheckJSON / FlashFallbackUsed を下書きシートに書き込み');
+    console.log('   （ScriptProperties には LAST_FACT_CHECK / FLASH_FALLBACK_USED を設定していません）');
+  } catch (e) {
+    console.log('   ❌ 準備エラー: ' + e.message);
+    return;
+  }
+
+  // 2. sendDraftNotification を呼び出し
+  console.log('');
+  console.log('2. 承認メールを送信（下書きシート経由のFactCheck読み込み確認）');
+  try {
+    sendDraftNotification([{
+      postId: postId,
+      scheduledTime: '07:00',
+      postType: 'MORNING',
+      text: testText,
+      imageFileId: null,
+      archetype: null
+    }]);
+    console.log('   ✅ 承認メール送信完了');
+  } catch (e) {
+    console.log('   ❌ sendDraftNotification エラー: ' + e.message);
+  }
+
+  // 3. ScriptProperties に旧フラグが残っていないか確認
+  console.log('');
+  console.log('3. ScriptProperties 残存チェック');
+  var props = PropertiesService.getScriptProperties();
+  var oldFactCheck = props.getProperty('LAST_FACT_CHECK_MORNING');
+  var oldFlash = props.getProperty('FLASH_FALLBACK_USED');
+  console.log('   LAST_FACT_CHECK_MORNING: ' + (oldFactCheck ? '残存あり（旧フロー）' : 'なし ✅'));
+  console.log('   FLASH_FALLBACK_USED: ' + (oldFlash ? '残存あり（旧フロー）' : 'なし ✅'));
+
+  // 4. テスト下書きを削除
+  console.log('');
+  console.log('4. テスト下書きを削除');
+  try {
+    var sheet = getDraftsSheet_();
+    var targetDraft = getDraftById_(postId);
+    if (targetDraft) {
+      sheet.deleteRow(targetDraft.rowIndex);
+      console.log('   ✅ テスト下書き削除: ' + postId);
+    }
+  } catch (e) {
+    console.log('   ⚠️ 削除失敗: ' + e.message);
+  }
+
+  console.log('');
+  console.log('🎉 タスク6テスト完了');
+  console.log('  📧 Gmailを確認してください:');
+  console.log('  期待されるメール内容:');
+  console.log('   1. ⚠️ Gemini Pro 503 → Claude代替生成（オレンジ枠）');
+  console.log('   2. ⚠️ ファクトチェック: 要確認あり（オレンジ枠）');
+  console.log('   3. ❌ ドル円レート155円→159円の指摘');
+  console.log('   4. 🔧 自動修正済み の表示');
+  console.log('  上記4項目がメールに表示されていれば、下書きシートからの読み込みが成功です。');
 }

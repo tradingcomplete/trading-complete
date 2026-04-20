@@ -278,6 +278,102 @@ function testPostProcessorChain() {
   
   console.log('');
   
+  // ========================================
+  // ★v12.7: 未来日付ガード（Phase 1）のテスト
+  // ========================================
+  // isFutureDatePastTenseLine_ の判定ロジック検証
+  // テスト基準日を 2026/4/16（今日）として、各ケースが期待通り判定されるか確認
+  
+  console.log('=== 未来日付ガード（v12.7 Phase 1）テスト ===');
+  
+  var baseDate = new Date(2026, 3, 16);  // 2026/4/16（月は0-indexed）
+  
+  // ケース1: 未来日付＋過去形「発言」→ 削除対象
+  run(assert_(
+    'ガード1: 4/17トランプ発言→削除',
+    true,
+    isFutureDatePastTenseLine_('4/17、トランプ大統領がパウエル解任を示唆', baseDate)
+  ));
+  
+  // ケース2: 未来日付＋「発表予定」→ 保持
+  run(assert_(
+    'ガード2: 4月17日CPI発表予定→保持',
+    false,
+    isFutureDatePastTenseLine_('4月17日に米CPI発表予定', baseDate)
+  ));
+  
+  // ケース3: 未来日付＋「注目」→ 保持
+  run(assert_(
+    'ガード3: 4/17FOMCに注目→保持',
+    false,
+    isFutureDatePastTenseLine_('4/17のFOMCに注目', baseDate)
+  ));
+  
+  // ケース4: 未来日付＋「発言」（体言止め）→ 削除対象
+  run(assert_(
+    'ガード4: 4月17日パウエル発言→削除',
+    true,
+    isFutureDatePastTenseLine_('4月17日、パウエルが発言した', baseDate)
+  ));
+  
+  // ケース5: 未来日付＋「予定」文脈→ 保持
+  run(assert_(
+    'ガード5: 来週4/17-4/18のイベント予定→保持',
+    false,
+    isFutureDatePastTenseLine_('来週4/17〜4/18のイベントに注目', baseDate)
+  ));
+  
+  // ケース6: 未来日付＋過去形「上振れ」→ 削除対象
+  run(assert_(
+    'ガード6: 4/17雇用統計上振れ→削除',
+    true,
+    isFutureDatePastTenseLine_('4/17、米雇用統計の結果が上振れを示した', baseDate)
+  ));
+  
+  // ケース7: 日付依存なしの過去形→ 保持（削除対象外）
+  run(assert_(
+    'ガード7: 昨夜パウエル発言（日付なし）→保持',
+    false,
+    isFutureDatePastTenseLine_('昨夜、パウエルが金利据え置きに言及', baseDate)
+  ));
+  
+  // 追加の境界テスト
+  
+  // ケース8: 今日の日付（未来ではない）→ 判定対象外で保持
+  run(assert_(
+    'ガード8: 今日4/16発表→保持（未来ではない）',
+    false,
+    isFutureDatePastTenseLine_('4/16、日銀が金融政策決定会合の結果を発表', baseDate)
+  ));
+  
+  // ケース9: 過去の日付（未来ではない）→ 保持
+  run(assert_(
+    'ガード9: 4/10過去の発言→保持（未来ではない）',
+    false,
+    isFutureDatePastTenseLine_('4/10、パウエルが発言した', baseDate)
+  ));
+  
+  // ケース10: レート数値（1.1803）を日付と誤認しないこと
+  run(assert_(
+    'ガード10: レート数値は日付と誤認しない',
+    false,
+    isFutureDatePastTenseLine_('EUR/USDは1.1803まで上昇した', baseDate)
+  ));
+  
+  // removeFutureDateLines_ の統合テスト
+  
+  var multilineInput = '☕ 今朝のドル円は158円台。\n' +
+    '→東京時間は様子見ムード。\n' +
+    '4/17、トランプがパウエル解任を示唆。\n' +
+    '4月17日の米CPI発表に注目。';
+  
+  var filteredResult = removeFutureDateLines_(multilineInput);
+  run(assertNotContains_('統合: 削除対象行が除去された', '解任を示唆', filteredResult));
+  run(assertContains_('統合: 保持すべき行が維持されている', 'CPI発表に注目', filteredResult));
+  run(assertContains_('統合: 通常の行は維持', '今朝のドル円', filteredResult));
+  
+  console.log('');
+  
   // === 結果サマリー ===
   console.log('========================================');
   console.log('後処理チェーンテスト結果');

@@ -11,6 +11,8 @@
  * ★v12.5.3: Q6事実誤り検出時はパッチ修正ではなく全文再生成。確定データだけに基づいて最初から書き直す
  * ★v12.5.4: 口調の一元管理。ハードコード口調を全削除し、キャラクターシートを動的読み込み（getCharacterPrompt）
  * ★v12.5.5: Q6再生成後に2回目品質レビュー（Q6スキップ）追加。再生成プロンプトをスリム化。いたちごっこ解消
+ * ★v12.6.1: Q6「全文再生成」を廃止→「元の投稿ベース事実修正」に変更。API呼び出し3回→1回。
+ *   白紙再生成は口調・構造が崩壊する原因だった。元の投稿を渡してQ6+他の指摘を同時修正する方式に統合。
  * 
  * Claudeが品質レビュー（Q1〜Q7）を行い、問題があればClaudeが自分で修正する。
  * 「正確か？」はfactCheckPost_（Gemini Grounding）が担当。
@@ -31,6 +33,7 @@
 
 
 // ===== 投稿タイプ別の時間帯と役割（Q1判定用） =====
+// ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
 var TYPE_DESCRIPTIONS = {
   // ★v12.3: ストーリー主導に更新
   'MORNING': '朝7:30頃配信。今一番ホットな地政学・ファンダのネタ1つを因果チェーンで展開。「自分はこう読んでいる」を伝える。データは裏付け。150〜300字。NG: データから始める。指標を全部列挙。3ペア以上に言及',
@@ -38,7 +41,6 @@ var TYPE_DESCRIPTIONS = {
   'LUNCH': '昼12時台配信。短くてもためになる一言。午前に動きがあれば速報的に。生活×為替の共感も◎。100〜180字。NG: 長い分析。午後の展望。仮説の振り返り',
   'LONDON': '夕方17時台配信。欧州勢参入で何が変わったかを1ネタ。東京との温度差。100〜250字。NG: 東京時間の詳細な振り返り',
   'GOLDEN': '夜20-21時台配信。1日の締め。冷静な振り返り。今日の答え合わせ1〜2文+一番の学び。150〜350字。NG: ネガティブ感情。詳細な市場分析の繰り返し。明日の展望',
-  'NY': '夜22時台配信。今夜の一点集中。焦点1つ+翌朝の仮説1つ。100〜250字。NG: 今日の振り返り。テーマを3つ並べる',
   'INDICATOR': '指標発表前の復習メモ。①この指標は何か②今回なぜ注目か③見るべきポイント1つ。140〜180字。先輩が本番前にサッと教えてくれる感覚。NG: 詳細な予想値解説。複数指標を並べる。残り時間表現',
   'WEEKLY_REVIEW': '土曜朝。今週を一言で+一番印象的な出来事1つ。レートの羅列禁止。物語で。200〜400字',
   'WEEKLY_LEARNING': '土曜夕方。今週の気づき1つ。法則形式が理想。市場レポートではなく心理面・判断の反省。150〜300字',
@@ -106,12 +108,12 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
           confirmedData += '  GBP/USD: ' + formatRate_(latestRates.gbpusd, 'gbpusd', 'verify') + '\n';
           confirmedData += '  AUD/USD: ' + formatRate_(latestRates.audusd, 'audusd', 'verify') + '\n';
         }
-      } catch (e) { /* レート取得失敗は無視 */ }
+      } catch (e) { console.log('⚠️ レビュー用レート取得失敗（続行）: ' + e.message); }
       try {
         var btcCom = fetchCommodityPrices_();
         if (btcCom && btcCom.btc) confirmedData += '  ビットコイン: ' + btcCom.btc.toFixed(0) + 'ドル\n';
         if (btcCom && btcCom.gold) confirmedData += '  ゴールド: ' + btcCom.gold.toFixed(2) + 'ドル\n';
-      } catch (e) { /* 商品価格取得失敗は無視 */ }
+      } catch (e) { console.log('⚠️ レビュー用商品価格取得失敗（続行）: ' + e.message); }
       if (confirmedData) {
         reviewPrompt += '【確定データ（API取得の正確な値。Q6の判定に使用）】\n';
         reviewPrompt += confirmedData;
@@ -128,7 +130,23 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
           reviewPrompt += '※この判定は絶対。Web検索で「既に発表済み」という情報が見つかっても、カレンダーの結果欄が空なら未発表として扱え。\n';
           reviewPrompt += '※未発表の指標を「発表済み」と指摘するのは致命的な誤り。逆に、発表済みの指標を「未発表」と書いている投稿は指摘せよ。\n\n';
         }
-      } catch (calErr) { /* カレンダー取得失敗は無視（続行） */ }
+      } catch (calErr) { console.log('⚠️ レビュー用カレンダー取得失敗（続行）: ' + calErr.message); }
+      
+      // ★v12.9: Q6事実検証の精度向上のため、政策金利・通貨強弱・継続中重大事象を追加注入
+      // finalFactVerify_ と同じ collectAnchorData_ を再利用（2026-04-17 GOLDEN事件の根本対策）
+      try {
+        var anchorForReview = collectAnchorData_(postType);
+        if (anchorForReview) {
+          reviewPrompt += '【★★★ 追加の確定データ（政策金利・通貨強弱・継続中重大事象）】\n';
+          reviewPrompt += anchorForReview + '\n';
+          reviewPrompt += '※このセクションは「真実のアンカー」である。Web検索結果と矛盾する場合は必ずこちらを優先せよ。\n';
+          reviewPrompt += '※特に政策金利・金融政策(利上げ/利下げ)について、上記の値が絶対。Web検索で過去の記事が見つかっても無視せよ。\n';
+          reviewPrompt += '※Claudeの内部知識(カットオフ以前の情報)と乖離する場合も、確定データが正しい。\n';
+          reviewPrompt += '※「利上げ」「利下げ」「サイクル」等の金融政策に関する投稿の記述が、上記の政策金利データと矛盾していないか必ず確認せよ。\n\n';
+        }
+      } catch (anchorErr) { 
+        console.log('⚠️ Q6追加確定データ取得失敗(Web検索のみでQ6判定): ' + anchorErr.message); 
+      }
     }
     
     reviewPrompt += '【レビュー対象の投稿テキスト】\n';
@@ -151,7 +169,7 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
         reviewPrompt += '【キャラクター定義（口調判定の唯一の基準。以下に書かれた口調だけがコンパナの正しい口調）】\n';
         reviewPrompt += characterPrompt + '\n\n';
       }
-    } catch (charErr) { /* キャラクターシート取得失敗は無視（Q5判定が甘くなるが投稿は止まらない） */ }
+    } catch (charErr) { console.log('⚠️ キャラクターシート取得失敗（Q5判定が甘くなるが続行）: ' + charErr.message); }
     
     reviewPrompt += '【レビュー項目】\n';
     reviewPrompt += 'Q1. タイプ整合: この投稿の冒頭・トーンは「' + postType + '」の時間帯と合っているか？\n';
@@ -172,6 +190,10 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
     reviewPrompt += '    ★v12.2: Web検索が使える。要人発言・政策決定・直近のイベントについて投稿が言及している場合、\n';
     reviewPrompt += '    Web検索で事実かどうかを必ず確認せよ。例:「植田総裁が〜と発言」→検索して発言の事実を確認。\n';
     reviewPrompt += '    「RBAが利上げ」→検索して最新の政策決定を確認。検索で裏付けが取れない主張は指摘せよ。\n';
+    reviewPrompt += '    ★★★v12.9 最重要(2026-04-17 GOLDEN事件の教訓): Web検索結果と「追加の確定データ」(政策金利・通貨強弱・継続中重大事象)が矛盾する場合は、必ず確定データを優先せよ。\n';
+    reviewPrompt += '    理由: Web検索はSEO影響で古い記事が上位に出やすく、Claudeの知識カットオフと相まって「過去の政策局面」の情報を「現在」と誤認する危険がある。\n';
+    reviewPrompt += '    具体例: 投稿が「RBAは利上げサイクル」と書き、確定データも「4.10%(2026年3月利上げ)」と記録されているなら、Web検索で「RBAは2025年に利下げ」という情報が出ても、それは古い情報として無視し、投稿を正しいと判定せよ。\n';
+    reviewPrompt += '    判定優先順位: 1)経済カレンダー確定データ > 2)追加の確定データ(政策金利等) > 3)本文内の数値データ > 4)Web検索 > 5)Claudeの内部知識\n';
     reviewPrompt += '    ★★★v12.5.1 最最重要: 経済指標の「発表済み/未発表」は上記の経済カレンダー確定データのみで判定せよ。\n';
     reviewPrompt += '    カレンダーの結果欄が空 = 未発表。これは絶対のルール。Web検索で「4月10日に発表済み」等の情報が出ても、\n';
     reviewPrompt += '    カレンダーの結果欄が空ならその指標は未発表として扱え。Web検索でカレンダーの未発表ステータスを覆すな。\n';
@@ -180,6 +202,22 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
     reviewPrompt += '    データが上昇を示しているのに「下落した」と書くのは環境認識の失敗であり、最も重大な誤り。\n';
     reviewPrompt += '    ★未発表イベントの過去形チェック: 経済カレンダーで「結果」が空のイベントを「〜を受けて」「〜が示された」等の過去形で書いていないか確認せよ。\n';
     reviewPrompt += '    まだ発表されていないイベントを過去形で書くのはハルシネーションであり、最も重大な誤り。\n';
+    // ★v12.10: 診断書 水準1-2 追加。論理整合性チェックをQ6.5として独立項目化
+    // 背景: 2026-04-18 WEEKLY_REVIEW で「予想は外れた」と「着地点は合っていた」が同居する論理矛盾が
+    //       Q6①で検出されたが、Q6修正段階では他の数値指摘に注意が奪われ、修正されず残存した。
+    //       論理矛盾を明示的な独立ルールに昇格させ、検出と修正の優先度を上げる。
+    reviewPrompt += 'Q6.5. 論理整合性: 投稿内の主張どうしが論理的に矛盾していないか？\n';
+    reviewPrompt += '    ■ 最優先チェック項目: 以下のような論理破綻があれば必ず指摘せよ。\n';
+    reviewPrompt += '    例1: 「予想は外れた」と「着地点は合っていた」が同居 → 矛盾\n';
+    reviewPrompt += '    例2: 「方向は的中」と「逆行した」が同居 → 矛盾\n';
+    reviewPrompt += '    例3: 「リスクオン」と「円高進行」が同居 → 矛盾\n';
+    reviewPrompt += '    例4: 「仮説通り」と「プロセスが違った」が同居 → これは論点をすり替えた矛盾\n';
+    reviewPrompt += '    例5: 「利上げ期待」と「利下げサイクル」が同居 → 矛盾\n';
+    reviewPrompt += '    ■ 判定ルール: 2つの主張が同じ投稿内で明らかに相反する場合、どちらが事実かを確定データから判定し、\n';
+    reviewPrompt += '    もう一方を修正(または削除)するよう具体的に指摘せよ。\n';
+    reviewPrompt += '    ■ 因果関係の不整合もチェック: 「Aが起きた」+「だからBが起きた」の因果が成り立たない場合も指摘せよ。\n';
+    reviewPrompt += '    ■ この項目は Q6(事実検証) とは別の観点。事実が正しくても「論理的に矛盾した語り」になっている投稿は多い。\n';
+    reviewPrompt += '    ■ 検出した場合は必ず id を "Q6.5" で返せ。\n';
     reviewPrompt += 'Q7. 絵文字行の書き分け: 絵文字（☕📕📝📋💡⚠️✅）で始まる行は「事実の短い言い切り」になっているか？\n';
     reviewPrompt += '    ■ 感想禁止: 絵文字行に感想・感情・意見（「驚きました」「マジで」「すごい」「怖い」「嬉しい」等）が混入していたら指摘せよ。\n';
     reviewPrompt += '    感想は→行に書くのがルール。絵文字行は事実だけ。\n';
@@ -196,7 +234,7 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
     reviewPrompt += '{\n';
     reviewPrompt += '  "passed": true/false,\n';
     reviewPrompt += '  "issues": [\n';
-    reviewPrompt += '    {"id": "Q1〜Q7", "problem": "問題の説明（Web検索で確認した事実も含めて書け）", "suggestion": "どう直すべきかの具体的指示"}\n';
+    reviewPrompt += '    {"id": "Q1〜Q7 または Q6.5", "problem": "問題の説明（Web検索で確認した事実も含めて書け）", "suggestion": "どう直すべきかの具体的指示"}\n';
     reviewPrompt += '  ]\n';
     reviewPrompt += '}\n';
     reviewPrompt += '問題がなければ {"passed": true, "issues": []} を返せ。\n';
@@ -233,125 +271,128 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
     // Q6なし → 従来パッチ修正
     
     var q6Issues = [];
+    var q65Issues = [];  // ★v12.10: Q6.5(論理矛盾)を別カウント(診断書 水準1-2)
     var otherIssues = [];
     for (var qi = 0; qi < parsed.issues.length; qi++) {
       var issueId = parsed.issues[qi].id || '';
-      if (issueId.indexOf('Q6') !== -1) {
+      if (issueId === 'Q6.5') {
+        q65Issues.push(parsed.issues[qi]);
+        q6Issues.push(parsed.issues[qi]);  // 元投稿ベース修正ルートにも入れる
+      } else if (issueId.indexOf('Q6') !== -1) {
         q6Issues.push(parsed.issues[qi]);
       } else {
         otherIssues.push(parsed.issues[qi]);
       }
     }
     
+    // ★v12.10: Q6.5 検出時は警告ログで目立たせる(診断書 水準1-2)
+    if (q65Issues.length > 0) {
+      console.log('⚠️ Q6.5 論理矛盾検出: ' + q65Issues.length + '件 → 修正プロンプトで最優先扱い');
+    }
+    
     var revisedText = '';
     
     if (q6Issues.length > 0) {
-      // ===== Q6事実誤り → 全文再生成（スリムプロンプト） =====
-      console.log('🔄 Q6事実誤り' + q6Issues.length + '件 → 全文再生成モード');
+      // ===== ★v12.6.1: Q6事実誤り → 元の投稿ベースで事実修正（全文再生成を廃止） =====
+      // 旧（v12.5.5）: 白紙から全文再生成 → 2回目品質レビュー → パッチ修正（API 3回）
+      //   問題: 元の投稿の構造・口調が失われ、ハルシネーション発生、別人の投稿になる
+      // 新（v12.6.1）: 元の投稿を渡して事実誤り箇所だけ修正（API 1回）
+      //   元の投稿の口調・構造・絵文字ブロックをそのまま維持する
+      //   Q1-Q5, Q7の指摘も同時に反映（初回レビューで検出済み）
+      var q65Count = q65Issues.length;
+      var q6OnlyCount = q6Issues.length - q65Count;
+      console.log('🔄 Q6.5論理矛盾' + q65Count + '件 + Q6事実誤り' + q6OnlyCount + '件 + 他' + otherIssues.length + '件 → 元投稿ベース修正');
       
-      var regenPrompt = 'あなたはFX関連X投稿のライター「コンパナ」です。\n';
-      regenPrompt += '以下の投稿に事実誤りがあった。確定データだけに基づいて全文を書き直せ。\n\n';
-      regenPrompt += '【投稿タイプ】' + postType + '（' + (typeConfig.label || '') + '）\n';
-      regenPrompt += '【投稿タイプの役割】' + typeDesc + '\n';
-      regenPrompt += '【文字数】' + charMin + '〜' + charMax + '文字\n\n';
+      // Q6 + 他の指摘を統合（1回のAPI呼び出しで全て修正）
+      // ★v12.10: 診断書 水準1-3 優先度順ソート
+      //   背景: 2026-04-18 WEEKLY_REVIEW で5件の指摘を同列に並べた結果、
+      //         最重要の論理矛盾(Q6①)が数値修正(Q6④)と同列扱いされ修正漏れ。
+      //   対策: 論理矛盾(Q6.5) > 事実誤り(Q6) > 口調(Q5,Q7) > 文字数(Q4) の順で並べ、
+      //         修正プロンプトに「最優先で直せ」のラベルを明示する。
+      var priorityOf = function(id) {
+        if (id === 'Q6.5') return 1; // 論理矛盾: 最優先
+        if (id === 'Q6')   return 2; // 事実誤り
+        if (id === 'Q5' || id === 'Q7') return 3; // 口調・絵文字
+        if (id === 'Q1' || id === 'Q2' || id === 'Q3') return 4; // 構造
+        if (id === 'Q4')   return 5; // 文字数
+        return 9;
+      };
+      var allIssues = q6Issues.concat(otherIssues);
+      allIssues.sort(function(a, b) { return priorityOf(a.id) - priorityOf(b.id); });
       
-      // キャラクターシート注入（口調の基盤）
-      if (characterPrompt) {
-        regenPrompt += '【キャラクター口調（この口調で書け）】\n' + characterPrompt + '\n\n';
+      var fixPrompt = '以下のFX投稿テキストに事実誤りと品質の問題がある。修正してください。\n\n';
+      fixPrompt += '【★最重要ルール】\n';
+      fixPrompt += '・元の投稿の口調・絵文字ブロックの並び・→行の構造をそのまま維持せよ。\n';
+      fixPrompt += '・指摘された箇所だけ書き換えよ。指摘のない箇所は一字一句変えるな。\n';
+      fixPrompt += '・事実誤りの文は、正しい事実に差し替えつつ元の口調を維持せよ。\n';
+      fixPrompt += '・文字数' + charMin + '〜' + charMax + '文字（超過指摘がある場合は冗長な部分を削って収めよ）。\n\n';
+      
+      // ★v12.10: 修正優先度の明示(診断書 水準1-3)
+      fixPrompt += '【★★★修正の優先順位(絶対厳守)】\n';
+      fixPrompt += '複数の指摘を同時に反映する場合、以下の順で直せ。上位ほど重要で、下位の指摘に注意を奪われて上位を見落とすな。\n';
+      fixPrompt += '  1. 【最優先】Q6.5 論理矛盾: 投稿内の主張どうしの矛盾。ここが残ると投稿全体が破綻する。\n';
+      fixPrompt += '  2. 【次点】  Q6   事実誤り: 数値・要人発言・政策決定の誤り。\n';
+      fixPrompt += '  3. 【その次】Q5/Q7 表現・口調: 語尾バリエーション・絵文字行の体言止め。\n';
+      fixPrompt += '  4. 【構造】  Q1/Q2/Q3: 時間帯整合・表現重複・文の完成度。\n';
+      fixPrompt += '  5. 【最後】  Q4   文字数圧縮: 上記を全て満たした上で文字数を調整せよ。\n';
+      fixPrompt += '※ Q6.5 の論理矛盾を見落とすと、他を全て直しても投稿は使えない。まず論理矛盾を解消してから他に進め。\n\n';
+      
+      fixPrompt += '【元の投稿テキスト（これがベース。構造を壊すな）】\n' + postText + '\n\n';
+      
+      fixPrompt += '【修正すべき問題（' + allIssues.length + '件・優先度順）】\n';
+      for (var ai = 0; ai < allIssues.length; ai++) {
+        var prefix = (allIssues[ai].id === 'Q6.5') ? '★最優先 ' 
+                   : (allIssues[ai].id === 'Q6')   ? '★次点   ' 
+                   : '';
+        fixPrompt += prefix + '・' + allIssues[ai].id + ': ' + allIssues[ai].problem + '\n';
+        if (allIssues[ai].suggestion) fixPrompt += '  → ' + allIssues[ai].suggestion + '\n';
       }
-      regenPrompt += '【事実誤り（これを繰り返すな）】\n';
-      for (var q6i = 0; q6i < q6Issues.length; q6i++) {
-        regenPrompt += '・' + q6Issues[q6i].problem + '\n';
-      }
-      regenPrompt += '\n【確定データ（事実はこれだけ。確定データにないことは書くな）】\n';
+      
+      fixPrompt += '\n【確定データ（これが絶対的な事実。レートはこの値を使え）】\n';
       if (rates) {
-        if (rates.usdjpy) regenPrompt += 'USD/JPY: ' + formatRate_(rates.usdjpy, 'usdjpy', 'display') + '  ';
-        if (rates.audusd) regenPrompt += 'AUD/USD: ' + formatRate_(rates.audusd, 'audusd', 'display') + '  ';
-        if (rates.eurusd) regenPrompt += 'EUR/USD: ' + formatRate_(rates.eurusd, 'eurusd', 'display') + '\n';
-        if (rates.gbpusd) regenPrompt += 'GBP/USD: ' + formatRate_(rates.gbpusd, 'gbpusd', 'display') + '  ';
-        if (rates.audjpy) regenPrompt += 'AUD/JPY: ' + formatRate_(rates.audjpy, 'audjpy', 'display') + '  ';
-        if (rates.eurjpy) regenPrompt += 'EUR/JPY: ' + formatRate_(rates.eurjpy, 'eurjpy', 'display') + '\n';
+        fixPrompt += '確定レート:\n';
+        if (rates.usdjpy) fixPrompt += '  USD/JPY: ' + formatRate_(rates.usdjpy, 'usdjpy', 'verify') + '円\n';
+        if (rates.audusd) fixPrompt += '  AUD/USD: ' + formatRate_(rates.audusd, 'audusd', 'verify') + '\n';
+        if (rates.audjpy) fixPrompt += '  AUD/JPY: ' + formatRate_(rates.audjpy, 'audjpy', 'verify') + '円\n';
+        if (rates.eurjpy) fixPrompt += '  EUR/JPY: ' + formatRate_(rates.eurjpy, 'eurjpy', 'verify') + '円\n';
+        if (rates.gbpjpy) fixPrompt += '  GBP/JPY: ' + formatRate_(rates.gbpjpy, 'gbpjpy', 'verify') + '円\n';
+        if (rates.eurusd) fixPrompt += '  EUR/USD: ' + formatRate_(rates.eurusd, 'eurusd', 'verify') + '\n';
+        if (rates.gbpusd) fixPrompt += '  GBP/USD: ' + formatRate_(rates.gbpusd, 'gbpusd', 'verify') + '\n';
       }
       if (csData && csData.length > 0) {
-        regenPrompt += '通貨強弱: ';
+        fixPrompt += '通貨強弱ランキング:\n';
         for (var ci = 0; ci < csData.length; ci++) {
-          regenPrompt += csData[ci].currency + '(' + (csData[ci].score >= 0 ? '+' : '') + csData[ci].score.toFixed(2) + '%) ';
+          var cs = csData[ci];
+          fixPrompt += '  ' + (cs.jpName || cs.currency) + '(' + cs.currency + '): ' + (cs.score >= 0 ? '+' : '') + cs.score.toFixed(2) + '% → ' + cs.direction + '\n';
         }
-        regenPrompt += '\n';
       }
       try {
-        var calForRegen = getEconomicCalendar_('today');
-        if (calForRegen) regenPrompt += '経済カレンダー（結果欄が空=未発表）:\n' + calForRegen + '\n';
-      } catch (e) {}
-      regenPrompt += '\n【フォーマット】\n';
-      regenPrompt += '・絵文字行（☕📕📝💡⚠️✅）+ →行のブロック構造で書け。絵文字なしの投稿は禁止。\n';
-      regenPrompt += '・絵文字行 = 事実の短い言い切り。→行 = 分析・意見。\n';
-      regenPrompt += '・レート数値は確定データをそのまま使え。桁を変えるな。\n';
-      regenPrompt += '\n投稿テキストのみ出力。説明不要。\n';
+        var calForFix = getEconomicCalendar_('today');
+        if (calForFix) {
+          fixPrompt += '経済カレンダー（結果欄が空 = 未発表。未発表指標を発表済みに書き換えるな）:\n' + calForFix + '\n';
+        }
+      } catch (calErr) { console.log('⚠️ カレンダー取得失敗（続行）: ' + calErr.message); }
       
-      var regenResult = callClaudeGenerate_(regenPrompt, getApiKeys());
-      if (!regenResult || !regenResult.text) {
-        console.log('⚠️ Q6再生成失敗 → 指摘のみ返却');
+      fixPrompt += '\n【絶対遵守のフォーマットルール】\n';
+      fixPrompt += '・絵文字行（☕📕📝💡⚠️✅）= 事実の短い言い切り。体言止め・動詞止め必須。\n';
+      fixPrompt += '  OK: 「📝米イラン交渉が決裂。」「📕雇用統計、予想を上回る結果。」\n';
+      fixPrompt += '  NG: 「📝米イラン交渉が決裂しました。」「📕上昇基調が続いています。」\n';
+      fixPrompt += '・→行 = 背景・意見・人間味。コンパナの口調で。\n';
+      fixPrompt += '・確定データの方向と矛盾する修正はするな。確定データ > 品質レビュー指摘。\n';
+      fixPrompt += '・レート数値は確定データをそのまま使え。桁を変えるな。丸めるな。\n';
+      fixPrompt += '・修正後テキストのみ出力。説明不要。\n';
+      
+      if (characterPrompt) {
+        fixPrompt += '\n【★★★コンパナの口調（元の投稿と同じ口調を維持せよ。別人にするな）】\n' + characterPrompt + '\n';
+      }
+      
+      var fixResult = callClaudeGenerate_(fixPrompt, getApiKeys());
+      if (!fixResult || !fixResult.text) {
+        console.log('⚠️ Q6修正失敗 → 指摘のみ返却');
         return { passed: false, issues: parsed.issues, revisedText: '' };
       }
-      
-      var regenText = regenResult.text;
-      console.log('✅ Q6再生成完了（' + regenText.length + '文字）');
-      
-      // ===== 2回目品質レビュー（Q6スキップ） =====
-      console.log('🔍 再生成後の品質チェック（Q6スキップ）...');
-      
-      var review2Prompt = 'FX投稿テキストの品質をチェックしてください。事実検証（Q6）は済んでいるのでスキップ。\n\n';
-      review2Prompt += '【投稿テキスト】\n' + regenText + '\n\n';
-      
-      // キャラクターシート注入（口調判定用）
-      if (characterPrompt) {
-        review2Prompt += '【キャラクター定義】\n' + characterPrompt + '\n\n';
-      }
-      
-      review2Prompt += '【チェック項目】\n';
-      review2Prompt += 'Q4. 文字数: ' + charMin + '〜' + charMax + '文字か？超過なら冗長箇所を指摘。\n';
-      review2Prompt += 'Q5. 口調: 上記キャラクター定義の口調か？アナリスト調・AI調になっていないか？同じ語尾2回連続してないか？\n';
-      review2Prompt += 'Q7. 絵文字行: 事実の短い言い切りか？感想・逆説（「ただ〜」）が混入していないか？体言止め・動詞止めか？\n';
-      review2Prompt += '    指標名（PPI等）が省略されていないか？\n';
-      review2Prompt += '    →行がない絵文字ブロックはないか？\n\n';
-      review2Prompt += '{"passed": true/false, "issues": [{"id": "Q4〜Q7", "problem": "...", "suggestion": "..."}]}\n';
-      review2Prompt += 'JSON形式のみ出力。問題なければ {"passed": true, "issues": []}。\n';
-      
-      var review2Result = callClaude_(review2Prompt, apiKey, false); // Web検索なし
-      var parsed2 = review2Result ? parseClaudeReviewResponse_(review2Result) : null;
-      
-      if (parsed2 && !parsed2.passed && parsed2.issues.length > 0) {
-        // 2回目で問題あり → パッチ修正
-        console.log('📝 再生成後の品質指摘: ' + parsed2.issues.length + '件 → パッチ修正');
-        for (var p2j = 0; p2j < parsed2.issues.length; p2j++) {
-          console.log('  ' + parsed2.issues[p2j].id + ': ' + parsed2.issues[p2j].problem);
-        }
-        
-        var patchPrompt = '以下のFX投稿テキストを品質指摘に基づいて修正してください。\n\n';
-        patchPrompt += '【投稿テキスト】\n' + regenText + '\n\n';
-        patchPrompt += '【品質指摘】\n';
-        for (var p2k = 0; p2k < parsed2.issues.length; p2k++) {
-          patchPrompt += '・' + parsed2.issues[p2k].id + ': ' + parsed2.issues[p2k].problem + '\n';
-          if (parsed2.issues[p2k].suggestion) patchPrompt += '  → ' + parsed2.issues[p2k].suggestion + '\n';
-        }
-        patchPrompt += '\n【ルール】\n';
-        patchPrompt += '・指摘箇所だけ直せ。それ以外は触るな。\n';
-        patchPrompt += '・文字数' + charMin + '〜' + charMax + '文字。\n';
-        patchPrompt += '・絵文字行は事実のみ。感想・逆説は→行に書け。\n';
-        patchPrompt += '・修正後テキストのみ出力。\n';
-        
-        if (characterPrompt) {
-          patchPrompt += '\n【キャラクター口調】\n' + characterPrompt + '\n';
-        }
-        
-        var patchResult = callClaudeGenerate_(patchPrompt, getApiKeys());
-        revisedText = (patchResult && patchResult.text) ? patchResult.text : regenText;
-        console.log('✅ 品質修正完了（Q6再生成→品質チェック→パッチ修正）');
-      } else {
-        revisedText = regenText;
-        console.log('✅ 再生成後の品質チェック: 合格');
-      }
+      revisedText = fixResult.text;
+      console.log('✅ 品質修正完了（元投稿ベース事実修正・API 1回）');
       
     } else {
       // ===== Q6なし → 従来パッチ修正 =====
@@ -386,14 +427,17 @@ function qualityReviewPost_(postText, postType, typeConfig, rates, csData) {
         if (calForFix) {
           fixPrompt += '経済カレンダー（結果欄が空 = 未発表。未発表指標を発表済みに書き換えるな）:\n' + calForFix + '\n';
         }
-      } catch (calFixErr) {}
+      } catch (calFixErr) { console.log('⚠️ カレンダー取得失敗（続行）: ' + calFixErr.message); }
       
       fixPrompt += '\n【ルール】\n';
       fixPrompt += '・確定データの方向と矛盾する修正はするな。確定データ > 品質レビュー指摘。\n';
       fixPrompt += '・問題のある文は削除するな。書き直して改善せよ。\n';
       fixPrompt += '・指摘箇所を書き直し、それ以外は触るな。\n';
       fixPrompt += '・文字数' + charMin + '〜' + charMax + '文字。' + charMin + '文字未満は禁止。\n';
-      fixPrompt += '・絵文字行は事実のみ・体言止め。感想は→行。\n';
+      fixPrompt += '・絵文字行は事実のみ・体言止め・動詞止め必須。\n';
+      fixPrompt += '  OK: 「📝米イラン交渉が決裂。」「📕雇用統計、予想を上回る結果。」\n';
+      fixPrompt += '  NG: 「📝米イラン交渉が決裂しました。」「📕上昇基調が続いています。」\n';
+      fixPrompt += '・→行 = 背景・意見。コンパナの口調で。\n';
       fixPrompt += '・修正後テキストのみ出力。\n';
       
       if (characterPrompt) {
@@ -526,6 +570,51 @@ function trimToCharMax_(text, charMax) {
       continue;
     }
     
+    // ★v13.0.8 段階3: 鉤括弧の途中で切らない保護
+    //   削除候補の行を削ると、鉤括弧「」『』の対応が壊れる場合、
+    //   現行の行ではなくその前の行から削るか、削除を諦める
+    var remainingAfterPop = lines.slice(0, -1).join('\n');
+    var openKaku1 = (remainingAfterPop.match(/「/g) || []).length;
+    var closeKaku1 = (remainingAfterPop.match(/」/g) || []).length;
+    var openKaku2 = (remainingAfterPop.match(/『/g) || []).length;
+    var closeKaku2 = (remainingAfterPop.match(/』/g) || []).length;
+
+    if (openKaku1 !== closeKaku1 || openKaku2 !== closeKaku2) {
+      // この行を削ると鉤括弧が破綻する
+      // → 次善策: 鉤括弧を含む行セット全体を削除(鉤括弧の開始行から末尾まで)
+      console.log('🔒 鉤括弧保護: 現行行を削ると破綻 → 鉤括弧ブロックごと削除を試行');
+      
+      // 鉤括弧の開始位置を探す
+      var kakuStartIdx = -1;
+      for (var i = lines.length - 1; i >= 0; i--) {
+        if (/[「『]/.test(lines[i])) {
+          // この行で鉤括弧が開始
+          // 同じ行で閉じているかチェック
+          var lineOpen1 = (lines[i].match(/「/g) || []).length;
+          var lineClose1 = (lines[i].match(/」/g) || []).length;
+          var lineOpen2 = (lines[i].match(/『/g) || []).length;
+          var lineClose2 = (lines[i].match(/』/g) || []).length;
+          if (lineOpen1 > lineClose1 || lineOpen2 > lineClose2) {
+            // この行で開いて閉じていない = 鉤括弧ブロックの開始行
+            kakuStartIdx = i;
+            break;
+          }
+        }
+      }
+      
+      if (kakuStartIdx >= 0 && kakuStartIdx >= 3) {
+        // 鉤括弧の開始行から末尾まで削除
+        var deletedCount = lines.length - kakuStartIdx;
+        lines = lines.slice(0, kakuStartIdx);
+        console.log('🔒 鉤括弧ブロックごと削除: ' + deletedCount + '行削除');
+        continue;
+      } else {
+        // ブロック削除不可 → 削除ループを抜ける(これ以上削れない)
+        console.log('🔒 鉤括弧保護で削除不可 → 圧縮中断');
+        break;
+      }
+    }
+
     // 通常の行を末尾から削除
     lines.pop();
   }
@@ -553,7 +642,7 @@ function getTodayPreviousPosts_() {
       try {
         var data = JSON.parse(allProps[key]);
         posts.push(data);
-      } catch (e) { /* パース失敗は無視 */ }
+      } catch (e) { console.log('⚠️ 投稿キャッシュパース失敗（続行）: ' + e.message); }
     }
   }
   

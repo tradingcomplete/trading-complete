@@ -4,15 +4,22 @@
  * 
  * v8.5: geminiApi.gsからファイル分割（Phase 2）
  * 
- * generatePost内で生成テキストに対して順番に適用される:
+ * generatePost内で生成テキストに対して順番に適用される
+ * （applyPostProcessingChain_ を参照。最大20段階・rates引数とdayOfWeekで条件分岐）:
  *   removeForeignText_ → stripAIPreamble_ → enforceLineBreaks_
  *   → removeDisallowedEmoji_ → fixOrphanedVariationSelector_（★v8.14: 孤立U+FE0F修復）
  *   → removeMarkdown_ → replaceProhibitedPhrases_
- *   → fixMondayYesterday_（月曜のみ） → removeDuplicateBlocks_
+ *   → fixIncompleteVerbEnding_（★v13.0.10: 文末未完結「〜かなと。」を動詞完結形に）
+ *   → fixMondayYesterday_（月曜のみ）
+ *   → removeFutureDateLines_（★v12.7: 未来日付+過去形文脈を削除）
+ *   → removeDuplicateBlocks_
  *   → removeOrphanedLines_（★v8.12: 孤立短文除去）
  *   → fixBrokenSentenceEndings_（★v8.14: 壊れた句点修復）
  *   → truncateAfterHashtag_ → generateDynamicHashtags_
+ *   → [rates有の場合のみ以下5段階]
  *   → fixMissingDecimalPoint_ → fixHallucinatedRates_
+ *   → normalizeRateDecimals_
+ *   → convertExactRatesToRange_（★v12.6: TOKYO/LUNCHのレート台変換）
  *   → validateFinalFormat_（安全網）
  * 
  * 設計の鉄則:
@@ -1777,7 +1784,8 @@ function generateDynamicHashtags_(text, postType) {
   
   // フォールバック: 2個未満ならジャンルに応じて補完
   if (tags.length < 2) {
-    var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'NY', 'INDICATOR',
+    // ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
+    var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR',
                        'WEEKLY_REVIEW', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
     if (marketTypes.indexOf(postType) !== -1) {
       tags.push('#為替');
@@ -1888,6 +1896,7 @@ function applyPostProcessingChain_(text, postType, rates) {
   text = fixOrphanedVariationSelector_(text);  // ★v8.14: 孤立U+FE0F修復
   text = removeMarkdown_(text);
   text = replaceProhibitedPhrases_(text);
+  text = fixIncompleteVerbEnding_(text);  // ★v13.0.10: 文末未完結「〜かなと。」「〜とこ。」「〜感じ。」を動詞完結形に
   
   // 月曜日の「昨日」「昨夜」を機械的に修正
   var todayDow = new Date().getDay();
@@ -1895,6 +1904,7 @@ function applyPostProcessingChain_(text, postType, rates) {
     text = fixMondayYesterday_(text);
   }
   
+  text = removeFutureDateLines_(text);  // ★v12.7: 未来日付＋過去形文脈を検出して該当行を削除
   text = removeDuplicateBlocks_(text);
   text = removeOrphanedLines_(text);  // ★v8.12: 品質修正で壊れた孤立短文を除去
   text = fixBrokenSentenceEndings_(text);  // ★v8.14: 壊れた句点パターン修復
@@ -1910,6 +1920,177 @@ function applyPostProcessingChain_(text, postType, rates) {
   }
   
   return text;
+}
+
+
+// ========================================
+// ★v12.7: 未来日付ガード（Phase 1）
+// ========================================
+// 
+// 2026-04-16本番事故の再発防止。
+// Gemini Groundingで「4/17のトランプSNS投稿」を「4/16昨夜の出来事」として
+// 拾ってくるハルシネーションを機械的に除去する。
+// 
+// 設計の鉄則:
+//   - 過去形/完了形文脈（〜した、〜発表、〜示唆）が含まれる場合のみ削除
+//   - 未来予定/予想文脈（〜予定、〜に注目、〜を控える）は保持
+//   - これにより「来週のFOMCに注目」「4/17米CPI発表予定」等は残る
+//   - 経済カレンダーの未来予定をごっそり削除する過剰反応を防止
+
+/** 削除対象となる過去形/完了形のキーワード（これらが文脈にあれば未来日付を削除） */
+var PAST_TENSE_KEYWORDS = [
+  // 発言系
+  'が発言', 'と発言', 'を発言', 'が示唆', 'と示唆', 'を示唆',
+  'が表明', 'と表明', 'を表明', 'が発表', 'を発表',
+  'が明らかに', 'を明らか', 'が公表', 'を公表',
+  // 起きた系
+  'が起きた', 'が起こった', 'が発生', '事件が', '発生した',
+  'となった', '決裂した', '合意した', '成立した',
+  // 受動系（結果受領）
+  'が示された', 'が判明', 'を受けて', 'を受け',
+  'で確認された', 'が確認された',
+  // ★v12.7 追加: 結果の示現系（雇用統計・CPI等の発表結果）
+  'を示した', 'を示唆した', '結果が', '発表された',
+  '上振れ', '下振れ', '予想を上回', '予想を下回',
+  // 時制副詞+過去
+  '昨夜', '昨日', '今朝', '今日未明', '今未明',
+  // 直接の過去形語尾（比較的ゆるいパターン）
+  'しました', 'されました', 'だった', 'ました'
+];
+
+/** 保持対象となる未来予定/予想の文脈キーワード（これらがあれば削除しない） */
+var FUTURE_INTENT_KEYWORDS = [
+  '予定', '予想', '見込み', '見通し', '控える', '控えた',
+  'に注目', 'に焦点', '公表予定', '発表予定', '開催予定',
+  '可能性', '可能性が', 'かもしれ', 'だろう', 'でしょう',
+  '待ち', '待たれる', '注視', '警戒', '警戒感'
+];
+
+/**
+ * ★v12.7: 指定した行に「未来日付＋過去形文脈」が含まれているかを判定する
+ * 
+ * ロジック:
+ *   1. 行から日付パターンを抽出（M月D日・M/D・April X等）
+ *   2. 抽出日付が今日より後か判定
+ *   3. 今日より後の場合:
+ *      a. 未来予定キーワード（予定・注目等）が含まれる → 保持（false）
+ *      b. 過去形キーワード（発言・示唆・昨夜等）が含まれる → 削除（true）
+ *      c. どちらもない → 保持（false・安全側に倒す）
+ * 
+ * @param {string} line - 検査対象の行
+ * @param {Date} [today] - 判定基準日（省略時は現在）
+ * @return {boolean} 削除すべき行ならtrue
+ */
+function isFutureDatePastTenseLine_(line, today) {
+  if (!line || line.length === 0) return false;
+  today = today || new Date();
+  var thisYear = today.getFullYear();
+  var todayMonth = today.getMonth() + 1; // 1-12
+  var todayDate = today.getDate();
+  
+  // 日付パターン抽出（複数候補）
+  var candidates = [];
+  
+  // パターン1: M月D日
+  var m1;
+  var re1 = /(\d{1,2})月(\d{1,2})日/g;
+  while ((m1 = re1.exec(line)) !== null) {
+    candidates.push({ month: parseInt(m1[1], 10), date: parseInt(m1[2], 10) });
+  }
+  
+  // パターン2: M/D（年なし・スラッシュ区切り）
+  // レート数値（1.1803等）や通貨ペア（EUR/USD）と誤認しないよう、前後に文字種制限
+  var m2;
+  var re2 = /(?:^|[^0-9A-Z.\/])(\d{1,2})\/(\d{1,2})(?![0-9A-Z.\/])/g;
+  while ((m2 = re2.exec(line)) !== null) {
+    var mo = parseInt(m2[1], 10);
+    var da = parseInt(m2[2], 10);
+    // 妥当な日付範囲（1-12月・1-31日）
+    if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) {
+      candidates.push({ month: mo, date: da });
+    }
+  }
+  
+  // パターン3: April D, Apr D（英語月名）
+  var monthMap = {
+    'January': 1, 'Jan': 1, 'February': 2, 'Feb': 2, 'March': 3, 'Mar': 3,
+    'April': 4, 'Apr': 4, 'May': 5, 'June': 6, 'Jun': 6,
+    'July': 7, 'Jul': 7, 'August': 8, 'Aug': 8, 'September': 9, 'Sep': 9,
+    'October': 10, 'Oct': 10, 'November': 11, 'Nov': 11, 'December': 12, 'Dec': 12
+  };
+  var m3;
+  var re3 = /(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})/g;
+  while ((m3 = re3.exec(line)) !== null) {
+    candidates.push({ month: monthMap[m3[1]], date: parseInt(m3[2], 10) });
+  }
+  
+  if (candidates.length === 0) return false; // 日付なし→保持
+  
+  // 今日より後の日付が1つでもあるか
+  var hasFutureDate = false;
+  for (var i = 0; i < candidates.length; i++) {
+    var c = candidates[i];
+    if (c.month > todayMonth || (c.month === todayMonth && c.date > todayDate)) {
+      hasFutureDate = true;
+      break;
+    }
+  }
+  
+  if (!hasFutureDate) return false; // 未来日付なし→保持
+  
+  // 未来予定キーワードがあれば保持（ホワイトリスト優先）
+  for (var j = 0; j < FUTURE_INTENT_KEYWORDS.length; j++) {
+    if (line.indexOf(FUTURE_INTENT_KEYWORDS[j]) !== -1) {
+      return false; // 未来予定文脈→保持
+    }
+  }
+  
+  // 過去形キーワードがあれば削除
+  for (var k = 0; k < PAST_TENSE_KEYWORDS.length; k++) {
+    if (line.indexOf(PAST_TENSE_KEYWORDS[k]) !== -1) {
+      return true; // 未来日付＋過去形→削除
+    }
+  }
+  
+  // 未来日付はあるが過去形も未来予定もない→保持（安全側）
+  return false;
+}
+
+/**
+ * ★v12.7: 投稿本文から「未来日付＋過去形文脈」の行を削除する
+ * 
+ * 削除された内容は「未来日付ガード発動ログ」シートに記録（週次レビュー用）
+ * 
+ * @param {string} text - 投稿テキスト
+ * @return {string} 削除処理後のテキスト
+ */
+function removeFutureDateLines_(text) {
+  if (!text) return text;
+  
+  var lines = text.split('\n');
+  var kept = [];
+  var removedLines = [];
+  var today = new Date();
+  
+  for (var i = 0; i < lines.length; i++) {
+    if (isFutureDatePastTenseLine_(lines[i], today)) {
+      removedLines.push(lines[i]);
+      console.log('⚠️ 未来日付＋過去形文脈を検出→行削除: ' + lines[i].substring(0, 80));
+    } else {
+      kept.push(lines[i]);
+    }
+  }
+  
+  // 削除があった場合、ログシートに記録
+  if (removedLines.length > 0) {
+    try {
+      logFutureDateGuard_('postBody', removedLines.join(' | '));
+    } catch (logErr) {
+      console.log('⚠️ 未来日付ガードログ記録失敗（続行）: ' + logErr.message);
+    }
+  }
+  
+  return kept.join('\n');
 }
 
 
@@ -1944,6 +2125,55 @@ function convertExactRatesToRange_(text, postType) {
   
   if (text !== original) {
     console.log('📌 レート数値を「台」表現に変換しました（' + postType + '）');
+  }
+  
+  return text;
+}
+
+
+// ========================================
+// ★v13.0.10(2026-04-20): 文末未完結パターンの機械置換
+// ========================================
+//
+// 背景: 2026-04-20 MORNING投稿で「〜見えてくるかなと。」が再発。
+//   - promptBuilder.gs L1092 の最終確認「★文末は動詞で完結させろ」が効かず
+//   - validationV13.gs Q5 の error 判定もすり抜け
+//   - 3層の防御(プロンプト予防+Stage 1検出+trim保護)全てをすり抜けたため
+//     後処理チェーンに機械置換を4層目として追加
+//
+// 対象パターン:
+//   1. 「〜かなと。」 → 「〜かなと思います。」(単純置換・誤爆リスクなし)
+//   2. 「〜とこ。」   → 「〜とこですね。」(動詞連用形+とこ限定・誤爆回避)
+//   3. 「〜感じ。」   → 「〜感じですね。」(ひらがな/漢字+感じ限定・誤爆回避)
+//
+// 設計方針:
+//   - 誤爆回避のため「。(句点)の直前」のみ置換対象とする
+//   - 関連A案(promptBuilder.gs 例9): 生成時点の予防
+//   - 関連B案(本関数):             後処理時点の確実化
+//   - 両者併用で再発ゼロを目指す
+//
+function fixIncompleteVerbEnding_(text) {
+  if (!text || typeof text !== 'string') return text;
+  var original = text;
+  
+  // パターン1: 「〜かなと。」→「〜かなと思います。」
+  // 「かなと」は文末表現としてほぼ限定的なため単純置換で安全
+  text = text.replace(/かなと。/g, 'かなと思います。');
+  
+  // パターン2: 「〜とこ。」→「〜とこですね。」
+  // 誤爆回避: 動詞連用形 or 形容詞い形 + とこ のパターンに限定
+  //   OK対象: 「行くとこ。」「見たいとこ。」「やってるとこ。」「読めてるとこ。」
+  //   保持: 「ここ。」「どこ。」「すごいところ。」は元々マッチしない(直前の文字が違うため)
+  text = text.replace(/([るたいてでせれろ])とこ。/g, '$1とこですね。');
+  
+  // パターン3: 「〜感じ。」→「〜感じですね。」
+  // 誤爆回避: ひらがな or 漢字 + 感じ のパターンに限定(単独の「感じ。」は対象外)
+  //   OK対象: 「重い感じ。」「強い感じ。」「不安な感じ。」
+  //   保持: 単独の「感じ。」(ほぼ発生しない)
+  text = text.replace(/([ぁ-んァ-ヶー一-龯])感じ。/g, '$1感じですね。');
+  
+  if (text !== original) {
+    console.log('📌 文末未完結パターンを動詞完結形に修正(v13.0.10)');
   }
   
   return text;

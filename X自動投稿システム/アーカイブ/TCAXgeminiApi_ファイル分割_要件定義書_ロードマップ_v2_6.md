@@ -36,9 +36,9 @@
 
 | 項目 | 分割前 | 現在（v12.6） |
 |------|--------|--------------|
-| geminiApi.gs | 9,398行・117関数 | 860行・9関数 |
+| geminiApi.gs | 9,398行・117関数 | 1,095行・11関数 |
 | ファイル数 | 1ファイル | 23ファイル |
-| 総行数 | 9,398行 | 約20,100行 |
+| 総行数 | 9,398行 | 約20,300行 |
 
 ### テスト体制（v10.0でテスト再構成）
 
@@ -64,21 +64,21 @@ GASプロジェクトの全23ファイル（アルファベット順 = GAS読み
 | 4 | calendarManager.gs | 784 | 7 | 経済カレンダー取得・インポート ★v12.2: 27:00形式対応+B列テキスト強制 |
 | 5 | config.gs | 767 | 8 | 設定値+POST_TYPES ★v12.6: formatRate_+RATE_DECIMALS追加（レート桁数一元管理） |
 | 6 | factCheck.gs | 533 | 5 | ファクトチェック ★v12.6: toFixed→formatRate_置換 |
-| 7 | geminiApi.gs | 860 | 9 | 核: メイン処理+Claude市場分析 ★v12.6: toFixed→formatRate_置換 |
+| 7 | geminiApi.gs | 1,095 | 11 | 核: メイン処理+Claude市場分析 ★v12.6: finalFactVerify_新設(JSON検出+コード置換) |
 | 8 | imageGenerator.gs | 898 | - | AI画像生成+透かし合成 ★v12.4: 時間表現ルール追加 |
 | 9 | indicatorManager.gs | 1,154 | 20 | 経済指標の取得・解析・フォーマット |
 | 10 | learningManager.gs | 873 | 8 | 学び・仮説の抽出・検証 ★v12.1.1: SH/SL例文更新 |
 | 11 | main.gs | 694 | - | カスタムメニュー+エントリポイント ★v12.6: 🧪テストメニュー追加 |
 | 12 | marketAnalysis.gs | 803 | 7 | 市場分析（通貨強弱・ニュース） ★v11.0: ニュースv3（背景+生活影響） |
-| 13 | postProcessor.gs | 1,920 | 22 | 後処理チェーン14段階 ★v12.6: fixHallucinatedRates_クロス汚染修正 |
+| 13 | postProcessor.gs | 1,958 | 23 | 後処理チェーン14段階 ★v12.6: fixHallucinatedRates_クロス汚染修正 + convertExactRatesToRange_ |
 | 14 | priceSummary.gs | 874 | 8 | 価格サマリー集計・日次OHLC ★v12.1.1: SH/SL判定+週足シート作成 |
-| 15 | promptBuilder.gs | 1,985 | 18 | プロンプト構築+データ注入 ★v12.6: toFixed→formatRate_置換。**分割不要（2,500行まで現状維持）** |
+| 15 | promptBuilder.gs | 1,988 | 18 | プロンプト構築+データ注入 ★v12.6: TOKYO/LUNCHレート台ルール。**分割不要（2,500行まで現状維持）** |
 | 16 | qualityReview.gs | 635 | 8 | 品質レビュー Q1〜Q7 ★v12.6: toFixed→formatRate_置換（20箇所） |
 | 17 | rateManager.gs | 1,635 | 18 | レート取得・保存・検証 ★v12.2: SH/SLダウ理論+62秒削除+キャッシュ読み |
 | 18 | scheduler.gs | 599 | - | トリガー管理+スケジュール ★v12.5: サマータイムオフセット適用 |
 | 19 | sheetsManager.gs | 1,038 | - | スプレッドシート読み書き |
 | 20 | testFunctions.gs | 225 | 19 | テスト関数（E2E） |
-| 21 | ★testPostProcessor.gs | 265 | 4 | ★v12.6新設: 後処理チェーン不変条件テスト（32ケース） |
+| 21 | ★testPostProcessor.gs | 296 | 5 | ★v12.6新設: 後処理チェーン不変条件テスト（40ケース） |
 | 22 | utils.gs | 172 | - | ユーティリティ |
 | 23 | xApi.gs | 654 | - | X API v2投稿 |
 

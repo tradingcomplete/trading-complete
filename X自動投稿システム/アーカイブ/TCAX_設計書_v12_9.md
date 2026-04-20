@@ -1,7 +1,14 @@
-# T-CAX 設計書 v12.6
+# T-CAX 設計書 v12.9
 
-**方針**: プロンプト公開 + 学び自動蓄積 + 7通貨ペア市場データ + 完全自動学習
-**関連**: スプレッドシート仕様書 v1.8（シート詳細）/ 全体設計図 v12.6（システム全体）
+**方針**: プロンプト公開 + 学び自動蓄積 + 7通貨ペア市場データ + 完全自動学習 + Phase A→B→C 全モード稼働 + 確定データ優先の事実検証
+**関連**: スプレッドシート仕様書 v1.9（シート詳細・23シート）/ 全体設計図 v12.9（システム全体）/ TCAX_REFERENCE.md（事件簿・ベストプラクティス）
+**v12.9 変更点**: 
+  - ★Q6 確定データ強化: qualityReview.gs で collectAnchorData_ を再利用し、政策金利・通貨強弱・継続中重大事象を注入。Claude時系列バイアスによる誤判定を根絶
+  - ★GOLDEN 夜の材料ヒント注入: promptBuilder.gs に buildEveningMaterialHint_ を新設。経済カレンダーから GOLDEN 投稿以降の材料を動的抽出
+  - ★SCHEDULE 整合性修正: config.gs の月〜金 times 配列から 22:XX を削除。runMorning 異常発火事件の根本対策
+  - ★testFunctions.gs Lv2 拡充: verifyScheduleIntegrity / 3シート確認 / Q6シナリオ別等、15関数追加
+  - ★TCAX_REFERENCE.md 新設: 事件簿4件 + ベストプラクティス10項目
+**v12.8 変更点**: タスク5-a/b/c 完了反映。全モード(manual/validate/auto)で Phase A→B→C 非同期パイプライン稼働。対話型検証 Step 4 が本番フロー内で初稼働成功。
 
 ---
 
@@ -70,21 +77,29 @@ AI自動投稿であることを公開。プロンプトを見せて信頼と期
 
 ---
 
-## 2. スプレッドシート構成（17シート）
+## 2. スプレッドシート構成（23シート）
 
 ```
 【プロンプト素材（7シート）】
 ①キャラクター ②TC概要 ③投稿プロンプト（v5）④トレードスタイル
 ⑤参照ソース ⑥心得テーマ ⑦経済カレンダー
 
-【データ蓄積（8シート）】
+【データ蓄積（9シート）】
 ⑧投稿履歴 ⑨レートキャッシュ ⑩レートサマリー ⑪指標データ
-⑫学びログ ⑬仮説検証ログ ⑭エンゲージメントログ ⑮確定データ
+⑫学びログ ⑬仮説検証ログ ⑭エンゲージメントログ ⑮確定データ ⑯通貨強弱
+
+【レート分析（2シート）】
+⑰日次レート ⑱週足
 
 【運用（2シート）】
-⑯下書き ⑰アノマリー（マスターデータ20行）
+⑲下書き ⑳アノマリー（マスターデータ20行）
 
-※ 各シートの列定義はスプレッドシート仕様書 v1.7を参照
+【★v12.7 Phase 3分割関連（3シート）】
+㉑継続中重大事象（ハルシネーション対策・手動更新）
+㉒対話型検証ログ（Step 4 実行記録・12列）
+㉓未来日付ガードログ（削除発動記録・3列）
+
+※ 各シートの列定義はスプレッドシート仕様書 v1.9を参照
 ```
 
 ---
@@ -220,15 +235,23 @@ RULE系/KNOWLEDGE: 注入しない
 
 ---
 
-## 7. 品質管理システム（★v12.0 3段防御）
+## 7. 品質管理システム（★v12.9: 4段防御 + Phase B内再実行 + Q6確定データ強化）
 
 ```
+★v12.9 全体アーキテクチャ:
+  Phase A 内: チェック1(ファクトチェック) + チェック2-3(品質レビュー) + チェック4(最終事実検証)
+  Phase B 内: 品質レビュー + 最終事実検証 再実行 + チェック5(対話型検証 Step 4)
+  Phase C 内: factCheckSkipped=true / Phase Bエラー → manual強制降格
+  ★v12.9: Q6 に collectAnchorData_ 注入で確定データ完全化(RBA誤判定事件の根本対策)
+  タスク18 で Phase A 内の検証層を削除予定(対話型検証の実運用評価完了後)
+
 【ファクトチェック（factCheck.gs）— チェック1】
   Gemini + Grounding ON でレート・指標・ニュースの事実検証
   Layer 1: システム確定データと照合
     ・為替レート（7ペア）: 3%超の乖離で❌
     ・★v12.0: 商品価格（WTI/BTC/ゴールド/天然ガス）: 5%超の乖離で❌
     ・政策金利・カレンダー・要人・アノマリー
+    ・★v12.7(タスク13): 継続中重大事象シート注入(米国関税措置等)
   Layer 2: Grounding検索で事実確認
   ❌誤り → autoFix（Grounding OFF）で自動修正
   ⚠️要確認 → 修正不要（システムデータで検証不可の意味）
@@ -244,30 +267,76 @@ RULE系/KNOWLEDGE: 注入しない
     ★Q6. 事実の信憑性（確定データ二重チェック + ★v12.2: Web検索でリアルタイム検証）
     ★Q7. 絵文字行の書き分け（事実のみ・感想混入禁止 + ★v12.4: 体言止め必須）
   ★v12.2: Claude品質レビューにWeb検索（web_search_20250305）を追加
-    要人発言・政策決定・直近イベントについてWeb検索で事実確認
-    例: 「植田総裁が発言」→検索して発言の事実を確認
-    例: 「RBAが利上げ」→検索して最新の政策決定を確認
-    systemパラメータでJSON出力を強制（Web検索使用時の文章混入防止）
-    max_tokens: 4096（Web検索時の出力切れ防止）
-    JSONフォールバックパーサー（文章中からJSON部分を自動抽出）
-  ★v12.4: 修正フロー変更
-    旧: Claude指摘 → Gemini修正 → コード側文字数保証
-    新: Claude指摘 → Claude修正 + 確定データガード → コード側文字数保証
-    確定データガード: レート7ペア + 通貨強弱ランキングを修正プロンプトに注入
-    「確定データの方向と矛盾する修正はするな。確定データ > 品質レビュー指摘」
-  ★v12.0: Q6指摘の数値誤りはClaude修正で正しい値に置換
+  ★v12.4: 修正フロー変更: Claude指摘 → Claude修正 + 確定データガード
+  
+  ★★★v12.9 Q6確定データ強化（2026-04-17 RBA誤判定事件の根本対策）:
+    qualityReview.gs の Q6 プロンプト作成時に collectAnchorData_(postType) を呼び出し、
+    以下を追加注入:
+      ・政策金利（RBA/FRB/ECB/BOE/BOJ）
+      ・通貨強弱（AUD/GBP/EUR/JPY/USD の日次変動率）
+      ・継続中重大事象（米国関税措置/米イラン対立/ホルムズ海峡関連等）
+    
+    Q6 プロンプトに判定優先順位を明示:
+      1) 経済カレンダー確定データ
+      2) 追加の確定データ(政策金利等)
+      3) 本文内の数値データ
+      4) Web検索（SEO影響で古い記事が上位に出やすい）
+      5) Claudeの内部知識（カットオフ以前の情報）
+    
+    ★事件の背景: 2026-04-17 GOLDEN投稿で、Phase A の finalFactVerify_ が
+      「RBAは利下げサイクル」→「利上げサイクル」と正しく修正したのに、
+      Phase B の Q6 が Web検索で2025年の利下げ記事を引いて逆判定した事件。
+      根本原因は Q6 に政策金利データが不完全に注入されていたこと。
+      v12.9 で collectAnchorData_ を共通化し、Phase A/B の判定が一致するようにした。
+    
+    ★テスト: testQReviewRBA() / testQReviewFOMC() / testQReviewOngoingEvents()
+      (testFunctions.gs Lv2 拡充で追加)
+
+【最終事実検証（finalFactVerify_・geminiApi.gs）— チェック4】
+  Claude JSON検出 + コード側置換で事実誤りを機械的修正
+  検出はClaude、修正はコード置換。AI修正ステップの副作用を排除
+  確定データ: レート7ペア + 本日始値 + 通貨強弱 + カレンダー + 政策金利 + 要人
+  ★v12.7: 継続中重大事象シート注入(「〜ショック前」等のハルシネーション防止)
+  ★v12.9: collectAnchorData_ の成果物を qualityReview.gs と共通化(Q6 と判定整合)
+
+【★NEW(v12.7 Phase 3分割): 対話型検証（interactiveVerify.gs）— チェック5】
+  Phase B 内の executeQualityReviewChain_ 末尾で実行
+  Claude + Web検索による「人間の検証プロセス」の模倣
+  3ステップ構造:
+    Step 1: 検証質問抽出（Claude API 1回、Web検索なし）
+            投稿本文から検証対象の主張を最大5件抽出
+    Step 2: 一括Web検証（Claude API 1回、Web検索あり）
+            各主張を ❌/⚠️/✅ で判定
+    Step 3: 修正（Claude API 0-1回、❌/⚠️がある場合のみ）
+            元投稿ベースで指摘箇所を書き換え
+  有効化制御: ScriptProperties 'INTERACTIVE_VERIFY_ENABLED'
+    'false' = 停止 / 未設定 or 'true' = 有効
+  時間制限: 最終検証完了後、残り180秒以上ある場合のみ実行
+  ログ: 対話型検証ログシート(12列)に実行ごとに1行追加
+  
+  ★既存チェックリスト型検証との違い:
+    従来(チェック1-4): 「このルールに違反していないか？」を機械的に点検
+    対話型検証(チェック5): 「この主張は事実か？」を Web で調査
+    → 文脈依存の誤り(発言引用のニュアンス、継続事象の時制)を検出
+  
+  ★2026-04-17 初稼働実績:
+    MORNING投稿で Step 1: 5件のclaim抽出 / Step 2: ❌0/⚠️1/✅4 / Step 3: 修正適用
+    経過時間: 38秒、Claude API 3回、ログID: VL_20260417_160034_4012
+  
+  ★2026-04-17 GOLDEN投稿での再稼働実績:
+    Step 2: ❌0/⚠️0/✅4 (全件クリア)
+    ログID: VL_20260417_195821_2047
+    確定データ優先が Step 4 でも機能していることを確認
 
 【後処理チェーン（postProcessor.gs・14段階）】
-  生成→リトライ→ファクトチェック修正後→品質修正後の4回適用
+  生成→リトライ→ファクトチェック修正後→品質修正後→★対話型検証修正後 の5回適用
   新しい後処理 → applyPostProcessingChain_内に追加するだけ
   ★v12.6: fixHallucinatedRates_を「最近傍キーワード割り当て方式」に書き換え
-    旧: ペア順に行内全レートを一括置換 → 同一行2ペアでクロス汚染
-    新: 行ごとに全キーワード位置収集 → 各レートを最近傍に割り当て → 位置ベース置換
 
 【★v12.6: リグレッション防止（testPostProcessor.gs新設）】
   後処理チェーンの変更前後に testPostProcessorChain() を実行（32テストケース、API不要）
   レート桁数は formatRate_(value, pairKey, purpose) で一元管理（toFixed直書き禁止）
-  promptBuilder.gsは2,500行まで分割しない（安定稼働中。GAS同名関数「後勝ち」で分割自体がリスク）
+  promptBuilder.gsは2,500行まで分割しない（安定稼働中）
 ```
 
 ---
@@ -317,33 +386,53 @@ RULE系/KNOWLEDGE: 注入しない
 
 ---
 
-## 10. 承認フロー（★v12.2修正）
+## 10. 承認フロー（★v12.8: Phase A→B→C 全モード稼働）
 
 ```
-【フロー】
-  generatePost → 下書きシートE列に保存 → 承認メール送信
-  → [承認] → processApprovedDrafts → ★v12.0: E列を再読み込み → X API投稿
-  → [画像再生成] → processPendingRegenRequests_ → ★v12.0: E列から最新テキスト取得 → 新メール
-  → [中止] → ステータス更新
+【v12.8フロー(全モード共通)】
+  Phase A (generatePost): テキスト生成 + Phase A内3段検証 → saveDraft (下書き保存)
+    → PHASE_B_POST_ID 設定 → 1分後 executePhaseBQualityReview トリガー
+  
+  Phase B (executePhaseBQualityReview): 品質レビュー + 最終事実検証 + ★対話型検証★
+    → 下書きステータス「Phase B完了」 → PHASE_C_POST_ID 設定
+    → 1分後 executePhaseCImageAndPost トリガー
+  
+  Phase C (executePhaseCImageAndPost): 画像生成 → モード分岐
+    ├ manual   → 承認メール送信 → ステータス「承認待ち」
+    ├ validate → validatePost → 通過→直接投稿 / NG→承認メール
+    └ auto     → 直接投稿 (executePhaseCPost_)
+
+【承認後処理】
+  下書きシートE列編集 → 承認 → processApprovedDrafts
+  → ★v12.0: E列を再読み込み → X API投稿
+  [画像再生成] → processPendingRegenRequests_ → ★v12.0: E列から最新テキスト取得 → 新メール
+  [中止] → ステータス更新
+
+★v12.8 タスク5-a/b/c 完了:
+  ・handleManualMode_ / handleValidateMode_ / handleAutoMode_ が対称形に統一
+  ・3モードとも「saveDraft + Phase B トリガー」のみの実装 (各30-40行)
+  ・モード固有の挙動は全て Phase C の currentMode 分岐に集約
+  ・autoモードでも下書きが必ず作成される → 緊急中止ウィンドウ 約2分間
+
+★v12.7 Phase 3分割の効果:
+  ・GAS 6分制限対策: 各Phase 3-4分枠で確実に完走
+  ・対話型検証(Step 4)は Phase B 末尾で実行 → Phase B完了時間 約40秒増加
+  ・事故時の手動ロールバック: 下書きステータスを「中止」に変更で止められる
+  ・factCheckSkipped=true / Phase Bエラー → Phase C で manual 強制降格
 
 ★v12.2追加:
   ・validateモード復活（メニューに「検証モード（問題時のみ承認）」追加）
-    バリデーション通過 → 自動投稿 / 問題あり → 承認メール
   ・ファクトチェック失敗時の自動ブロック
     factCheckSkippedフラグ（503等でファクトチェック未実行）
-    → auto/validateモードでも強制的にmanualモードへ（検証なしで投稿されない）
-  ・Claudeフォールバック通知
-    Gemini Pro 503 → Claude代替生成時、メールにオレンジ枠で表示
+    → Phase C で強制的にmanualモードへ降格
+  ・Claudeフォールバック通知（Gemini 503時、メールにオレンジ枠）
 
 ★v12.0修正:
   ・投稿直前にgetDraftById_でスプレッドシートE列を再読み込み
   ・手動編集した場合、編集後のテキストが確実に投稿される
-  ・画像再生成時も同様にE列の最新テキストを使用
-
-★v12.0修正: imageGenerator.gsの重複関数
-  ・saveImageToDrive_ → approval.gs版のみ有効（文字列を返す）
-  ・saveImageToTempDrive_ → imageGenerator.gs版（オブジェクトを返す。テスト用）
-  ・GASは同名関数が「後勝ち」のため、リネームで衝突を回避
+  ・imageGenerator.gsの重複関数はリネームで衝突回避
+    saveImageToDrive_ → approval.gs版（文字列を返す）
+    saveImageToTempDrive_ → imageGenerator.gs版（オブジェクトを返す）
 ```
 
 ---
@@ -351,18 +440,128 @@ RULE系/KNOWLEDGE: 注入しない
 ## 11. バージョン履歴（直近のみ）
 
 ```
-v12.6（2026-04-15）= 設計図v12.6
-  リグレッション防止 + fixHallucinatedRates_クロス汚染修正 + 最終事実検証 + TOKYO/LUNCHレート台変換
-  ・testPostProcessor.gs新設: 後処理チェーン不変条件テスト38ケース
+v12.9（2026-04-17 完成）= 設計書v12.9
+  Q6確定データ強化 + GOLDEN夜の材料ヒント + SCHEDULE整合性修正
+  
+  背景: 2026-04-17 の運用で発覚した2件の事件を根本解決したセッション
+    事件1: runMorning 22:11異常発火(config.gs配列不整合)
+    事件2: Phase B Q6 RBA利下げ誤判定(Claude時系列バイアス)
+  
+  成果:
+    ★Q6確定データ強化:
+      ・qualityReview.gs で collectAnchorData_(postType) を呼び出し追加
+      ・政策金利・通貨強弱・継続中重大事象を Q6 プロンプトに注入
+      ・判定優先順位を明示(カレンダー > 確定データ > 本文 > Web > 内部知識)
+      ・testQReviewRBA でRBA利上げサイクル判定の正答を確認
+    
+    ★GOLDEN夜の材料ヒント:
+      ・promptBuilder.gs に buildEveningMaterialHint_ 新設(約130行)
+      ・経済カレンダーから GOLDEN投稿(20-21時台)以降の材料を動的抽出
+      ・重要度別分類(高=軽く触れる/中=目線述べる/要人発言=別枠)
+      ・INDICATOR投稿との重複回避設計
+      ・スプレッドシートC列の「今夜の材料」セクションと連動
+    
+    ★SCHEDULE整合性修正:
+      ・config.gs の月〜金 times 配列から 22:XX(NYスロット) を削除
+      ・types/times が全曜日で要素数一致(不整合解消)
+      ・runMorning 異常発火の根本対策
+      ・verifyScheduleIntegrity() で自動検証可能
+    
+    ★testFunctions.gs Lv2拡充:
+      ・260行 → 656行 (+396行)
+      ・追加15関数: verifyScheduleIntegrity / checkTriggers / 3シート読込 /
+        testInteractiveVerifyUnit / testCollectAnchorData /
+        testQReviewRBA/FOMC/OngoingEvents / testShowPhaseStatus / testPhaseBOnly
+      ・testPro_NY削除(NY廃止のため)
+    
+    ★ドキュメント新設:
+      ・TCAX_REFERENCE.md v1.0: 事件簿4件 + ベストプラクティス10項目
+      ・Trading Complete REFERENCE.md とは別管理(システムが異なるため)
+
+v12.8（2026-04-17 完成）= 設計書v12.8
+  タスク5-a/b/c 完了 + 対話型検証 Step 4 初稼働 + Phase A→B→C 全モード稼働
+  
+  成果:
+    ・タスク5-a: handleManualMode_ + Phase C トリガー有効化(+3行)
+    ・タスク5-b: handleValidateMode_ 88行→38行簡素化
+    ・タスク5-c: handleAutoMode_ 63行→40行簡素化
+    ・3モードハンドラーが対称形に統一
+    ・Phase A→B→C 非同期パイプラインが全モードで稼働可能に
+  
+  対話型検証(Step 4)の初稼働実績(2026-04-17 16:00):
+    ・runMorning 本番フロー内で Phase B → Step 4 発火
+    ・claim5件抽出(植田総裁発言/RBA利上げ/通貨ペア数値/指標予告等)
+    ・Web検証: ❌0件 / ⚠️1件(発言引用のニュアンス) / ✅4件
+    ・修正発動 → 後処理チェーン適用 → Gmail 承認メール到着
+    ・所要時間: 38秒、Claude API 3回
+    ・対話型検証ログシートに初回レコード VL_20260417_160034_4012
+  
+  副次的効果:
+    ・全モードで下書き必ず作成 → 緊急中止ウィンドウ 約2分間
+    ・事後分析用のスナップショット残存
+    ・autoモードでも事故投稿を途中で止められる設計に
+
+v12.7（計画中・2026-04-17〜）= 設計図v12.7
+  Phase 3分割 + 未来日付ガード（完全自動運用への最終章）
+  
+  背景: 2026-04-16本番MORNINGでのハルシネーション事故
+    ・投稿本文に「4/17のトランプ解任示唆」を「4/16昨夜の出来事」として混入
+    ・ファクトチェック「全て正確」で通過。品質レビューは事実検出したが修正失敗
+    ・Gemini Pro 503 → Claudeフォールバックで時間余裕が消失
+    ・承認メールまで到達。人間が止めなければ誤情報が発信されていた
+    ・autoモード運用中なら完全自動で誤情報が世界に出ていた
+  
+  根本原因:
+    ・Phase A（1トリガー=6分）に検証と修正を全詰め。障害時に品質保証の余裕が消える
+    ・未来日付検証の専用ロジックが存在しない
+    ・autoモードで下書きが作られないため事故時の中止手段ゼロ
+  
+  解決策:
+    ・Phase 3分割（A=生成 / B=整形 / C=投稿）で検証と修正を独立Phase化
+    ・未来日付ガード（ニュース収集+投稿本文の2段ガード）
+    ・全モードで下書き必須化（autoでも緊急中止可能に）
+  
+  設計思想:
+    Write-Then-Reviewパターン: 生成と検証を別Phaseに分離
+    完全自動でも下書きは残す: 事後分析と緊急中止手段を確保
+    「確定データ > AI推論」をPhase分割でも維持
+    API呼び出し回数は増加ゼロ（月額コスト±0円）
+  
+  関連ドキュメント:
+    Phase 3分割+未来日付ガード要件定義書 v1.2
+      セクション4.4: autoモードでも下書きが必ず作られる仕様
+      セクション5.4: False Positive防止（未来予定文脈のホワイトリスト）
+      セクション6: 影響範囲分析（approval.gs等の実コード検証）
+      セクション8.4: ハートビート監視（システム沈黙検知）
+      セクション12: 移行手順（下書きクリア→段階デプロイ）
+
+v12.6.1（2026-04-16）コード品質改善（4項目）
+  ・config.gs: CLAUDE_MODEL定数追加（ハードコード廃止）
+  ・config.gs: ScriptProperties全24キー一覧コメント追加
+  ・config.gs: POST_TYPESからhasImageフィールド廃止
+  ・geminiApi.gs: サイレントcatch 9箇所にログ追加
+  ・qualityReview.gs: Q6「全文再生成→2回目レビュー→パッチ」を「元投稿ベース事実修正」に変更（API 3回→1回）
+  ・qualityReview.gs: サイレントcatch 5箇所にログ追加
+  ・scheduler.gs: ログ表示をisImageGenerationType()参照に変更
+  ・設計思想: 完全自動運用では「静かに劣化する」ことが最大のリスク
+    手動承認モード（人間の目がセーフティネット）と完全自動モードは別物
+    完全自動を目指すなら、ログなしcatchは禁止
+
+v12.6（2026-04-15/16）= 設計図v12.6
+  リグレッション防止 + 最終事実検証(JSON検出+コード置換) + TOKYO/LUNCHレート台変換
+  ・testPostProcessor.gs新設: 後処理チェーン不変条件テスト40ケース
   ・config.gs: formatRate_関数+RATE_DECIMALS定数（toFixed散在をDRY化）
-  ・postProcessor.gs: fixHallucinatedRates_を最近傍キーワード割り当て方式に書き換え
-  ・postProcessor.gs: convertExactRatesToRange_新設（TOKYO/LUNCHのレート数値→「台」自動変換）
+  ・postProcessor.gs: fixHallucinatedRates_を最近傍キーワード割り当て方式に書き換え（クロス汚染修正）
+  ・postProcessor.gs: convertExactRatesToRange_新設（TOKYO/LUNCHレート→「台」変換。スペース区切り対応）
   ・qualityReview.gs/geminiApi.gs/factCheck.gs/promptBuilder.gs: toFixed→formatRate_置換（計48箇所）
-  ・geminiApi.gs: finalFactVerify_新設（品質レビュー後に事実だけに集中した最終検証+修正）
+  ・geminiApi.gs: finalFactVerify_新設（JSON検出+コード置換。Claudeは検出だけ、修正はコード）
+    確定データ: レート+始値+通貨強弱+カレンダー+政策金利+要人
+    correctフィールド汚染検出+wrong===correctスキップ+切れたJSON修復
+    ★本番NY投稿で「円高→円安」を自動修正（効果実証済み）
+  ・geminiApi.gs: TIME_LIMIT_SEC 240→300秒（Phase B分離済みで安全）
   ・promptBuilder.gs: TOKYO/LUNCHに「レートは台で表現」ルール追加
   ・main.gs: 🧪テストメニュー追加
-  ・設計思想: promptBuilder.gsは2,500行まで分割しない。テストで守れる安全網を優先
-  ・設計思想: 品質レビュー(Q1-Q7同時)は注意が分散する。最終検証は事実だけに100%集中させる
+  ・設計思想: Claudeは検出だけ、修正はコード。promptBuilder.gsは2,500行まで分割しない
 
 v12.5（2026-04-14/15）= 設計図v12.5
   コード品質改善 + 品質レビュー大幅強化
@@ -449,4 +648,83 @@ v8.0（2026-04-01）= 設計図v9.0
 
 ---
 
-*更新日: 2026-04-15 | v12.6（リグレッション防止+fixHallucinatedRates_クロス汚染修正+promptBuilder分割不要方針）*
+## 12. ★NEW: 完成への道のり（2026-04-17 v12.8時点）
+
+```
+T-CAXは「完成の一歩手前」に到達した。
+タスク5-a/b/c 完了 + 対話型検証 Step 4 初稼働成功により、達成度は98%に。
+残る2%は、実運用データを取得しタスク18(factCheck削除)と19(Claude統一)を判断する工程。
+
+【現在地(2026-04-17 v12.8)】
+  ・機能実装: ✅ 全機能実装完了
+  ・手動承認モード: ✅ 安定運用中 + Phase A→B→C 非同期パイプライン稼働確認
+  ・validateモード: ✅ コード実装完了(実運用検証待ち)
+  ・autoモード: ✅ コード実装完了・下書き必須化済み(実運用検証待ち)
+  ・対話型検証(Step 4): ✅ 本番フロー内で初稼働成功(2026-04-17 16:00)
+  ・対話型検証ログシート: ✅ データ蓄積開始(VL_20260417_160034_4012 が1行目)
+
+【完成定義】
+  「人間が毎回目視確認しなくても、誤情報を発信せずに月179投稿が安定稼働する」
+  
+  これを達成すれば:
+    ・毎朝PCを起動して承認する作業が不要になる
+    ・月約27,000円相当（9時間/月）の人間工数が解放される
+    ・その時間をTC本業・新機能企画・休養に回せる
+    ・T-CAXは「FX情報発信の無人プラットフォーム」として完成する
+
+【v12.8 達成済み課題】
+  ✅ 課題1: 未来日付混入のハルシネーション
+      → v12.7 Phase 1 + 未来日付ガードログシート(㉓)で止血・監視
+  
+  ✅ 課題2: Phase A過負荷による障害時の品質崩壊
+      → v12.7 Phase 2 で A/B/C 3分割完成。各Phase 3-4分枠で余裕
+  
+  ✅ 課題3: autoモードで下書きが作られず事故時の中止手段ゼロ
+      → v12.8 タスク5-c で autoモードも下書き必須化
+      → 緊急中止ウィンドウ 約2分間(Phase A完了〜Phase C実行)を確保
+
+【残課題(v12.8→v13.0)】
+  課題4: 対話型検証の実効果測定
+    症状: 初稼働は成功したが、1件のみのデータでは効果判断不能
+    解決: 1-2週間の実運用で ❌/⚠️/✅ 分布を取得 → タスク18の判断材料
+  
+  課題5: 既存3段検証との重複コスト
+    症状: Phase A の3段検証 + Phase B の品質レビュー二重実行で Claude API 11-12回/投稿
+    解決: タスク18で Phase A 内の検証層削除 → 対話型検証で置換
+
+【v12.8 以降のロードマップ】
+  M3(今ここ): 手動承認モード + 対話型検証ON で1-2週間運用
+            → 対話型検証ログに100件超のデータ蓄積
+            → プロンプト改善の根拠データを取得
+  
+  M4: タスク18 (factCheck削除 + Q6削除)
+      → Phase A の検証層を対話型検証に一本化
+      → Claude API 回数削減 → 月額約5,000円→3,000円見込み
+  
+  M5: タスク19 (Claude統一)
+      → Gemini 503 全滅時のフォールバック削除
+      → 生成パスをClaude一本化
+  
+  M6: validateモード切替
+      → 1週間運用 → バリデーション通過率を測定
+  
+  M7: autoモード切替(完全自動運用開始)
+      → 連続7日間179投稿 × 事故ゼロ → 完成宣言
+      → 以降は月次レビュー(継続中重大事象シートの更新のみ必須)
+
+【心構え】
+  焦らない: v12.8 到達は早かったが、タスク18以降は実運用データ待ち。
+           「動いたから次」ではなく「動いた証拠を集めてから次」が事故を防ぐ。
+  
+  実運用を軽視しない: 1投稿で Step 4 が成功したからといって、全投稿で動く保証はない。
+                   平日6投稿 × 2週間 = 約85件のデータ蓄積で分布を見る。
+  
+  完成させる: v12.8まで来たシステムを、ここで中途半端にしない。
+             残り約3時間の実装(タスク18+19)で、完全自動運用の無人プラットフォームとして完成する。
+             焦る必要はない。でも確実に前に進む。
+```
+
+---
+
+*更新日: 2026-04-17 | v12.9（Q6確定データ強化 + GOLDEN夜の材料ヒント + SCHEDULE整合性修正 + testFunctions.gs Lv2拡充 + TCAX_REFERENCE.md 新設）*
+*更新日: 2026-04-17 | v12.8（タスク5-a/b/c 完了 + 対話型検証 Step 4 初稼働成功 + Phase A→B→C 全モード稼働）*

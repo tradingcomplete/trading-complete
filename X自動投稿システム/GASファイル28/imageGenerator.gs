@@ -34,8 +34,8 @@ var IMAGE_REGEN_MAX = 3;
 
 var IMAGE_TYPE_COLORS = {
   MORNING:       { accent: 'サイアン（水色/cyan）',  label: 'MORNING BRIEF' },
-  LONDON:        { accent: 'ネオン緑（neon green）', label: 'LONDON REPORT' },
-  NY:            { accent: 'ネオン紫（neon purple）', label: 'NY PREVIEW' },
+  GOLDEN:        { accent: 'ネオンオレンジ（neon orange）', label: 'GOLDEN TIME' },  // ★v12.7新規: 夜の集大成
+  // ★v12.7: LONDON/NY削除（画像なし投稿へ移行）
   INDICATOR:     { accent: 'ネオン赤（neon red）',   label: 'INDICATOR ALERT' },
   WEEKLY_REVIEW: { accent: 'ゴールド（gold）',       label: 'WEEKLY REVIEW' },
   NEXT_WEEK:     { accent: 'ネオン緑（neon green）', label: 'NEXT WEEK' }
@@ -60,12 +60,12 @@ var IMAGE_ARCHETYPES = {
   DUAL_CONTRAST: {
     name: 'デュアル・コントラスト',
     description: '左右や斜めの分割画面で対比する構図。対立・比較。ブルvsベア、タカ派vsハト派など。',
-    bestFor: ['MORNING', 'LONDON', 'NY']
+    bestFor: ['MORNING', 'GOLDEN']  // ★v12.7: LONDON/NY → GOLDEN
   },
   FLOW_PERSPECTIVE: {
     name: 'フロー＆パースペクティブ',
     description: '奥へと続く道や分岐点を描く構図。シナリオ分岐・トレンド。',
-    bestFor: ['NY', 'NEXT_WEEK']
+    bestFor: ['GOLDEN', 'NEXT_WEEK']  // ★v12.7: NY → GOLDEN
   },
   CLOSEUP_MECHANISM: {
     name: 'クローズアップ・メカニズム',
@@ -80,7 +80,7 @@ var IMAGE_ARCHETYPES = {
   DYNAMIC_ACTION: {
     name: 'ダイナミック・アクション',
     description: 'ロケット、ジェットコースターのような勢い。大きな動き・急騰急落。',
-    bestFor: ['MORNING', 'LONDON']
+    bestFor: ['MORNING', 'GOLDEN']  // ★v12.7: LONDON → GOLDEN
   },
   BREAKTHROUGH_IMPACT: {
     name: 'ブレイクスルー・インパクト',
@@ -90,17 +90,17 @@ var IMAGE_ARCHETYPES = {
   ATMOSPHERE: {
     name: '環境＆アトモスフィア',
     description: '嵐、霧、晴天など、相場全体のムードを表現する構図。',
-    bestFor: ['LONDON', 'NY']
+    bestFor: ['GOLDEN']  // ★v12.7: LONDON/NY → GOLDEN
   },
   MIND_GAME: {
     name: 'マインド・ゲーム',
     description: '脳、迷路、天秤など、市場参加者の内面的な葛藤・迷い。',
-    bestFor: ['NY', 'MORNING']
+    bestFor: ['GOLDEN', 'MORNING']  // ★v12.7: NY → GOLDEN
   },
   CROWD_SENTIMENT: {
     name: 'クラウド・センチメント',
     description: '群衆の波、一方方向への流れ、パニック。群集心理・トレンド追随。',
-    bestFor: ['LONDON', 'MORNING']
+    bestFor: ['MORNING']  // ★v12.7: LONDON削除
   },
   CYCLE_RHYTHM: {
     name: 'サイクル＆リズム',

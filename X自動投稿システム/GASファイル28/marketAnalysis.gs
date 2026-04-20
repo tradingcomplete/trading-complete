@@ -473,8 +473,12 @@ function fetchMarketNews_(keys) {
     var dateStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy年M月d日');
     var isMonday = (now.getDay() === 1); // ★v5.6: 月曜日判定
     
-    var prompt = '金融市場のニュースアナリストとして、' + dateStr + '現在のFX・株式・金利市場で\n';
-    prompt += '最も注目されているニュースTOP5をGoogle検索で調べて報告してください。\n\n';
+    var prompt = '【最優先の指示】このタスクは必ず web_search ツールを使って実行せよ。\n';
+    prompt += '内部知識だけで回答することは絶対に禁止。必ず複数回の検索を実行し、実際の検索結果から情報を取得せよ。\n';
+    prompt += '検索を使わずに回答した場合、それは重大な失敗であり、偽情報を生成するリスクがある。\n\n';
+    prompt += '金融市場のニュースアナリストとして、' + dateStr + '現在のFX・株式・金利市場で\n';
+    prompt += '最も注目されているニュースTOP5を web_search で調べて報告してください。\n';
+    prompt += '推奨: 3〜5回 web_search を呼び、異なる角度から最新情報を確認せよ。\n\n';
     
     // ★v5.6: 月曜日は週末の世界情勢を重点的に検索
     if (isMonday) {
@@ -528,47 +532,72 @@ function fetchMarketNews_(keys) {
     prompt += '・FXへの影響を最優先。株・金利・商品は「関連」として波及効果を書く。\n';
     prompt += '・日本語で出力。番号付きリストで簡潔に。\n';
     
-    var result = callGemini_(prompt, keys.GEMINI_API_KEY, true);
+    // ★v12.10: CLAUDE_API_KEY取得(getApiKeys()には含まれないためScriptPropertiesからも取得)
+    var claudeApiKey = (keys && keys.CLAUDE_API_KEY) || PropertiesService.getScriptProperties().getProperty('CLAUDE_API_KEY');
+    if (!claudeApiKey) {
+      console.log('❌ CLAUDE_API_KEY未設定 → ニュース取得スキップ');
+      return '';
+    }
     
-    // ★v6.0.2: Grounding検索ソースをログ出力（ニュースの裏付け確認用）
-    if (result && result.raw) {
+    var result = callClaudeApi_(prompt, claudeApiKey, {
+      useWebSearch: true,
+      maxSearchUses: 5,        // ニュース取得は複数検索したい
+      maxRetries: 2,
+      logPrefix: 'ニュース取得(Claude web_search)'
+    });
+    
+    // ★v12.10: Claude web_search のソース数確認
+    // Claude の server_tool_use / web_search_tool_result をカウントして
+    // 検索が実際に実行されたか検証する。0件なら取得失敗扱いにする。
+    var searchCount = 0;
+    var sourceUrls = [];
+    if (result && result.raw && result.raw.content) {
       try {
-        var candidate = result.raw.candidates && result.raw.candidates[0];
-        if (candidate && candidate.groundingMetadata) {
-          var gm = candidate.groundingMetadata;
-          
-          // 検索クエリをログ出力
-          if (gm.webSearchQueries && gm.webSearchQueries.length > 0) {
-            console.log('🔍 Grounding検索クエリ: ' + gm.webSearchQueries.join(' | '));
+        for (var ri = 0; ri < result.raw.content.length; ri++) {
+          var block = result.raw.content[ri];
+          if (block.type === 'server_tool_use' && block.name === 'web_search') {
+            searchCount++;
+            if (block.input && block.input.query) {
+              console.log('🔍 Claude web_search クエリ: ' + block.input.query);
+            }
           }
-          
-          // ソースURLをログ出力（最大10件）
-          if (gm.groundingChunks && gm.groundingChunks.length > 0) {
-            var sources = [];
-            for (var gi = 0; gi < Math.min(gm.groundingChunks.length, 10); gi++) {
-              var chunk = gm.groundingChunks[gi];
-              if (chunk.web) {
-                sources.push((chunk.web.title || '不明') + ' → ' + chunk.web.uri);
+          if (block.type === 'web_search_tool_result' && block.content) {
+            for (var bi = 0; bi < block.content.length; bi++) {
+              var item = block.content[bi];
+              if (item.type === 'web_search_result' && item.url) {
+                sourceUrls.push(item.title + ' → ' + item.url);
               }
             }
-            if (sources.length > 0) {
-              console.log('📰 Groundingソース（' + sources.length + '件）:');
-              for (var si = 0; si < sources.length; si++) {
-                console.log('  ' + (si + 1) + '. ' + sources[si]);
-              }
-            }
-          } else {
-            console.log('⚠️ Groundingソースなし（Geminiの内部知識のみで回答した可能性）');
           }
         }
-      } catch (gmErr) {
-        console.log('⚠️ GroundingMetadata解析スキップ: ' + gmErr.message);
+      } catch (metaErr) {
+        console.log('⚠️ Claude検索メタデータ解析スキップ: ' + metaErr.message);
       }
     }
     
+    // 検索結果のログ出力
+    if (sourceUrls.length > 0) {
+      console.log('📰 Claude web_searchソース(' + sourceUrls.length + '件):');
+      for (var ui = 0; ui < Math.min(sourceUrls.length, 10); ui++) {
+        console.log('  ' + (ui + 1) + '. ' + sourceUrls[ui]);
+      }
+    }
+    
+    // ★検索が0件ならニュース取得失敗扱い(キャッシュしない)
+    if (searchCount === 0 || sourceUrls.length === 0) {
+      console.log('❌ Claude web_search が実行されなかった/結果0件 → ニュース取得失敗扱い');
+      console.log('   → キャッシュに保存せず、次回呼び出しで再取得を試みる');
+      return '';
+    }
+    
     if (result && result.text) {
+      // ★v12.7: 未来日付フィルタ（Phase 1）
+      // Geminiが「明日以降の日付のニュース」を拾ってきた場合、その段落を除去する
+      // 段落単位（番号項目単位）で判定。過去形文脈があれば削除、未来予定文脈なら保持
+      var filteredNewsText = filterFutureDateParagraphs_(result.text);
+      
       var newsText = '\n\n【📰 直近の市場ニュースTOP5（自動取得 - 投稿の題材として最優先で使え）】\n';
-      newsText += result.text.trim();
+      newsText += filteredNewsText.trim();
       newsText += '\n\n';
       newsText += '■ ニュースの使い方（重要）\n';
       newsText += '・上記ニュースから投稿タイプに最も合うものを選び、投稿の「フック」（冒頭の掴み）に使え。\n';
@@ -582,7 +611,7 @@ function fetchMarketNews_(keys) {
       
       // 1時間キャッシュ（3600秒）
       cache.put('market_news_v3', newsText, 3600);
-      console.log('📰 市場ニュース取得成功（キャッシュ保存: 1時間）');
+      console.log('📰 市場ニュース取得成功(Claude web_search・キャッシュ保存: 1時間)');
       return newsText;
     }
     
@@ -593,6 +622,92 @@ function fetchMarketNews_(keys) {
     console.log('⚠️ 市場ニュース取得エラー（スキップ）: ' + e.message);
     return '';
   }
+}
+
+
+// ========================================
+// ★v12.7: 未来日付ニュース段落フィルタ（Phase 1）
+// ========================================
+
+/**
+ * Geminiが取得したニューステキストから、未来日付＋過去形文脈の段落を除去する
+ * 
+ * ニュースは「番号. [カテゴリ] ヘッドライン...」という段落構造。
+ * 各段落を isFutureDatePastTenseLine_ で判定し、削除対象は段落丸ごと除去。
+ * 
+ * 例:
+ *   2. [要人発言] トランプ大統領、4月17日にパウエル解任を示唆
+ *      ソース: ... 日付: 2026/04/17 ...
+ *   → 段落全体を削除（ヘッドライン行の判定で削除決定）
+ * 
+ * @param {string} newsText - Geminiが返したニューステキスト
+ * @return {string} フィルタ後のニューステキスト
+ */
+function filterFutureDateParagraphs_(newsText) {
+  if (!newsText) return newsText;
+  
+  // 段落分割: 「番号. 」で始まる行の直前で分割
+  // 番号パターン: 「1.」「2.」... 〜「5.」まで
+  var paragraphs = [];
+  var lines = newsText.split('\n');
+  var current = [];
+  
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    // 番号付き項目の開始判定（「1.」「2.」等）
+    if (/^\s*[1-9][0-9]?\.\s/.test(line) && current.length > 0) {
+      paragraphs.push(current.join('\n'));
+      current = [line];
+    } else {
+      current.push(line);
+    }
+  }
+  if (current.length > 0) paragraphs.push(current.join('\n'));
+  
+  // 各段落を判定
+  var today = new Date();
+  var kept = [];
+  var removedCount = 0;
+  
+  for (var pi = 0; pi < paragraphs.length; pi++) {
+    var paragraph = paragraphs[pi];
+    
+    // 段落内の各行を isFutureDatePastTenseLine_ で判定
+    // 1行でも「削除対象」なら段落ごと削除
+    var paraLines = paragraph.split('\n');
+    var shouldRemove = false;
+    var firstRemovedLine = '';
+    
+    for (var li = 0; li < paraLines.length; li++) {
+      if (typeof isFutureDatePastTenseLine_ === 'function' &&
+          isFutureDatePastTenseLine_(paraLines[li], today)) {
+        shouldRemove = true;
+        firstRemovedLine = paraLines[li];
+        break;
+      }
+    }
+    
+    if (shouldRemove) {
+      removedCount++;
+      console.log('⚠️ 未来日付ニュース段落を削除: ' + firstRemovedLine.substring(0, 80));
+      // ログシートに記録（sheetsManager.gsのlogFutureDateGuard_を使用）
+      try {
+        if (typeof logFutureDateGuard_ === 'function') {
+          logFutureDateGuard_('news', paragraph.substring(0, 500));
+        }
+      } catch (logErr) {
+        console.log('  （ログ記録スキップ: ' + logErr.message + '）');
+      }
+    } else {
+      kept.push(paragraph);
+    }
+  }
+  
+  if (removedCount > 0) {
+    console.log('📰 未来日付フィルタ: ' + removedCount + '段落を除去');
+  }
+  
+  return kept.join('\n');
 }
 
 
