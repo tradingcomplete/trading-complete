@@ -57,57 +57,40 @@ function getPostPrompt_(postType) {
   }
 }
 
-// ===== TC概要をSheetsから取得（コンパクト版） =====
+// ===== TC概要をSheetsから取得（★Phase 1 選択肢A: 2026-04-21 圧縮版） =====
+// 旧版(1,082字)を新版(約305字)に圧縮。-777字(-72%)
+// キャラクターシート【TC導線】(トーン・OK/NG例)と連携し、
+// ここでは今週のローテーション機能とコア指示のみに絞る
 function getTCOverview() {
   try {
     var keys = getApiKeys();
     var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
     var sheet = ss.getSheetByName('TC概要');
     
-    if (!sheet) {
-      console.log('⚠️ TC概要シートが見つかりません');
-      return '';
-    }
-    
-    var data = sheet.getDataRange().getValues();
-    
-    // 必要な行だけ抽出（全22行を注入すると冗長すぎてGeminiが無視する）
-    var keyRows = ['サービス名', 'コンセプト', '一言で言うと', '解決する課題', 
-                   'ターゲット', '核心の価値', '投稿での扱い', 'URL'];
-    var sections = [];
-    
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] && data[i][1]) {
-        var sectionName = String(data[i][0]).trim();
-        for (var k = 0; k < keyRows.length; k++) {
-          if (sectionName === keyRows[k]) {
-            sections.push(sectionName + ': ' + String(data[i][1]).trim());
-            break;
-          }
-        }
+    // ★Phase 1 選択肢A: KV情報はコンセプトとURLのみに絞る
+    //   他の項目(サービス名/ターゲット/核心の価値等)はキャラクターシート【ペルソナ】で既出
+    var concept = '';
+    var url = '';
+    if (sheet) {
+      var data = sheet.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        var k = String(data[i][0] || '').trim();
+        var v = String(data[i][1] || '').trim();
+        if (k === 'コンセプト' && v) concept = v;
+        else if (k === 'URL' && v) url = v;
       }
     }
     
-    if (sections.length === 0) return '';
-    
-    var text = '\n\n【Trading Complete（TC）について - 投稿に自然に織り込むための参考情報】\n';
-    text += sections.join('\n') + '\n';
-    // ★v12.10: 診断書 Phase 1-2 重複削除
-    //   旧: 【TCの主な機能(投稿内で1つだけ自然に触れろ)】ヘッダを独立セクションで配置
-    //   新: ヘッダ削除。機能リストは【Trading Complete(TC)について】の一部として自然に続ける
-    //   削減: 1セクション・約50字
-    text += '\n■ 機能リスト(投稿内で1つだけ自然に触れろ。押し売り厳禁):\n';
-    
-    // 8機能を定義
+    // 8機能を定義(ローテーション対象・変更なし)
     var features = [
-      'エントリー前チェックリスト: 3つの根拠（エントリー・損切り・利確）を書かないと保存できない「関所」機能',
-      'リスク自動判定: 許容損失額を超えるトレードは赤警告。ロットの適正値も自動計算',
-      '手法別勝率分析: どの手法が勝てているか・負けているかが一目で分かる',
-      '月次カレンダー: 日別損益を緑（利益）/赤（損失）で色分け表示。勝てる曜日・負ける曜日が一目で分かる',
-      '相場ノート検索: 過去のノートをキーワード検索。「去年の今頃」が瞬時に分かる',
-      '期待値・PF計算: 勝率だけでなく「1トレードあたりいくら稼げるか」を自動算出',
-      '経費管理・CSV出力: 確定申告用のデータが一発で出せる',
-      'バッジ機能: ルール遵守・リスク判定がトレードカードにバッジとして表示される'
+      'エントリー前チェックリスト(3つの根拠を書かないと保存できない関所機能)',
+      'リスク自動判定(許容損失超過を赤警告・ロット適正値も自動計算)',
+      '手法別勝率分析(どの手法が勝てているか/負けているか一目で分かる)',
+      '月次カレンダー(日別損益を色分け表示・勝てる曜日が一目で分かる)',
+      '相場ノート検索(過去のノートをキーワード検索・「去年の今頃」が瞬時に)',
+      '期待値・PF計算(1トレードあたりいくら稼げるかを自動算出)',
+      '経費管理・CSV出力(確定申告データが一発で出せる)',
+      'バッジ機能(ルール遵守・リスク判定がカードにバッジ表示される)'
     ];
     
     // スクリプトプロパティで前回のインデックスを記録→順番に回す
@@ -116,23 +99,16 @@ function getTCOverview() {
     var nextIdx = (lastIdx + 1) % features.length;
     props.setProperty('TC_FEATURE_INDEX', String(nextIdx));
     
-    text += '★今回はこの機能を紹介しろ → ' + features[nextIdx] + '\n';
-    for (var g = 0; g < features.length; g++) {
-      if (g !== nextIdx) {
-        text += '・' + features[g] + '\n';
-      }
-    }
-    text += '\n■ 導線の入れ方(自然に1箇所だけ):\n';
-    text += '・宣伝感は絶対に出さない。自分の体験→課題→TCの機能で解決、の自然な流れ\n';
-    text += '・投稿の主題はあくまで市場情報や心得。TC言及は脇役として自然に添える程度\n';
-    text += '・★印の機能を具体的に紹介すること（毎回違う機能になる）\n';
-    text += '・OK: 「Trading Completeのリスク自動判定で、許容損失額を超えた時に警告が出る」\n';
-    text += '・OK: 「手法別の勝率を分析タブで見たら、逆張りの勝率が20%台だった。封印したら収支が改善」\n';
-    text += '・OK: 「月次カレンダーで赤（損失日）が並ぶ週があって、調べたら全部感情的なトレードだった」\n';
-    text += '・OK: 「相場ノート検索で去年の同時期を振り返ったら、似たパターンを発見」\n';
-    text += '・NG: 「記録が大事」（抽象的すぎる）\n';
-    text += '・NG: 「Trading Completeで仕組み化した」（何の機能か分からない）\n';
-    text += '・NG: 「ぜひ使ってください」「リンクはプロフから」（直接宣伝）\n';
+    // ★Phase 1 選択肢A: 統合版TC導線(旧版1,082字 → 新版約305字)
+    var text = '\n\n【TC導線(今週紹介する機能・自然に織り込め)】\n';
+    if (concept) text += 'TCのコンセプト: ' + concept + '\n';
+    if (url) text += 'URL: ' + url + '\n';
+    text += '★今回紹介する機能: ' + features[nextIdx] + '\n\n';
+    text += '入れ方(キャラクターシート【TC導線】のルールも参照):\n';
+    text += '・主題は市場情報や心得。TC言及は脇役として自然に添える(投稿の20%以下・週1〜2回)\n';
+    text += '・★印の機能を具体的に触れる。宣伝感厳禁\n';
+    text += '・OK例: 「手法別の勝率を分析タブで見たら、逆張りの勝率が20%台だった。封印したら収支が改善」\n';
+    text += '・NG例: 「ぜひ使ってください」「記録が大事」(直接宣伝・抽象論はNG)\n';
     
     return text;
   } catch (e) {
@@ -1792,12 +1768,11 @@ function buildFormatRules_(charMin, charMax, postType) {
     rules += '全ペア変動小なら値動き分析を無理に語るな。指標解説/学び/トレード心理に切り替え。\n';
   }
   
-  var tcWeekdayTypes = ['GOLDEN', 'LUNCH'];
+  // ★Phase 1 選択肢A (2026-04-21): tcWeekdayTypes の TC導線指示を削除
+  //   getTCOverview() 統合版に同等内容が含まれるため重複。-65字
+  //   tcNoTypes の「TC言及禁止」指示は保持(MORNING/TOKYO等で必須の制御)
   var tcNoTypes = ['MORNING', 'TOKYO', 'LONDON', 'INDICATOR', 'KNOWLEDGE'];
-  if (tcWeekdayTypes.indexOf(postType) !== -1) {
-    rules += '\n【TC導線（AI自律判断・週1〜2回・投稿の20%以下）】\n';
-    rules += '宣伝感NG。「記録が大事→面倒→ツールで仕組み化」の自然な流れで。\n';
-  } else if (tcNoTypes.indexOf(postType) !== -1) {
+  if (tcNoTypes.indexOf(postType) !== -1) {
     rules += '\n【TC言及禁止。純粋な価値提供のみ。】\n';
   }
   

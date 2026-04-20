@@ -654,3 +654,80 @@ function testPhaseBOnly() {
     console.log('❌ エラー: ' + err.message);
   }
 }
+function testDowTheoryOutput() {
+  var keys = getApiKeys();
+  var text = getDowTheorySummary_(keys.SPREADSHEET_ID);
+  console.log('===== ダウ理論サマリー出力 =====');
+  console.log(text);
+  console.log('===== 文字数: ' + (text ? text.length : 0) + ' =====');
+}
+/**
+ * getTCOverview の出力を可視化するテスト関数
+ * 
+ * 使い方: GAS エディタで「testTCOverviewOutput」を選択 → 実行
+ * 実行ログに現在の getTCOverview() の出力全文と文字数が表示される
+ * 
+ * 確認ポイント:
+ *   1. 文字数が約300字前後(旧版1,082字からの圧縮確認)
+ *   2. コンセプトとURLが入っている
+ *   3. ★今回紹介する機能が入っている(ローテーション動作確認)
+ */
+function testTCOverviewOutput() {
+  console.log('========================================');
+  console.log('🔍 getTCOverview() 出力確認テスト');
+  console.log('========================================');
+  console.log('');
+  
+  try {
+    // 現在の TC_FEATURE_INDEX を確認
+    var props = PropertiesService.getScriptProperties();
+    var beforeIdx = props.getProperty('TC_FEATURE_INDEX') || '(未設定)';
+    console.log('● 実行前の TC_FEATURE_INDEX: ' + beforeIdx);
+    console.log('');
+    
+    // getTCOverview を実行
+    var output = getTCOverview();
+    
+    // 実行後の TC_FEATURE_INDEX
+    var afterIdx = props.getProperty('TC_FEATURE_INDEX') || '(未設定)';
+    
+    if (!output) {
+      console.log('⚠️ 空文字が返却されました(TC概要シートが空の可能性)');
+      return;
+    }
+    
+    console.log('● 出力文字数: ' + output.length + '字');
+    console.log('● 実行後の TC_FEATURE_INDEX: ' + afterIdx + ' (次回紹介する機能のインデックス)');
+    console.log('');
+    
+    // 圧縮効果の表示
+    var oldSize = 1082;
+    var diff = oldSize - output.length;
+    var rate = (diff / oldSize * 100).toFixed(1);
+    console.log('● 旧版(1,082字)からの削減: ' + diff + '字 (-' + rate + '%)');
+    console.log('');
+    
+    // 内容確認
+    console.log('● 含まれる要素の確認:');
+    console.log('  [' + (output.indexOf('TC導線') !== -1 ? '✅' : '❌') + '] 「TC導線」ヘッダ');
+    console.log('  [' + (output.indexOf('コンセプト') !== -1 ? '✅' : '❌') + '] 「TCのコンセプト」');
+    console.log('  [' + (output.indexOf('URL') !== -1 ? '✅' : '❌') + '] 「URL」');
+    console.log('  [' + (output.indexOf('★今回紹介する機能') !== -1 ? '✅' : '❌') + '] 「★今回紹介する機能」');
+    console.log('  [' + (output.indexOf('OK例') !== -1 ? '✅' : '❌') + '] 「OK例」');
+    console.log('  [' + (output.indexOf('NG例') !== -1 ? '✅' : '❌') + '] 「NG例」');
+    console.log('');
+    
+    // 全文出力
+    console.log('========================================');
+    console.log('● 出力全文:');
+    console.log('========================================');
+    console.log(output);
+    console.log('========================================');
+    console.log('');
+    console.log('✅ テスト完了');
+    
+  } catch (e) {
+    console.log('❌ エラー: ' + e.message);
+    console.log(e.stack);
+  }
+}
