@@ -75,7 +75,7 @@ class PaymentModule {
     // ================
     static PLAN_LIMITS = {
         free: {
-            totalTrades: 50,         // 累計50件まで
+            totalTrades: 20,         // 累計20件まで
             cloudSync: false,        // クラウド同期なし
             hasAI: false,
         },

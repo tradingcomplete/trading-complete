@@ -399,6 +399,23 @@ function runComprehensiveReview_(cleanedText, postType, rates, keys) {
 function buildComprehensiveReviewPrompt_(postText, postType, typeConfig, charMin, charMax, anchorData, previousPosts) {
   var p = '';
 
+  // ★v14.0 Phase 5(2026-04-22): 確定データを冒頭の最優先位置に配置
+  //   背景: 2026-04-22 LONDON 事件で、確定データの「備考」列に「連続利上げ」と明記されていたが、
+  //         30,000字のプロンプト内で埋もれて Stage 1 Claude が見落とし、投稿の「連続利上げ」を
+  //         論理矛盾として誤検出した。
+  //   対処: 確定データを冒頭に★★★マーカー付きで配置し、Claude の attention を最初に確実に当てる。
+  if (anchorData && typeof anchorData.toVerifyPrompt === 'function') {
+    p += '★★★━━━━━━━━━━━━━━━━━━━━━━━★★★\n';
+    p += '★★★   最優先参照情報: 確定データ       ★★★\n';
+    p += '★★★━━━━━━━━━━━━━━━━━━━━━━━★★★\n';
+    p += '以下の確定データは Twelve Data API とコンパナ手動管理のスプレッドシートから取得された、\n';
+    p += '本投稿評価における最も信頼できる情報源。\n';
+    p += '★★★ 投稿の記述が以下の確定データと一致する場合、絶対に「事実誤り」「論理矛盾」と判定するな ★★★\n';
+    p += '★★★ 特に【備考】列の記述は文脈を含む事実。例: 「連続利上げ」「据え置き中」等の時系列表現は絶対優先 ★★★\n\n';
+    p += anchorData.toVerifyPrompt() + '\n';
+    p += '★★★━━━━━━━━━━━━━━━━━━━━━━━★★★\n\n';
+  }
+
   p += '【タスク】\n';
   p += '以下のFX関連X投稿について、4観点を一括判定してJSON形式で出力せよ。\n';
   p += '検証には必ず web_search を使え。内部知識のみでの判定は禁止。\n';
@@ -409,11 +426,6 @@ function buildComprehensiveReviewPrompt_(postText, postType, typeConfig, charMin
 
   p += '【投稿テキスト】\n';
   p += postText + '\n\n';
-
-  // 確定データ(anchorData の toVerifyPrompt メソッドを利用)
-  if (anchorData && typeof anchorData.toVerifyPrompt === 'function') {
-    p += anchorData.toVerifyPrompt() + '\n';
-  }
 
   // 今日の既存投稿(重複チェック用)
   if (previousPosts && previousPosts.length > 0) {
@@ -477,7 +489,16 @@ function buildComprehensiveReviewPrompt_(postText, postType, typeConfig, charMin
   p += '          OK: 「原油下落で豪ドル反落」(鉤括弧内で完結)\n\n';
 
   p += 'B. 事実検証(Q6):\n';
-  p += '   ■ 判定優先順位: (1)確定データ > (2)Web検索 > (3)本文内数値 > (4)内部知識\n';
+  p += '   ■ ★★★ Step 0: 確定データとの照合(最初に必ず実行せよ) ★★★\n';
+  p += '     (1) 投稿の各主張を、冒頭の【確定データ】と1つずつ照合せよ\n';
+  p += '     (2) 確定データに一致する記述は「正しい」と判定し、factErrors/logical に入れるな\n';
+  p += '     (3) 特に【主要中銀の政策金利】の「備考」列(括弧内)に書かれた時系列表現は事実として扱え\n';
+  p += '         例: 投稿「RBAの連続利上げ」+ 確定データ「RBA 4.10%(2026年3月17日に利上げ。連続利上げ)」\n';
+  p += '             → この投稿は確定データと一致。絶対に「連続利上げは不正確」と判定するな\n';
+  p += '         例: 投稿「日銀利上げ路線」+ 確定データ「日銀 0.75%(2025年12月利上げ。緩やかな引き締め路線)」\n';
+  p += '             → 確定データと一致。誤り判定するな\n';
+  p += '   ■ Step 1(Step 0で問題なかった主張のみ対象):\n';
+  p += '     判定優先順位: (1)確定データ > (2)Web検索 > (3)本文内数値 > (4)内部知識\n';
   p += '   ■ 確定データと矛盾する主張、Web検索で反証できる主張を検出せよ\n';
   p += '   ■ 時間軸を含む主張(「週中高値」「急落率」「〜年以来」「何時頃」等)は\n';
   p += '     現在値では反証不能なので factErrors に入れるな(「検証不能」として扱う)\n';
@@ -490,11 +511,26 @@ function buildComprehensiveReviewPrompt_(postText, postType, typeConfig, charMin
   p += '   例: 因果が逆転した記述(原油下落でドル高 等)\n';
   p += '   ★この項目は最優先で修正すべき(事実が正しくても論理破綻投稿は価値ゼロ)\n\n';
 
-  p += 'D. Web検証可能なclaim抽出(最大3件):\n';
-  p += '   投稿から検証対象の独立した主張を最大3件抽出し、web_search で裏付けを確認。\n';
-  p += '   ❌(NG・明確に反証): 投稿の主張が事実と明確に矛盾\n';
+  p += 'D. Web検証可能なclaim抽出(最大5件・★v14.0 Phase 5 で3件→5件に拡張):\n';
+  p += '   ★★★ 抽出優先順位(この順で主張を拾え) ★★★\n';
+  p += '   優先1: 中央銀行の政策・金利・会合日程に関する主張(最重要)\n';
+  p += '          例: 「日銀4月会合で利上げ見送り」「FRB据え置き決定」「ECB次回会合」\n';
+  p += '   優先2: 要人発言の内容・日付に関する主張\n';
+  p += '          例: 「ウォーシュ公聴会でタカ派発言」「ラガルド総裁発言」\n';
+  p += '   優先3: 経済指標の発表・結果に関する主張\n';
+  p += '          例: 「米3月小売売上高が上振れ」「CPI発表で市場反応」\n';
+  p += '   優先4: 特定通貨・ペアの価格・変動率の主張\n';
+  p += '          例: 「ドル円159円台で膠着」「豪ドル3.8%急騰」\n';
+  p += '   優先5: 地政学イベント(停戦・合意等)に関する主張\n';
+  p += '          例: 「米イラン停戦期限が延長」「ホルムズ海峡閉鎖」\n';
+  p += '\n';
+  p += '   ★★★ 各 claim を独立して web_search で裏付け確認 ★★★\n';
+  p += '   1 claim につき 1 回の web_search を使うのが理想。5回枠を効率的に使え。\n';
+  p += '   ❌(NG・明確に反証): 投稿の主張が事実と明確に矛盾(Web検索で別事実が確認された)\n';
   p += '   ⚠️(WARN・裏付け不十分): 検索しても裏付けが見つからない/弱い\n';
-  p += '   ✅(OK・確認済み): 検索結果で裏付けあり\n\n';
+  p += '   ✅(OK・確認済み): 検索結果で裏付けあり\n';
+  p += '\n';
+  p += '   ★★★ Step 0 で確定データと一致した主張は、webClaims に入れるな(検索枠の無駄) ★★★\n\n';
 
   p += '【出力の鉄則(絶対厳守)】\n';
   p += '- JSON 以外一切出力禁止(前置き・解説・Chain of Thought禁止)\n';
@@ -516,7 +552,36 @@ function buildComprehensiveReviewPrompt_(postText, postType, typeConfig, charMin
   p += '  "factErrors": [{"wrong": "...", "correct": "...", "reason": "..."}],\n';
   p += '  "logical": [{"problem": "...", "suggested_direction": "..."}],\n';
   p += '  "webClaims": [{"claim": "...", "verdict": "NG"|"WARN"|"OK", "source_url": "...", "reason": "..."}]\n';
-  p += '}\n';
+  p += '}\n\n';
+
+  // ★v14.0 Phase 3(2026-04-22): factErrors.correct の厳格ルール
+  //   背景: LUNCH 本番で correct に解説文「ただし確定データでは0.041と一致する。数値自体は正しい。」が混入し、
+  //         投稿本文に直接置換されて意味不明な投稿になった事件への対応
+  p += '【★factErrors の書式(絶対厳守・2026-04-22 追加)】\n';
+  p += '事実誤りは機械置換(text.split(wrong).join(correct))で適用されるため、以下を絶対に守れ:\n';
+  p += '\n';
+  p += '1. wrong: 本文中に そのまま 存在する誤り部分だけを抜き出す(コピペで検索可能な文字列)\n';
+  p += '2. correct: wrong をそのまま置き換える完成テキストのみ(短く、投稿として自然)\n';
+  p += '3. reason: 修正理由は reason フィールドにのみ書く(correct には絶対混入させるな)\n';
+  p += '\n';
+  p += '★correct に入れてはいけないもの(絶対禁止):\n';
+  p += '  - 「ただし」「なお」「ちなみに」等の補足接続詞から始まる文\n';
+  p += '  - 「数値自体は正しい」「一致する」等のメタ判定\n';
+  p += '  - 「確定データでは〜と表記されており」等の検証プロセス説明\n';
+  p += '  - 「reason」相当の修正理由文\n';
+  p += '  - 2文以上の長い説明(置換後の投稿が破綻する)\n';
+  p += '\n';
+  p += '★OK例:\n';
+  p += '  wrong: "RBA利上げ(現在4.10%)"\n';
+  p += '  correct: "RBAが4.10%で据え置き中"\n';
+  p += '  reason: "RBAは2026年3月17日に4.10%へ利上げ済み。現在は据え置き中で、『利上げ』は不正確"\n';
+  p += '\n';
+  p += '★NG例(絶対にこう書くな):\n';
+  p += '  correct: "RBAの現在の政策金利は4.10%(2026年3月17日に3.85%→4.10%へ利上げ)。ただし確定データでは0.041 (=4.10%)と表記されており一致する。数値自体は正しい。"\n';
+  p += '  → correct は wrong を置き換える短いテキストだけ。解説は reason へ。\n';
+  p += '\n';
+  p += '★テスト: correct を wrong の位置に入れて読み返し、投稿として自然か確認せよ。\n';
+  p += '  不自然なら correct が長すぎるか、解説が混入している。\n';
 
   return p;
 }
@@ -653,7 +718,12 @@ function applyFixesV13_(cleanedText, stageResult, postType, rates, keys) {
     var factFixResult = applyFactErrorFix_(text, stageResult.factErrors);
     if (factFixResult.text !== text) {
       text = factFixResult.text;
-      fixLog += '【事実誤り機械置換】' + factFixResult.appliedCount + '件適用\n';
+      fixLog += '【事実誤り機械置換】' + factFixResult.appliedCount + '件適用';
+      // ★v14.0 Phase 3: サニタイズ件数を表示
+      if (factFixResult.sanitizedCount && factFixResult.sanitizedCount > 0) {
+        fixLog += '(correct解説混入ガード発動: ' + factFixResult.sanitizedCount + '件)';
+      }
+      fixLog += '\n';
       for (var fi = 0; fi < factFixResult.appliedList.length; fi++) {
         fixLog += '  ' + factFixResult.appliedList[fi] + '\n';
       }
@@ -771,17 +841,19 @@ function applyLogicalFix_(text, logicalIssues, postType, rates, keys, claudeKey)
 
 /**
  * 事実誤りの機械置換(postText.replace で適用)
+ * ★v14.0 Phase 3(2026-04-22): correct サニタイズ層追加
+ *   背景: 2026-04-22 LUNCH 本番で correct に検証解説文が混入した事件への対応
  */
 function applyFactErrorFix_(text, factErrors) {
   var appliedCount = 0;
   var appliedList = [];
+  var sanitizedCount = 0;
   var working = text;
 
   for (var i = 0; i < factErrors.length; i++) {
     var err = factErrors[i];
     if (!err.wrong || !err.correct) continue;
     if (err.wrong === err.correct) continue;
-    if (working.indexOf(err.wrong) === -1) continue;
 
     // 時間軸保護: wrong に時間軸を含む表現があればスキップ
     if (_containsTimeAxis_(err.wrong)) {
@@ -789,12 +861,105 @@ function applyFactErrorFix_(text, factErrors) {
       continue;
     }
 
-    working = working.split(err.wrong).join(err.correct);
+    // ★v14.0 Phase 3: correct を置換前にサニタイズ(解説混入ガード)
+    var sanitizeResult = sanitizeFactCorrect_(err.correct, err.wrong);
+    var finalCorrect = sanitizeResult.clean;
+    if (sanitizeResult.wasSanitized) {
+      sanitizedCount++;
+      console.log('  🧹 correct サニタイズ: ' + sanitizeResult.reason);
+      console.log('     Before: ' + err.correct.substring(0, 60) + (err.correct.length > 60 ? '...' : ''));
+      console.log('     After : ' + finalCorrect);
+    }
+
+    if (finalCorrect === err.wrong) continue;
+    if (working.indexOf(err.wrong) === -1) continue;
+
+    working = working.split(err.wrong).join(finalCorrect);
     appliedCount++;
-    appliedList.push(err.wrong.substring(0, 40) + ' → ' + err.correct.substring(0, 40));
+    appliedList.push(err.wrong.substring(0, 40) + ' → ' + finalCorrect.substring(0, 40));
   }
 
-  return { text: working, appliedCount: appliedCount, appliedList: appliedList };
+  return { text: working, appliedCount: appliedCount, appliedList: appliedList, sanitizedCount: sanitizedCount };
+}
+
+
+/**
+ * correct テキストから解説混入をサニタイズ
+ * ★v14.0 Phase 3(2026-04-22)
+ * 
+ * 戻り値: { clean: string, wasSanitized: boolean, reason: string }
+ */
+function sanitizeFactCorrect_(correct, wrong) {
+  if (!correct) return { clean: correct, wasSanitized: false, reason: '' };
+
+  var original = correct;
+  var clean = correct.trim();
+
+  // ルール1: 解説マーカーで始まる2文目以降をカット
+  //   Claudeが「〜。ただし〜。数値自体は〜」のように続けて書いた場合、
+  //   「。」で分割して最初の文だけを残す
+  var explanationMarkers = [
+    'ただし',
+    'なお',
+    'ちなみに',
+    'なお、',
+    'ただし、',
+    '数値自体',
+    '一致する',
+    '確定データでは',
+    'と表記されており',
+    'reason',
+    '補足すると',
+    'つまり',
+    'すなわち'
+  ];
+
+  var sentences = clean.split('。');
+  if (sentences.length > 1) {
+    // 2文目以降に解説マーカーが含まれていれば、1文目のみ採用
+    var laterParts = sentences.slice(1).join('。');
+    for (var i = 0; i < explanationMarkers.length; i++) {
+      if (laterParts.indexOf(explanationMarkers[i]) !== -1) {
+        var firstSentence = sentences[0];
+        if (firstSentence.length > 0) {
+          // 元が「〜。」で終わっていた場合は句点を残す
+          firstSentence = firstSentence + (clean.indexOf(firstSentence + '。') !== -1 ? '。' : '');
+        }
+        return {
+          clean: firstSentence.trim(),
+          wasSanitized: true,
+          reason: '2文目以降に解説マーカー「' + explanationMarkers[i] + '」を検出'
+        };
+      }
+    }
+  }
+
+  // ルール2: 長さ比較。correct が wrong の 3倍を超えていれば疑わしい
+  //   正当なケース(短い wrong を長い correct に置換)を除外するため、
+  //   50文字以上の超過時のみ検出
+  if (correct.length > wrong.length * 3 && correct.length > wrong.length + 50) {
+    // さらに、内部に解説マーカーが含まれているか確認
+    for (var j = 0; j < explanationMarkers.length; j++) {
+      if (clean.indexOf(explanationMarkers[j]) !== -1) {
+        // 解説マーカー直前までで切る
+        var markerPos = clean.indexOf(explanationMarkers[j]);
+        var truncated = clean.substring(0, markerPos).trim();
+        // 末尾に句点または完結記号がなければ付ける
+        if (truncated.length > 0 && !/[。、.」]$/.test(truncated)) {
+          truncated = truncated.replace(/[、,]\s*$/, '') + (truncated.length > 0 ? '。' : '');
+        }
+        if (truncated.length >= 3) {
+          return {
+            clean: truncated,
+            wasSanitized: true,
+            reason: '長さが wrong の ' + Math.round(correct.length / wrong.length) + '倍 + 解説マーカー「' + explanationMarkers[j] + '」検出'
+          };
+        }
+      }
+    }
+  }
+
+  return { clean: clean, wasSanitized: false, reason: '' };
 }
 
 
