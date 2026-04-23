@@ -698,27 +698,72 @@ Supabase保存（chart_imagesにURLが格納）
 ## 💳 PaymentModule（決済・プラン管理）
 
 **ファイル**: `js/payment/PaymentModule.js`  
-**バージョン**: 1.0.0  
-**完了日**: 2026-03-08
+**バージョン**: 3.0.0  
+**更新日**: 2026-04-22  
+**決済方式**: PAY.JP + PayPal 多層決済対応（Square対応予定）
 
 ### Public API
 
 | メソッド | 引数 | 説明 |
 |---------|------|------|
-| `initialize()` | - | 初期化（Supabaseからプラン取得） |
+| `initialize()` | - | 初期化（Supabaseからプラン取得・PAY.JP Checkoutコールバック登録） |
 | `getCurrentPlan()` | - | 現在のプラン取得（'free'/'pro'/'premium'） |
+| `getPlanLimits(plan)` | string/null | プラン制限取得（省略時は現在のプラン） |
 | `getStatus()` | - | 初期化状態・プラン・制限情報取得 |
-| `canAddTrade(currentCount)` | number | トレード追加可否（Free=50件上限） |
+| `canAddTrade(currentCount)` | number | トレード追加可否（Free=20件上限） |
 | `canUseCloudSync()` | - | クラウド同期利用可否（Pro以上） |
-| `createCheckoutSession(priceId)` | string | Stripe Checkout起動 |
-| `openCustomerPortal()` | - | Stripe Customer Portal起動 |
+| `canUseAI()` | - | AI機能利用可否（Premium以上） |
+| `getRemainingTrades(currentCount)` | number | 残り記録可能件数 |
+| `startCheckout(planId, provider)` | string, string | 決済開始（provider: 'paypal'/'payjp'、デフォルト'paypal'） |
+| `cancelSubscription()` | - | 解約（provider自動判定でEdge Function分岐） |
+| `refreshSubscription()` | - | サブスクリプション情報再取得・プラン反映 |
+
+### Static プロパティ
+
+| プロパティ | 値 | 用途 |
+|-----------|-----|------|
+| `PAYJP_PUBLIC_KEY` | pk_test_xxx | PAY.JP公開鍵（本番切替時に差替え） |
+| `PLAN_IDS` | { pro_monthly, pro_yearly } | PAY.JPプランID |
+| `PAYPAL_CLIENT_ID` | ATf3cbi... | PayPal Client ID（本番切替時に差替え） |
+| `PAYPAL_PLAN_IDS` | { pro_monthly: 'P-xxx', pro_yearly: 'P-xxx' } | PayPalプランID（本番切替時に差替え） |
+| `PLAN_LIMITS` | { free, pro, premium } | プラン別制限定義 |
 
 ### プラン別制限
 
 | 制限項目 | Free | Pro | Premium |
 |---------|------|-----|---------|
-| トレード記録 | 累計50件まで | 無制限 | 無制限 |
+| トレード記録 | 累計20件まで | 無制限 | 無制限 |
 | クラウド同期 | ❌ | ✅ | ✅ |
+| AI機能 | ❌ | ❌ | ✅（将来） |
+
+### 決済フロー
+
+```
+PayPalフロー:
+  startCheckout(planId, 'paypal')
+    → #startPayPalCheckout(planId)
+    → PayPalボタンモーダル表示
+    → ユーザーがPayPalで承認
+    → #handlePayPalApproval(subscriptionId, planId)
+    → Edge Function (paypal-activate-subscription)
+    → subscriptionsテーブル保存（provider='paypal'）
+    → refreshSubscription() → Pro反映
+
+PAY.JPフロー（既存維持）:
+  startCheckout(planId, 'payjp')
+    → #startPayjpCheckout(planId)
+    → PAY.JP Checkoutポップアップ
+    → postMessageでトークン受信
+    → #handlePayjpToken(token)
+    → Edge Function (create-checkout-session)
+    → subscriptionsテーブル保存（provider='payjp'）
+
+解約フロー（provider自動判定）:
+  cancelSubscription()
+    → subscription.provider で分岐
+    → 'paypal' → paypal-cancel-subscription
+    → 'payjp'  → cancel-subscription
+```
 
 ### bridge.js との統合（Phase 4）
 
@@ -749,26 +794,27 @@ if (window.PaymentModule && typeof window.PaymentModule.canUseCloudSync === 'fun
 
 ### EventBus
 
-| イベント | タイミング |
-|---------|-----------|
-| `payment:planChanged` | プラン変更時 |
-| `payment:upgradeRequired` | 制限到達時 |
+| イベント | タイミング | payload |
+|---------|-----------|---------|
+| `payment:initialized` | 初期化完了時 | `{ plan }` |
+| `payment:planChanged` | プラン変更時 | `{ oldPlan, newPlan }` |
 
 ### Supabase Edge Functions
 
-| 関数名 | 役割 | ファイル |
-|--------|------|---------|
-| `create-checkout-session` | Checkout Session作成 | supabase/functions/create-checkout-session/index.ts |
-| `stripe-webhook` | 決済イベント受信・DB更新 | supabase/functions/stripe-webhook/index.ts |
-| `customer-portal` | プラン管理画面URL発行 | supabase/functions/customer-portal/index.ts |
-
-**重要**: stripe-webhookはデプロイ時に `--no-verify-jwt` オプションが必須
+| 関数名 | 役割 | デプロイオプション |
+|--------|------|------------------|
+| `create-checkout-session` | PAY.JP サブスク作成 | - |
+| `payjp-webhook` | PAY.JP Webhook受信・DB更新 | `--no-verify-jwt` 必須 |
+| `cancel-subscription` | PAY.JP 解約 | - |
+| `paypal-activate-subscription` | PayPal 契約検証・DB保存 | - |
+| `paypal-cancel-subscription` | PayPal 解約 | - |
 
 ```bash
-npx supabase functions deploy stripe-webhook --project-ref apqmrhksogpscdtktjwd --no-verify-jwt
+# デプロイ元: C:\Users\focus\supabase-functions
+cd C:\Users\focus\supabase-functions && npx supabase functions deploy payjp-webhook --project-ref apqmrhksogpscdtktjwd --no-verify-jwt
 ```
 
-**詳細**: Stripe決済システム_要件定義書_ロードマップ_v1_4.md
+**詳細**: 決済システム_要件定義書_v3_6.md
 
 ---
 

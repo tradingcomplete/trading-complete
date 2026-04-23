@@ -167,7 +167,11 @@ function executePost(postType) {
 
     // Geminiでテキスト生成（+ 画像選択）
     console.log('テキスト生成中...');
-    var generated = generatePost(postType, context);
+    // ★v14.0 Phase 6(2026-04-23): skipValidation=true で Stage 1 検証をスキップ
+    //   Phase A(runMorning等)ではテキスト生成までで完結させ、
+    //   Stage 1 検証は Phase B(独立した6分枠)で実行する。
+    //   目的: GAS 6分制限のタイムアウト根絶。
+    var generated = generatePost(postType, context, null, { skipValidation: true });
 
     if (!generated || !generated.text) {
       throw new Error('テキスト生成失敗');

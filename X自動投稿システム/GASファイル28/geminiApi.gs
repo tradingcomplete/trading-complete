@@ -34,9 +34,15 @@
  */
 
 // ===== メイン: 投稿テキスト生成 =====
-function generatePost(postType, context, cachedRates) {
+function generatePost(postType, context, cachedRates, options) {
   var keys = getApiKeys();
   var typeConfig = POST_TYPES[postType];
+  
+  // ★v14.0 Phase 6(2026-04-23): options.skipValidation=true なら Stage 1 検証をスキップ
+  //   背景: runMorning 内でランダム遅延・API制限・ニュース取得で時間を使った後に
+  //         Stage 1 を実行するとGAS 6分制限でタイムアウト(2026-04-23本番で発生)。
+  //   対処: Phase A では生成までで完結させ、Stage 1 は Phase B(独立した6分枠)に移動。
+  var skipValidation = (options && options.skipValidation === true);
   
   // ★v8.8: GAS 6分制限の安全弁（経過時間を監視し、4分超過でリトライをスキップ）
   var startTime = new Date();
@@ -406,9 +412,13 @@ function generatePost(postType, context, cachedRates) {
   // 品質レビュー+最終事実検証+対話型検証を1関数で実行する(4段→2段統合)
   // false/未設定/例外時は以下の従来 v12.10 ロジックが動く(完全後方互換)
   // ========================================
+  // ★v14.0 Phase 6: skipValidation=true なら Stage 1 を完全スキップ(Phase Bで実行する)
   var useV13Gen = PropertiesService.getScriptProperties().getProperty('USE_V13_VALIDATION') === 'true';
   var v13GenSucceeded = false;
-  if (useV13Gen && typeof executeValidationV13_ === 'function' && !skipFactCheck) {
+  if (skipValidation) {
+    console.log('⏭️ v14.0 Phase 6: Stage 1 検証をスキップ(Phase B で実行)');
+    v13GenSucceeded = true; // 以下の従来ロジックもスキップするためフラグを立てる
+  } else if (useV13Gen && typeof executeValidationV13_ === 'function' && !skipFactCheck) {
     console.log('🚀 USE_V13_VALIDATION=true (generatePost経路) → validationV13.gs へ処理委譲');
     try {
       var v13GenResult = executeValidationV13_(cleanedText, factResult, postType, rates, keys, csForFactCheck, startTime, TIME_LIMIT_SEC);
