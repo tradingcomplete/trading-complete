@@ -16,6 +16,9 @@
  *   v14.2 Phase 9 v1.0(2026-04-24): ハッシュタグ動的可変運用。平常時0個・重要イベント当日1個のみ。
  *                                   #FX固定・通貨ペア・テーマタグ・フォールバック・3個上限を全撤廃。
  *                                   countPairTag_ 削除(通貨ペア検出廃止)。
+ *   v14.2 Phase 9 v2.0(2026-04-28): 本文主体判定に転換。経済カレンダー連携を撤廃し、
+ *                                   本文中で 2 回以上言及されたキーワードのみハッシュタグ候補に。
+ *                                   観察根拠: 2026-04-28 LONDON で本文に日銀の言及がないのに #日銀 が付与された問題。
  */
 
 
@@ -63,13 +66,14 @@ function generateDynamicHashtags_(text, postType) {
 
   var bodyText = cleanLines.join('\n');
 
-  // === Step 2: 本日の重要イベントを確認 ===
-  var today = new Date();
-  var candidateTags = getImportantEventTag_(today);
+  // === Step 2: 本文から候補タグ抽出(★Phase 9 v2.0・2026-04-28) ===
+  // v1.0(2026-04-24): 経済カレンダー ★重要 から候補抽出 → 本文と無関係に #日銀 等が付く問題
+  // v2.0(2026-04-28): 本文を直接スキャンし、2 回以上言及されたキーワードのみ候補に
+  var candidateTags = getImportantEventTag_(bodyText);
 
   if (candidateTags.length === 0) {
-    // 平常時 → ハッシュタグなし
-    console.log('🏷️ ハッシュタグ: なし (平常時)');
+    // 本文で 2 回以上言及されたイベントなし → ハッシュタグなし
+    console.log('🏷️ ハッシュタグ: なし (本文に 2 回以上言及された対象イベントなし)');
     return bodyText;
   }
 
@@ -82,7 +86,7 @@ function generateDynamicHashtags_(text, postType) {
   }
 
   // === Step 4: 1個のみ付与 ===
-  console.log('🏷️ ハッシュタグ自動生成: ' + primaryTag + ' (重要イベント当日)');
+  console.log('🏷️ ハッシュタグ自動生成: ' + primaryTag + ' (本文主題ベース)');
   return bodyText + '\n\n' + primaryTag;
 }
 
@@ -90,26 +94,25 @@ function generateDynamicHashtags_(text, postType) {
 // ===== ハッシュタグ生成ヘルパー関数 =====
 
 /**
- * 本日の重要度「高」イベントから、該当するハッシュタグ候補を抽出する。
+ * 本文中で 2 回以上言及されたイベントのハッシュタグ候補を抽出する。(★Phase 9 v2.0・2026-04-28)
  *
- * getEconomicCalendar_('today') の戻り値(複数行文字列)を解析し、
- * 「★重要」マーク付きの行のみを対象にイベント名パターンマッチで候補タグを抽出する。
- * 重要度「中」「低」のイベントは ★重要 マークが付かないため自動的に除外される。
+ * Phase 9 v1.0 (2026-04-24) との違い:
+ *   v1.0: 経済カレンダー ★重要 行から候補抽出 → 本文と無関係なタグが付く問題
+ *   v2.0: 本文を直接スキャン・2 回以上言及されたキーワードのみ候補に
  *
- * @param {Date} today - 判定基準日(通常は new Date())。getEconomicCalendar_ が内部で今日を判定するため本引数は未使用だが、将来の拡張用に残す。
+ * 設計思想 (2026-04-28 LONDON 観察を経て確定):
+ *   - 本文で軽く触れた程度(1 回言及)はハッシュタグの主題ではない
+ *   - 本文の主題として継続的に話されているイベントだけがタグ価値あり
+ *   - 経済カレンダーの ★重要 はホットトピック選定で別経路から既に活用されているため、
+ *     ハッシュタグ判定で重複参照は不要
+ *
+ * @param {string} bodyText - 投稿本文(ハッシュタグ除去済み)
  * @return {Array<string>} 該当タグ候補配列(例: ['#FOMC', '#日銀'])、該当なしは []
  */
-function getImportantEventTag_(today) {
-  var calendarText = getEconomicCalendar_('today');
-  if (!calendarText) return [];
+function getImportantEventTag_(bodyText) {
+  if (!bodyText) return [];
 
-  // 「★重要」マークが付いた行のみ抽出
-  var importantLines = calendarText.split('\n').filter(function(line) {
-    return line.indexOf('★重要') !== -1;
-  });
-  if (importantLines.length === 0) return [];
-
-  // イベント名 → ハッシュタグ のマッピング(v1.0 対応イベント)
+  // イベント名 → ハッシュタグ のマッピング(v1.0 と同一定義)
   var eventToTag = [
     { patterns: ['FOMC', 'パウエル'],                     tag: '#FOMC' },
     { patterns: ['日銀', 'BOJ', '植田', '金融政策決定会合'], tag: '#日銀' },
@@ -124,18 +127,11 @@ function getImportantEventTag_(today) {
   ];
 
   var detectedTags = [];
-  for (var i = 0; i < importantLines.length; i++) {
-    var line = importantLines[i];
-    for (var j = 0; j < eventToTag.length; j++) {
-      var entry = eventToTag[j];
-      for (var k = 0; k < entry.patterns.length; k++) {
-        if (line.indexOf(entry.patterns[k]) !== -1) {
-          if (detectedTags.indexOf(entry.tag) === -1) {
-            detectedTags.push(entry.tag);
-          }
-          break;
-        }
-      }
+  for (var i = 0; i < eventToTag.length; i++) {
+    var entry = eventToTag[i];
+    var totalCount = countAnyTag_(bodyText, entry.patterns);
+    if (totalCount >= 2) {
+      detectedTags.push(entry.tag);
     }
   }
 

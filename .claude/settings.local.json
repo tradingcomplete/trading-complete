@@ -6,7 +6,10 @@
       "Bash(git rm *)",
       "Bash(git mv *)",
       "Bash(mkdir -p \"C:/Users/focus/Documents/GitHub/trading-complete/.claude/skills/release-go\")",
-      "Bash(mkdir -p \"C:/Users/focus/Documents/GitHub/trading-complete/.claude/skills/release-go/checklists\")"
+      "Bash(mkdir -p \"C:/Users/focus/Documents/GitHub/trading-complete/.claude/skills/release-go/checklists\")",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
