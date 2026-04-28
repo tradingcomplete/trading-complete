@@ -235,18 +235,36 @@ window.saveTradeRecord = function(formData = null) {
     // MODULES.md準拠: TradeEntryに処理を委譲
     // formDataがnullの場合、TradeEntry.#collectFormDataが収集する
 
-    // --- Phase 4: プラン制限チェック（Freeプラン: 累計20件まで） ---
-    if (window.PaymentModule && typeof window.PaymentModule.canAddTrade === 'function') {
+    // --- Phase 11.5: 多層クライアント側プラン制限チェック（Freeプラン: 累計20件まで） ---
+    // 設計意図: F12 で PaymentModule.canAddTrade を書き換えての突破を防ぐため、
+    //          独立した3つのチェック (A/B/C) を組み合わせる。
+    //          いずれかが拒否を返した時点で保存ブロック → アップグレードモーダル表示。
+    //          単一関数の書き換えだけでは突破できない構造。
+    {
+        const FREE_LIMIT_HARDCODED = 20;       // ハードコード上限（独立した値）
+        const ABSOLUTE_HARD_LIMIT = 10000;     // 異常値防御（プラン問わず）
         const trades = JSON.parse(localStorage.getItem('trades') || '[]');
         const totalCount = trades.length;
-        if (!window.PaymentModule.canAddTrade(totalCount)) {
+        const planFromInstance = window.PaymentModule?.getCurrentPlan?.() ?? 'free';
+        const canAddViaApi = window.PaymentModule?.canAddTrade?.(totalCount);
+
+        // チェックA: PaymentModule.canAddTrade（書換可能・UX用）
+        const checkA_failed = canAddViaApi === false;
+        // チェックB: 直接カウント + ハードコード上限（独立検証）
+        const checkB_failed = (planFromInstance === 'free') && (totalCount >= FREE_LIMIT_HARDCODED);
+        // チェックC: プラン問わず異常値防御
+        const checkC_failed = totalCount >= ABSOLUTE_HARD_LIMIT;
+
+        if (checkA_failed || checkB_failed || checkC_failed) {
+            console.warn('[Phase11.5] 保存ブロック - A:', checkA_failed, 'B:', checkB_failed, 'C:', checkC_failed,
+                         '/ count:', totalCount, '/ plan:', planFromInstance);
             if (typeof window.showUpgradeModal === 'function') {
                 window.showUpgradeModal('trades');
             }
             return false;
         }
     }
-    // --- Phase 4 ここまで ---
+    // --- Phase 11.5 ここまで ---
 
     if (window.tradeEntry && window.tradeEntry.saveTradeRecord) {
         const result = window.tradeEntry.saveTradeRecord(formData);

@@ -2633,6 +2633,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.PaymentModule && typeof window.PaymentModule.initialize === 'function') {
             window.PaymentModule.initialize().then(() => {
                 console.log('PaymentModule初期化完了:', window.PaymentModule.getStatus());
+
+                // [Phase 11.5] 起動時整合性チェック
+                // localStorage の trade件数が Free プラン上限を超えていないか確認。
+                // 超えていれば警告 + アップグレードモーダル表示（読込は許可・追加保存は別途bridge.jsでブロック）
+                try {
+                    const FREE_LIMIT = 20;
+                    const trades = JSON.parse(localStorage.getItem('trades') || '[]');
+                    const plan = window.PaymentModule.getCurrentPlan?.() ?? 'free';
+                    if (plan === 'free' && trades.length > FREE_LIMIT) {
+                        console.warn('[Phase11.5] 起動時整合性チェック: Freeプランで上限超過を検出',
+                                     '/ count:', trades.length, '/ limit:', FREE_LIMIT);
+                        // 軽い注意喚起（ブロックはしない・既存データの閲覧は維持）
+                        if (typeof window.showToast === 'function') {
+                            window.showToast(
+                                `Freeプランの上限（${FREE_LIMIT}件）を超えるトレードが保存されています（現在 ${trades.length}件）。新規追加にはProプランへのアップグレードが必要です。`,
+                                'warning'
+                            );
+                        }
+                        // アップグレードモーダル表示（ユーザーが閉じられる）
+                        if (typeof window.showUpgradeModal === 'function') {
+                            setTimeout(() => window.showUpgradeModal('trades'), 1500);
+                        }
+                    }
+                } catch (err) {
+                    console.error('[Phase11.5] 起動時整合性チェックエラー:', err);
+                }
             });
         }
     }, 100);
