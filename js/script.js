@@ -2375,7 +2375,10 @@ window.resetTradeForm = resetTradeForm;
 
 // アップグレード案内モーダル表示
 function showUpgradeModal(limitType) {
-    const limits = window.PaymentModule?.PLAN_LIMITS?.free || { totalTrades: 50 };
+    // [v3.10修正] PaymentModule.PLAN_LIMITS は static プロパティのため、インスタンス経由 (window.PaymentModule)
+    // からは直接アクセス不可。Public API の getPlanLimits('free') を使う。
+    // フォールバック値も 50 → 20 に修正（v3.6の Free=20件 ポリシー反映）
+    const limits = window.PaymentModule?.getPlanLimits?.('free') || { totalTrades: 20 };
     const messages = {
         trades: '無料枠の' + limits.totalTrades + '件を使い切りました。\nProプランで無制限に記録できます。',
         sync: '複数デバイスでの同期はProプラン以上で利用できます。',
