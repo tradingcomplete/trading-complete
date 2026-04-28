@@ -235,7 +235,7 @@ window.saveTradeRecord = function(formData = null) {
     // MODULES.md準拠: TradeEntryに処理を委譲
     // formDataがnullの場合、TradeEntry.#collectFormDataが収集する
 
-    // --- Phase 4: プラン制限チェック（Freeプラン: 累計50件まで） ---
+    // --- Phase 4: プラン制限チェック（Freeプラン: 累計20件まで） ---
     if (window.PaymentModule && typeof window.PaymentModule.canAddTrade === 'function') {
         const trades = JSON.parse(localStorage.getItem('trades') || '[]');
         const totalCount = trades.length;
