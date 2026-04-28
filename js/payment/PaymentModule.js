@@ -1,9 +1,12 @@
 /**
  * @module PaymentModule
  * @description 決済・サブスクリプション管理モジュール（PAY.JP + PayPal + Square 多層決済対応）
- * @version 3.1.0
+ * @version 3.1.1
  * @date 2026-04-28
  * @important MODULES.md準拠
+ * @changelog
+ * - v3.1.1 (2026-04-28): 改善項目#3 解約処理ローディング表示追加 + 改善項目#4 .single() → .maybeSingle()
+ * - v3.1.0 (2026-04-28): Square Web Payments SDK 対応・E2Eテスト合格
  *
  * 【責務】
  * - 現在のプラン状態管理
@@ -291,8 +294,11 @@ class PaymentModule {
      * サブスクリプションを解約する
      * （期間終了時に自動解約。即時解約ではない）
      * provider別にEdge Functionを分岐
+     * [v3.1.1] 解約処理中ローディングオーバーレイ表示を追加（改善項目#3）
      */
     async cancelSubscription() {
+        let loadingOverlay = null;  // [v3.1.1] finally で確実に削除するため外で宣言
+
         try {
             if (!this.#supabase) {
                 window.showToast?.('ログインが必要です', 'error');
@@ -304,6 +310,10 @@ class PaymentModule {
                 window.showToast?.('ログインが必要です', 'error');
                 return;
             }
+
+            // [v3.1.1] 解約処理中ローディングオーバーレイを表示（改善項目#3）
+            // Square API のレイテンシで30秒程度かかることがあるため、UX 改善
+            loadingOverlay = this.#showCancelLoading();
 
             // providerに応じてEdge Functionを分岐
             const provider = this.#subscription?.provider || 'payjp';
@@ -340,7 +350,41 @@ class PaymentModule {
         } catch (error) {
             console.error('PaymentModule: cancelSubscription error', error);
             window.showToast?.('解約処理でエラーが発生しました', 'error');
+        } finally {
+            // [v3.1.1] 成功・失敗どちらの場合もローディングを必ず削除
+            if (loadingOverlay && loadingOverlay.parentNode) {
+                loadingOverlay.parentNode.removeChild(loadingOverlay);
+            }
         }
+    }
+
+    /**
+     * 解約処理中のローディングオーバーレイを画面に表示
+     * [v3.1.1] 改善項目#3 で新規追加
+     * @returns {HTMLElement} 作成されたオーバーレイ要素（cleanup用に呼び出し元で保持）
+     */
+    #showCancelLoading() {
+        // スピナーアニメーション用 CSS を <head> に挿入（既存があれば再利用）
+        if (!document.getElementById('tcCancelSpinKeyframes')) {
+            const style = document.createElement('style');
+            style.id = 'tcCancelSpinKeyframes';
+            style.textContent = '@keyframes tcCancelSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+        }
+
+        // ローディングオーバーレイ作成
+        const overlay = document.createElement('div');
+        overlay.id = 'tc-cancel-loading-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:100001; display:flex; align-items:center; justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#fff; padding:32px 48px; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.3); text-align:center; min-width:280px; max-width:90%;">
+                <div style="width:48px; height:48px; border:4px solid #f3f3f3; border-top:4px solid #00ff88; border-radius:50%; margin:0 auto 16px; animation:tcCancelSpin 1s linear infinite;"></div>
+                <p style="margin:0 0 8px; font-size:16px; font-weight:bold; color:#222;">解約処理中</p>
+                <p style="margin:0; font-size:13px; color:#666; line-height:1.6;">最大30秒程度かかります<br>そのままお待ちください</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        return overlay;
     }
 
     /**
@@ -823,7 +867,7 @@ class PaymentModule {
                 .from('subscriptions')
                 .select('*')
                 .eq('user_id', user.id)
-                .single();
+                .maybeSingle();  // [v3.1.1] .single() から変更: 0件時に 406 エラーを返さない
 
             if (error || !data) {
                 this.#currentPlan = 'free';
