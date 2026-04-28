@@ -3580,12 +3580,25 @@ document.addEventListener('DOMContentLoaded', () => {
         <h2 style="color:#e8ecf1; margin:0 0 12px 0; font-size:1.4em;">アップグレードしませんか？</h2>
         <p id="upgradeMessage" style="color:#8a94a6; margin:0 0 24px 0; line-height:1.6;"></p>
         
+        <!-- 決済手段選択 [v3.1.0] -->
+        <div style="background:#1a1d23; border:1px solid #3a4050; border-radius:8px; padding:14px 16px; margin-bottom:20px; text-align:left;">
+            <div style="color:#8a94a6; font-size:0.85em; margin-bottom:10px;">お支払い方法</div>
+            <label style="display:inline-flex; align-items:center; cursor:pointer; margin-right:24px; color:#e8ecf1; font-size:0.95em;">
+                <input type="radio" name="upgradeProvider" value="paypal" checked style="margin-right:6px; cursor:pointer;">
+                <span>PayPal</span>
+            </label>
+            <label style="display:inline-flex; align-items:center; cursor:pointer; color:#e8ecf1; font-size:0.95em;">
+                <input type="radio" name="upgradeProvider" value="square" style="margin-right:6px; cursor:pointer;">
+                <span>クレジットカード (Square)</span>
+            </label>
+        </div>
+        
         <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-            <button onclick="window.PaymentModule?.startCheckout(PaymentModule.PLAN_IDS.pro_monthly)" 
+            <button onclick="window.startUpgradeCheckout(PaymentModule.PLAN_IDS.pro_monthly)" 
                     style="background:linear-gradient(135deg, #00ff88, #00cc6a); color:#0c1018; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1em;">
                 Proプラン 月額1,980円
             </button>
-            <button onclick="window.PaymentModule?.startCheckout(PaymentModule.PLAN_IDS.pro_yearly)" 
+            <button onclick="window.startUpgradeCheckout(PaymentModule.PLAN_IDS.pro_yearly)" 
                     style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1em;">
                 Proプラン 年額19,800円
             </button>
@@ -3598,6 +3611,23 @@ document.addEventListener('DOMContentLoaded', () => {
         </button>
     </div>
 </div>
+
+<!-- アップグレード決済の起動ヘルパー [v3.1.0] -->
+<!-- ラジオボタンで選択された決済手段を読み取り、PaymentModule.startCheckoutを呼び出す -->
+<script>
+window.startUpgradeCheckout = function(planId) {
+    const selectedProvider = document.querySelector('input[name="upgradeProvider"]:checked')?.value || 'paypal';
+    if (!window.PaymentModule) {
+        console.error('[startUpgradeCheckout] PaymentModule not loaded');
+        if (typeof window.showToast === 'function') {
+            window.showToast('決済モジュール読み込み中です。少し待ってからお試しください。', 'error');
+        }
+        return;
+    }
+    console.log('[startUpgradeCheckout] planId:', planId, 'provider:', selectedProvider);
+    window.PaymentModule.startCheckout(planId, selectedProvider);
+};
+</script>
 
 <!-- PayPal JS SDK（サブスクリプション決済） -->
 <script src="https://www.paypal.com/sdk/js?client-id=ATf3cbiPiYlvHmCDHcEwc1R_6kQ1D1kDlgkFrvDFX5ifPI8jtZn3jHUDL4rIFhUmT4VZAWkwBpPkVz0X&vault=true&intent=subscription&currency=JPY" data-sdk-integration-source="button-factory"></script>
