@@ -224,7 +224,7 @@
 | 7.5 | PAY.JP本番利用申請 | ❌ 全カード否決 | 2026-04-03 |
 | 8 | ホームページ改善（文言+画像） | ✅ 完了 | 2026-04-09 |
 | 9 | 多層決済戦略の実行（7社申請） | ✅ 完了: PayPal・Square 通過 / Lemon Squeezy・KOMOJU・fincode・PAY.JP 否決 | 2026-04-22 |
-| **10** | **Square実装（Subscriptions API → Edge Functions → PaymentModule統合）** | **🔄 進行中（Phase 10A+B 完了）**: Edge Functions 3つデプロイ済み（4-1〜4-8）+ フロントエンド統合4-9〜4-12 完了（PaymentModule v3.1.0）+ Sandbox E2Eテスト 4-13 完了（購入✅・解約✅・Webhook✅）。残り 改善項目（UPSERT化が高優先）+ 4-14〜4-19 本番切替 | 4-9〜4-13: 2026-04-28 |
+| **10** | **Square実装（Subscriptions API → Edge Functions → PaymentModule統合）** | **🔄 進行中（Phase 10A+B 完了+改善#2クリア）**: Edge Functions 3つデプロイ済み（4-1〜4-8）+ フロントエンド統合4-9〜4-12 完了（PaymentModule v3.1.0）+ Sandbox E2Eテスト 4-13 完了（購入✅・解約✅・Webhook✅）+ 改善#2 UPSERT化完了（square v1.1.0/paypal v1.1.0）。残り 4-14〜4-19 本番切替のみ | 4-9〜4-13/改善#2: 2026-04-28 |
 | **11** | **サーバー側プラン制限（RLS+トリガー）** | ⚠️ **リリース前必須・未着手**: フロント側のみではF12で突破可能。Supabase RLS Policy + INSERTトリガーで多層防御を構築（約12h） | - |
 
 ### 審査結果一覧（v3.10 §5 より）
@@ -274,14 +274,14 @@ v3.10 §6 Step 4 / §9-A E2E結果 を参照。
 
 ### Phase 10 改善項目（Sandbox E2Eテストで発見・v3.10 §9-A）
 
-| # | 項目 | 優先度 | 備考 |
+| # | 項目 | 優先度 | 状態 |
 |---|------|--------|------|
-| 1 | アップグレードモーダルのメッセージ「無料枠の50件」→「20件」 | 中 | v3.6 で 20件に変更済みだが文言が古い |
-| 2 | **subscriptions の INSERT を UPSERT に（プロバイダ乗換対応）** | **高** | **リリース前必須**。プロバイダ乗換時に UNIQUE制約違反 |
-| 3 | 解約処理に「処理中...」ローディング表示追加 | 中 | 約30秒かかる（'click' handler took 30435ms 警告） |
-| 4 | #fetchSubscription() の .single() を .maybeSingle() に | 低 | 0件時に 406 エラー（機能影響なし） |
-| 5 | CSP に Square fonts ドメイン追加 | 低 | sandbox.web.squarecdn.com フォントの CSP違反警告 |
-| 6 | DB カラム命名統一（stripe_* 流用問題） | 低 | PayPal subscription ID が stripe_subscription_id に保存 |
+| 1 | アップグレードモーダルのメッセージ「無料枠の50件」→「20件」 | 中 | ⬜ 文言修正のみ・5分 |
+| 2 | **subscriptions の INSERT を UPSERT に（プロバイダ乗換対応）** | **高** | ✅ **完了（2026-04-28・square v1.1.0/paypal v1.1.0）** |
+| 3 | 解約処理に「処理中...」ローディング表示追加 | 中 | ⬜ 約30秒かかる（'click' handler took 30435ms 警告） |
+| 4 | #fetchSubscription() の .single() を .maybeSingle() に | 低 | ⬜ 0件時に 406 エラー（機能影響なし） |
+| 5 | CSP に Square fonts ドメイン追加 | 低 | ⬜ sandbox.web.squarecdn.com フォントの CSP違反警告 |
+| 6 | DB カラム命名統一（stripe_* 流用問題） | 低 | ⬜ PayPal subscription ID が stripe_subscription_id に保存 |
 
 ### Phase 11 残作業（サーバー側プラン制限 / 約12h・リリース前必須）
 

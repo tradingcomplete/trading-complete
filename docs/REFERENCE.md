@@ -56,6 +56,7 @@ window.XxxModule = new XxxModule();
 
 | タスク | 完了日 |
 |--------|--------|
+| **改善#2 UPSERT化 完全クリア** square-create-subscription v1.1.0 + paypal-activate-subscription v1.1.0 でDB保存を `.upsert()` + `onConflict: 'user_id'` + `cancelled_at: null` に統一。プロバイダ乗換シナリオに完全対応 | 2026-04-28 |
 | **Square Webhook検証完了（4-13d）** Sandboxで `subscription.created` Test event 200 OK 取得・署名検証成功。Phase 10 Sandbox E2Eテスト全項目合格 | 2026-04-28 |
 | **square-webhook URLバグ修正** `req.url` が内部localhost URL を返す問題を発見・`Deno.env.get("SUPABASE_URL")` から動的組立に修正・即デプロイ | 2026-04-28 |
 | **Square Webhook Subscription 登録** Square Sandbox Dashboard に4イベント購読Webhook作成（subscription.created/updated, invoice.payment_made, invoice.scheduled_charge_failed）・Signature KeyをSupabase Secretsに登録 | 2026-04-28 |
