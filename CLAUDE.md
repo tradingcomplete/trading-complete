@@ -42,11 +42,13 @@ GitHub/
 
 | 知りたいこと | マスターファイル |
 |---|---|
+| 🏛️ **Studio Compana 経営全体** | `docs/business/Studio_Compana_運営要件定義書.md` |
 | 🏗️ システム全体構造 | `docs/OVERVIEW.md` |
 | 📋 進行中タスク | `docs/TASKS.md` |
 | 📚 完了履歴・教訓 | `docs/REFERENCE.md` |
 | 💰 価格・プラン制限 | `docs/marketing/Trading_Complete_中核オファー要件定義書_v1_0.md` |
 | 💳 決済実装 | `docs/features/決済システム要件定義書 v3.9.md` ⭐ |
+| 📣 マーケ実行戦略 | `docs/marketing/Trading_Complete_マーケティング戦略.md` |
 | 🎨 公式LP | `../tradingcomplete.github.io/TC_ホームページ設計書_v1_3.md` |
 | 📝 note記事制作 | `../trading-articles/.claude/skills/note-article/SKILL.md` |
 | 🔧 技術仕様 | `docs/MODULES.md` |

@@ -12,11 +12,13 @@
 
 | 何を知りたいか | マスターファイル |
 |---|---|
+| 🏛️ Studio Compana 経営全体 | `docs/business/Studio_Compana_運営要件定義書.md` |
 | 🏗️ システム全体構造 | `docs/OVERVIEW.md` |
 | 📋 進行中のタスク | `docs/TASKS.md` |
 | 📚 完了履歴・教訓 | `docs/REFERENCE.md` |
 | 💰 価格・プラン制限 | `docs/marketing/Trading_Complete_中核オファー要件定義書_v1_0.md` |
 | 💳 決済実装・Phase | `docs/features/決済システム要件定義書 v3.9.md` |
+| 📣 マーケ実行戦略 | `docs/marketing/Trading_Complete_マーケティング戦略.md` |
 | 🎨 ホームページ | `tradingcomplete.github.io/TC_ホームページ設計書_v1_3.md`（別リポ） |
 | 📝 note記事制作 | `trading-articles/.claude/skills/note-article/SKILL.md`（別リポ） |
 | 🔧 技術仕様 | `docs/MODULES.md` |
@@ -35,6 +37,9 @@ docs/
 ├── 📄 フォーム制御.md         フォーム関連の挙動ガイド
 ├── 📄 機能一覧.md            UI 解説
 ├── 📄 docs_フォルダ整理ガイド.md     本ファイル
+│
+├── 📂 business/             🆕 経営文書（Studio Compana全社運営）
+│   └── Studio_Compana_運営要件定義書.md  ← 経営レイヤーのSoT（v0.1骨子）
 │
 ├── 📂 features/             機能別要件定義書
 │   ├── ⭐ 決済システム要件定義書 v3.9.md  ← 決済の正
