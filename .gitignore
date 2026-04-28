@@ -1,1 +1,10 @@
 /.claude
+
+# APIキー・シークレット類はコミットしない（テストキーであっても）
+docs/*APIキー*
+docs/*api*key*
+docs/*api_key*
+docs/*secret*
+docs/*Secret*
+*.env
+*.env.local

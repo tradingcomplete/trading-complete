@@ -354,12 +354,17 @@ function buildPrompt_(postType, typeConfig, context, rates) {
               dynamicPart += '- ' + (pp.time || '??:??') + ' ' + (pp.type || '?') + ': ' + ppSummary + '\n';
             }
             dynamicPart += '\n';
-            dynamicPart += '★重要(投稿の主題重複回避・最優先ルール):\n';
-            dynamicPart += '- 上記投稿で既に書いた主題・切り口・通貨ペアの繰り返しは禁止\n';
-            dynamicPart += '- 当日最大材料(日銀・FOMC等)は 1 日 2 回まで触れる可・3 投稿目以降は必ず別の角度を探せ\n';
-            dynamicPart += '- 「タカ派/ハト派」「円買い/円売り」の二項対立を 2 回以上書いた場合、3 回目以降は別フレーミング\n';
-            dynamicPart += '- 経済カレンダーに日銀があっても、既に MORNING/TOKYO/LUNCH で書いた場合 LONDON では別主題が原則\n';
-            dynamicPart += '- 「明日の植田発言」「タカ派/ハト派どちらか」型の問いかけが既に出ていれば、別の問いかけを使え\n';
+            dynamicPart += '★重要(本文の切り口差別化・3軸モットー):\n';
+            dynamicPart += '- 同じ主題でも、別の角度・別の数字・別の通貨ペア・別の時間軸なら OK\n';
+            dynamicPart += '- 完全に同じ切り口の繰り返しだけは避けよ(読者の飽き防止)\n';
+            dynamicPart += '- 判断3軸(全部満たすほど良い投稿):\n';
+            dynamicPart += '  (1) ホット度: 今この瞬間の最新材料か。続報があるなら積極的に拾え\n';
+            dynamicPart += '  (2) 面白さ: 読者の好奇心を引く切り口か(意外性・新事実・数字の具体化)\n';
+            dynamicPart += '  (3) 役立つ度: トレード判断に使える具体情報があるか\n';
+            dynamicPart += '- 当日最大材料(日銀・FOMC等)は何度でも触れて可・ただし毎回違う角度から\n';
+            dynamicPart += '- 続報があるならその続報を最優先(発表前→発表直後→反応・と時系列で深掘り)\n';
+            dynamicPart += '- 「タカ派/ハト派」「円買い/円売り」型は既出なら、別フレーミング(具体的な経済指標予想数値・テクニカル水準など)を優先\n';
+            dynamicPart += '- 「明日の○○発言、どちらを想定?」型の問いかけが既出なら、別の角度の問いかけを使え\n';
             dynamicPart += '\n';
           }
         } catch (_t2f2Err) {

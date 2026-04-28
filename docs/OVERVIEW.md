@@ -1,6 +1,9 @@
 # OVERVIEW.md - Trading Complete 全体構造図
 *このファイルは変更禁止 - 全体の地図として固定*
-*最終更新: 2026-04-01 - 感情記録選択式化（AI分析基盤整備）*
+*最終更新: 2026-04-28 - 決済システム多層化（PayPal+Square）反映*
+
+> **運営**: Studio Compana (屋号 / 個人事業主) — 代表: 成瀬仁文(コンパナ)
+> **決済の正**: `docs/features/決済システム要件定義書 v3.9.md` を最新マスターとする
 
 ## 🗺️ システム全体図
 ```
@@ -18,8 +21,8 @@ Trading Complete（約60,000行）
 │   │   └── AuthModule.js（認証管理 v1.4.0 - マイページ変更・パスワードリセット対応）
 │   ├── sync/（同期モジュール ✅）
 │   │   └── SyncModule.js ✅（クラウド同期 v1.7.0）
-│   ├── payment/（決済モジュール ✅Phase 5完了）
-│   │   └── PaymentModule.js ✅（プラン管理・Stripe連携 v1.0.0）
+│   ├── payment/（決済モジュール - 多層決済戦略実装中）
+│   │   └── PaymentModule.js ✅PayPal対応完了 v3.0.0（Square対応 Phase 10進行中）
 │   ├── part2/（10モジュール - 完成✅）
 │   │   ├── TradeCalculator.js
 │   │   ├── TradeDetail.js
@@ -85,7 +88,7 @@ Trading Complete（約60,000行）
 | **Part 7** | 収支管理 | 経費・締め・CSV・集計・入出金・月次カレンダー | 1,603 | ✅基本機能 + ✅モジュール6/6 | js/part7/ + js/part7_modules/ + js/part5/ | ✅リリース時使用 |
 | **Part 8** | 統計 | 統計計算・レポート・グラフ・AIサマリー | 423 | ✅完成 | js/part8_modules/*（4ファイル） | ✅リリース時使用 |
 | **Cloud** | クラウド連携 | 認証・データ同期・画像Storage | - | ✅完成 | js/auth/ + js/sync/ + js/core/ | ✅リリース時使用 |
-| **Payment** | 決済管理 | プラン判定・Stripe連携・制限制御 | - | ✅完成（Phase 5テスト済み） | js/payment/ | ✅リリース時使用 |
+| **Payment** | 決済管理 | プラン判定・PayPal/Square連携・制限制御 | - | ✅PayPal実装完了 / 🔄Square Phase 10進行中 | js/payment/ | ✅リリース時使用 |
 
 **削減実績合計**: 
 - Part4等（2025-10-28）: 744行
@@ -330,15 +333,17 @@ SyncModule               // js/sync/SyncModule.js（v1.7.0）
   .saveSettings(settings) // 設定保存
   .getStatus()           // デバッグ用
 
-// 決済 - js/payment/
-PaymentModule            // js/payment/PaymentModule.js（v1.0.0）
+// 決済 - js/payment/（多層決済戦略 / 詳細は決済システム要件定義書 v3.9）
+PaymentModule            // js/payment/PaymentModule.js（v3.0.0 - PayPal対応完了）
   .initialize()           // 初期化
   .getCurrentPlan()       // プラン取得（'free'/'pro'/'premium'）
-  .canAddTrade(count)     // トレード追加可否
-  .canUseCloudSync()      // クラウド同期利用可否
-  .createCheckoutSession(priceId) // Stripe Checkout起動
-  .openCustomerPortal()   // プラン管理画面
+  .canAddTrade(count)     // トレード追加可否（Free=20件・Pro/Premium=無制限）
+  .canUseCloudSync()      // クラウド同期利用可否（Pro以上のみ）
+  .startCheckout(planId, provider='paypal') // provider='paypal' or 'square'
+  .cancelSubscription()   // subscription.providerで自動分岐
   .getStatus()            // デバッグ用
+// ⚠️ 上記はUX向上目的のフロント側チェック。
+// セキュリティはPhase 11（サーバー側RLS+トリガー）で保証する設計（v3.9 §11）
 
 // 画像処理 - js/handlers/
 ImageHandler             // js/handlers/imageHandler.js（v1.1.0）
