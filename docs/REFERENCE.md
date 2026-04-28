@@ -56,6 +56,7 @@ window.XxxModule = new XxxModule();
 
 | タスク | 完了日 |
 |--------|--------|
+| **🛡️ Phase 11 サーバー側プラン制限 完全実装+テスト全合格** v3.10 §11全項目完了。get_user_active_plan / trades INSERT トリガー / Storage Policy / 5テーブルRLS Policy / SyncModule v1.9.0 / Phase 11.5 多層防御（bridge.js + script.js起動時チェック）/ 攻撃テスト合格 | 2026-04-28 |
 | **改善#2 UPSERT化 完全クリア** square-create-subscription v1.1.0 + paypal-activate-subscription v1.1.0 でDB保存を `.upsert()` + `onConflict: 'user_id'` + `cancelled_at: null` に統一。プロバイダ乗換シナリオに完全対応 | 2026-04-28 |
 | **Square Webhook検証完了（4-13d）** Sandboxで `subscription.created` Test event 200 OK 取得・署名検証成功。Phase 10 Sandbox E2Eテスト全項目合格 | 2026-04-28 |
 | **square-webhook URLバグ修正** `req.url` が内部localhost URL を返す問題を発見・`Deno.env.get("SUPABASE_URL")` から動的組立に修正・即デプロイ | 2026-04-28 |
@@ -265,6 +266,21 @@ const notificationUrl = `${supabaseUrl}/functions/v1/square-webhook`;
 
 ### 教訓29: Square Webhookイベント名「invoice.scheduled_charge_failed」（payment_made_failed ではない）
 v3.9 まで `invoice.payment_made_failed` と記載していたが、Square Sandbox Dashboard の購読可能イベント一覧には存在しない。サブスクリプション自動課金失敗を捉える正しいイベントは **`invoice.scheduled_charge_failed`**（"Published when an automatic scheduled payment for an Invoice has failed"）。v3.10 §9-A で訂正。
+
+---
+
+### 教訓30: SQL Editor では auth.uid() がNULL（postgres roleで動くため）
+Supabase Dashboard の SQL Editor は `postgres` 役割で実行されるため、`auth.uid()` を使うクエリが NULL マッチで0行になる。テスト時は user_id を直接指定する必要あり。本番アプリやEdge Functionからの実行では `auth.uid()` が認証ユーザーIDを正しく返す。
+
+---
+
+### 教訓31: subscriptions.user_id は auth.users への外部キー（架空IDでテスト不可）
+Phase 11 のテストで架空のテスト user_id（`00000000-...-099`）を subscriptions に INSERT しようとして 23503 FK制約違反。テストは実ユーザーで「Free切替→保存試行→Pro復帰」のSQLサイクルで実施するのが現実解。テスト trade ID は固定文字列（例: `phase11-test-trade`）にして最後に確実に DELETE する。
+
+---
+
+### 教訓32: フロントエンドのプラン制限は「無料保存」攻撃には完全防御できない（Phase 11.5）
+Supabase RLS とトリガーは「クラウド同期」側を完全に守るが、**localStorage への保存だけならクライアント突破で無制限可能**になる盲点があった（テスト2で発見）。対策として bridge.js に独立3チェック（canAddTrade / getCurrentPlan+count / 異常値）の多層防御 + script.js 起動時整合性チェック（毎回トースト+モーダル）を追加。100%防御は技術的不可能だが、Pro価値（クラウド同期・マルチデバイス）は守れているので「無料利用の脱法」の実利益は無し、と割り切る。
 
 ---
 
