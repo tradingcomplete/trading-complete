@@ -512,6 +512,9 @@ function updateDraftStatus(postId, newStatus) {
 
 
 // ===== 期限切れの下書きを処理 =====
+// ★2026-04-28 期限切れバグ修正: 「下書き」のみだった対象を「承認待ち」にも拡張
+//   背景: manualモードで承認されない「承認待ち」が永久残留する問題を解消
+//   閾値: DRAFT_EXPIRY_MINUTES(90分)を両ステータス共通で適用
 function expireOldDrafts() {
   var sheet = getDraftsSheet_();
   var lastRow = sheet.getLastRow();
@@ -520,32 +523,34 @@ function expireOldDrafts() {
 
   var now = new Date();
   var expiryMs = VALIDATION_CONFIG.DRAFT_EXPIRY_MINUTES * 60 * 1000;
-  var expiredCount = 0;
+  var draftExpired = 0;
+  var pendingExpired = 0;
 
   // ★v12.7: 列数をDRAFT_COLS経由で動的取得
   var data = sheet.getRange(2, 1, lastRow - 1, getDraftColCount_()).getValues();
 
   for (var i = 0; i < data.length; i++) {
-    // ★v12.7: ステータス判定をDRAFT_COLS経由に
-    if (data[i][DRAFT_COLS.STATUS - 1] === '下書き') {
-      var generatedAt = data[i][DRAFT_COLS.GENERATED_AT - 1];
-      if (generatedAt) {
-        var generated = new Date(generatedAt);
-        if (now.getTime() - generated.getTime() > expiryMs) {
-          var rowIndex = i + 2;
-          // ★v12.7: 列指定をDRAFT_COLS経由に
-          sheet.getRange(rowIndex, DRAFT_COLS.STATUS).setValue('期限切れ');
-          sheet.getRange(rowIndex, DRAFT_COLS.APPROVED_AT).setValue(
-            Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss')
-          );
-          expiredCount++;
-        }
-      }
-    }
+    var status = data[i][DRAFT_COLS.STATUS - 1];
+    if (status !== '下書き' && status !== '承認待ち') continue;
+
+    var generatedAt = data[i][DRAFT_COLS.GENERATED_AT - 1];
+    if (!generatedAt) continue;
+
+    var generated = new Date(generatedAt);
+    if (now.getTime() - generated.getTime() <= expiryMs) continue;
+
+    var rowIndex = i + 2;
+    sheet.getRange(rowIndex, DRAFT_COLS.STATUS).setValue('期限切れ');
+    sheet.getRange(rowIndex, DRAFT_COLS.APPROVED_AT).setValue(
+      Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss')
+    );
+    if (status === '下書き') draftExpired++;
+    else pendingExpired++;
   }
 
+  var expiredCount = draftExpired + pendingExpired;
   if (expiredCount > 0) {
-    console.log('⏰ ' + expiredCount + '件の下書きが期限切れになりました');
+    console.log('⏰ ' + expiredCount + '件が期限切れ(下書き' + draftExpired + '/承認待ち' + pendingExpired + ')');
   }
 
   return expiredCount;

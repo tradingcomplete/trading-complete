@@ -1,15 +1,48 @@
 {
   "permissions": {
     "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(echo:*)",
+      "Bash(pwd)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(node --check:*)",
+
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(git ls-files*)",
+      "Bash(git mv*)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+
       "Bash(find /c/Users/focus/Documents/GitHub/trading-complete -maxdepth 1 -type f \\\\\\(-name *.json -o -name *.yml -o -name *.yaml -o -name *.config.* -o -name .env* -o -name README* \\\\\\))",
       "Bash(ls -la /c/Users/focus/Documents/GitHub/trading-complete/*.py)",
-      "Bash(git rm *)",
-      "Bash(git mv *)",
       "Bash(mkdir -p \"C:/Users/focus/Documents/GitHub/trading-complete/.claude/skills/release-go\")",
-      "Bash(mkdir -p \"C:/Users/focus/Documents/GitHub/trading-complete/.claude/skills/release-go/checklists\")",
-      "Bash(git push *)",
-      "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(mkdir -p \"C:/Users/focus/Documents/GitHub/trading-complete/.claude/skills/release-go/checklists\")"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -- *)"
     ]
   }
 }

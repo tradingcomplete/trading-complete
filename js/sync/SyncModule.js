@@ -3,8 +3,8 @@
  * 
  * localStorage ↔ Supabase 双方向同期
  * 
- * @version 1.8.0
- * @date 2026-03-09
+ * @version 1.9.0
+ * @date 2026-04-28
  * @changelog
  *   v1.0.1 - trades同期実装
  *   v1.1.0 - notes同期追加
@@ -18,7 +18,10 @@
  *   v1.6.0 - goals/userIcon同期追加、セキュリティ強化（エラーハンドリング改善、SecureErrorフォールバック追加）
  *   v1.7.0 - siteTitle/subtitle同期追加
  *   v1.8.0 - オフライン復帰マージ機能追加（mergeAllWithCloud等5メソッド）
- * @see Supabase導入_ロードマップ_v1_7.md Phase 4
+ *   v1.9.0 - Phase 11 サーバー側プラン制限のエラーハンドリング追加
+ *            （P0001 trades上限/RLS拒否/Storage拒否を検出してshowUpgradeModal自動発火）
+ *            ＋#toUserMessage 無限再帰バグ修正（SecureError.toUserMessage誤呼出）
+ * @see 決済システム要件定義書_v3_10.md Phase 11
  */
 
 (function() {
@@ -41,24 +44,53 @@
          * @returns {string} ユーザー向けメッセージ
          */
         #toUserMessage(error) {
-            // SecureErrorが存在する場合はそちらを使用
+            // SecureErrorが存在する場合はそちらを使用（v1.7.0: 無限再帰バグ修正）
             if (typeof SecureError !== 'undefined' && SecureError.toUserMessage) {
-                return this.#toUserMessage(error);
+                return SecureError.toUserMessage(error);
             }
-            
+
             // フォールバック: 詳細なエラー情報を隠す
             console.error('[SyncModule] エラー詳細:', error);
-            
+
+            // [Phase 11] サーバー側プラン制限の検出（v3.10 §11.6）
+            // trades INSERT トリガー（enforce_trade_limit）からの拒否
+            if (error.code === 'P0001' || error.message?.includes('Free plan limit exceeded') || error.message?.includes('limit exceeded')) {
+                console.warn('[SyncModule] サーバー側で無料プランの上限到達を検出');
+                // アップグレードモーダルを自動表示
+                if (typeof window !== 'undefined' && typeof window.showUpgradeModal === 'function') {
+                    window.showUpgradeModal('trades');
+                }
+                return '無料プランの上限（20件）に達しました。Proプランへのアップグレードをご検討ください。';
+            }
+
+            // [Phase 11] RLS Policy による拒否（PostgreSQL 42501 / Supabase PGRST116等）
+            if (error.code === '42501' || error.code === 'PGRST116' || error.message?.includes('row-level security') || error.message?.includes('permission denied')) {
+                console.warn('[SyncModule] サーバー側でRLS拒否を検出（プラン要件未達の可能性）');
+                if (typeof window !== 'undefined' && typeof window.showUpgradeModal === 'function') {
+                    window.showUpgradeModal('sync');
+                }
+                return 'クラウド同期にはProプラン以上が必要です。';
+            }
+
+            // [Phase 11] Storage Policy による拒否（画像アップロード）
+            if (error.message?.includes('new row violates row-level security policy') && error.message?.includes('storage')) {
+                console.warn('[SyncModule] サーバー側でStorage Policy拒否を検出');
+                if (typeof window !== 'undefined' && typeof window.showUpgradeModal === 'function') {
+                    window.showUpgradeModal('sync');
+                }
+                return '画像のアップロードにはProプラン以上が必要です。';
+            }
+
             // ネットワークエラーの判定
             if (error.message?.includes('network') || error.message?.includes('fetch')) {
                 return 'ネットワークエラーが発生しました。接続を確認してください。';
             }
-            
+
             // 認証エラーの判定
             if (error.message?.includes('auth') || error.code === 'PGRST301') {
                 return '認証エラーが発生しました。再ログインしてください。';
             }
-            
+
             // 一般的なエラーメッセージ
             return '同期中にエラーが発生しました。しばらくしてから再試行してください。';
         }
