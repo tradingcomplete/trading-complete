@@ -224,7 +224,7 @@
 | 7.5 | PAY.JP本番利用申請 | ❌ 全カード否決 | 2026-04-03 |
 | 8 | ホームページ改善（文言+画像） | ✅ 完了 | 2026-04-09 |
 | 9 | 多層決済戦略の実行（7社申請） | ✅ 完了: PayPal・Square 通過 / Lemon Squeezy・KOMOJU・fincode・PAY.JP 否決 | 2026-04-22 |
-| **10** | **Square実装（Subscriptions API → Edge Functions → PaymentModule統合）** | **🔄 進行中（Phase 10A 完了）**: Edge Functions 3つデプロイ済み（4-1〜4-8）+ フロントエンド統合4-9〜4-12 完了（PaymentModule v3.1.0）+ Sandbox E2Eテスト（購入✅・解約✅・Webhook⬜）。残り 4-13Webhook検証 + 改善項目（UPSERT化）+ 4-14〜4-19 本番切替 | 4-9〜4-12: 2026-04-28 |
+| **10** | **Square実装（Subscriptions API → Edge Functions → PaymentModule統合）** | **🔄 進行中（Phase 10A+B 完了）**: Edge Functions 3つデプロイ済み（4-1〜4-8）+ フロントエンド統合4-9〜4-12 完了（PaymentModule v3.1.0）+ Sandbox E2Eテスト 4-13 完了（購入✅・解約✅・Webhook✅）。残り 改善項目（UPSERT化が高優先）+ 4-14〜4-19 本番切替 | 4-9〜4-13: 2026-04-28 |
 | **11** | **サーバー側プラン制限（RLS+トリガー）** | ⚠️ **リリース前必須・未着手**: フロント側のみではF12で突破可能。Supabase RLS Policy + INSERTトリガーで多層防御を構築（約12h） | - |
 
 ### 審査結果一覧（v3.10 §5 より）
@@ -264,7 +264,7 @@ v3.10 §6 Step 4 / §9-A E2E結果 を参照。
 | 4-10 | PaymentModule.js: Square対応実装（#startSquareCheckout / provider='square' 分岐） | 4時間 | ✅ 完了（2026-04-28・v3.1.0） |
 | 4-11 | upgradeModal: 決済手段選択UI追加（PayPal / Square トグル） | 2時間 | ✅ 完了（2026-04-28・ラジオ+2ボタン構成） |
 | 4-12 | Squareカード入力モーダル実装（Card.attach() でカードフォーム描画） | 2時間 | ✅ 完了（2026-04-28・4-10と同時） |
-| 4-13 | Sandboxテスト（購入・解約・Webhook受信） | 3時間 | 🔄 購入✅・解約✅・Webhook⬜ |
+| 4-13 | Sandboxテスト（購入・解約・Webhook受信） | 3時間 | ✅ 完了（2026-04-28・購入✅・解約✅・Webhook✅） |
 | 4-14 | PayPal本番APIキー切替 | 15分 | ⬜ |
 | 4-15 | Square本番APIキー切替（Subscription Plan本番版作成含む） | 30分 | ⬜ |
 | 4-16 | 本番E2Eテスト（両決済手段） | 2時間 | ⬜ |
