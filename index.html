@@ -3602,6 +3602,12 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- PayPal JS SDK（サブスクリプション決済） -->
 <script src="https://www.paypal.com/sdk/js?client-id=ATf3cbiPiYlvHmCDHcEwc1R_6kQ1D1kDlgkFrvDFX5ifPI8jtZn3jHUDL4rIFhUmT4VZAWkwBpPkVz0X&vault=true&intent=subscription&currency=JPY" data-sdk-integration-source="button-factory"></script>
 
+<!-- Square Web Payments SDK（カード決済・Sandbox） -->
+<script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+<!-- 本番切替時は上をコメントアウトし、↓をコメント解除
+<script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script>
+-->
+
 <!-- PAY.JP Checkout（隠しボタン・PaymentModuleから呼び出す） -->
 <div style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
     <form id="payjp-hidden-form" action="javascript:void(0);">

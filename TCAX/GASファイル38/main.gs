@@ -242,7 +242,7 @@ function generateImageIfNeeded_(postType, postText) {
       return null;
     }
   } catch (e) {
-    console.log('⚠️ AI画像生成エラー: ' + e.message + ' → テキストのみで続行');
+    handleError_('warning', 'main.gs:AI画像生成', e, { fallback: 'テキストのみで続行' });
     return null;
   }
 }
@@ -390,7 +390,7 @@ function executePhaseBQualityReview() {
           if (!factResult.issues) factResult.issues = [];
         }
       } catch (e) {
-        console.log('⚠️ FactCheckJSON のパース失敗: ' + e.message + '（スキップ扱いで続行）');
+        handleError_('warning', 'main.gs:FactCheckJSON パース', e, { fallback: 'スキップ扱いで続行' });
       }
     }
 
@@ -400,7 +400,7 @@ function executePhaseBQualityReview() {
       try {
         csForFactCheck = JSON.parse(draft.csDataJson);
       } catch (e) {
-        console.log('⚠️ CSDataJSON のパース失敗: ' + e.message);
+        handleError_('warning', 'main.gs:CSDataJSON パース', e);
       }
     }
 

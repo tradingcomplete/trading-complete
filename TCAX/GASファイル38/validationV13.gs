@@ -191,7 +191,7 @@ function executeValidationV13_(cleanedText, factResult, postType, rates, keys, c
   try {
     stageResult = runComprehensiveReview_(cleanedText, postType, rates, keys);
   } catch (e) {
-    console.log('❌ Stage 1 例外 → 検証スキップ・文字数保証のみ実行: ' + e.message);
+    handleError_('warning', 'validationV13.gs:Stage 1 runComprehensiveReview_', e, { fallback: '検証スキップ・文字数保証のみ実行' });
     // ★v13.0.5 Stage 1失敗時でも文字数保証は必ず走らせる(最低限の品質ガード)
     var fallbackResultEx = _enforceCharLimitFallback_(cleanedText, postType, rates, originalBeforeFix);
     _saveV13LegacyJson_(postType, { stageResult: null, wasFixed: fallbackResultEx.wasFixed, originalText: originalBeforeFix, fixedText: fallbackResultEx.text, fixLog: fallbackResultEx.fixLog });
@@ -233,7 +233,7 @@ function executeValidationV13_(cleanedText, factResult, postType, rates, keys, c
   try {
     fixed = applyFixesV13_(cleanedText, stageResult, postType, rates, keys);
   } catch (e) {
-    console.log('❌ Stage 2 例外 → 修正なしで続行: ' + e.message);
+    handleError_('warning', 'validationV13.gs:Stage 2 applyFixesV13_', e, { fallback: '修正なしで続行' });
     _saveV13LegacyJson_(postType, { stageResult: stageResult, wasFixed: false, originalText: originalBeforeFix, fixedText: cleanedText, fixLog: '' });
     return { text: cleanedText, fixLog: fixLog, wasFixed: false, originalBeforeFix: originalBeforeFix };
   }
@@ -337,7 +337,7 @@ function runComprehensiveReview_(cleanedText, postType, rates, keys) {
   try {
     anchorData = collectAnchorData_(rates, keys, { includeCalendar: true, includeOngoingEvents: true, calendarScope: 'today' });
   } catch (e) {
-    console.log('⚠️ collectAnchorData_失敗: ' + e.message);
+    handleError_('warning', 'validationV13.gs:collectAnchorData_', e, { fallback: 'null を返して続行' });
     return null;
   }
 
@@ -497,7 +497,40 @@ function buildComprehensiveReviewPrompt_(postText, postType, typeConfig, charMin
   p += '             → この投稿は確定データと一致。絶対に「連続利上げは不正確」と判定するな\n';
   p += '         例: 投稿「日銀利上げ路線」+ 確定データ「日銀 0.75%(2025年12月利上げ。緩やかな引き締め路線)」\n';
   p += '             → 確定データと一致。誤り判定するな\n';
-  p += '   ■ Step 1(Step 0で問題なかった主張のみ対象):\n';
+  p += '   ■ ★★★ Step 0.5: 時間限定数値主張の整合性チェック(★v14.0 Phase 7・事件13対策・v14.2 T1-A で口語表現拡張) ★★★\n';
+  p += '     背景: 2026-04-23 LONDON で「豪ドル円、今日だけで4円17銭超の急騰」という完全捏造が発生した。\n';
+  p += '           実際の本日変動は+0.03円。日次(直近24時間)の+3.8%と本日始値比を混同した誤り。\n';
+  p += '           v14.2 T1-A(2026-04-25 拡張): 口語表現(「この時間帯」「ここ数日」「寄り付きから」等)が抜けていた穴を埋める。\n';
+  p += '     \n';
+  p += '     検出対象: 投稿本文に以下いずれかの「時間限定語」+「数値主張」の組み合わせがあるか確認せよ。\n';
+  p += '       対象語(狭時制):   「今日」「本日」「今日だけで」「本日ここまで」「きょう」\n';
+  p += '       対象語(時間帯):   「今朝」「今朝から」「今晩」「今夜」「午前中」「午前中だけで」「午後」「この時間帯」「この朝」「この夕方」\n';
+  p += '       対象語(期間):     「ここまでで」「ここ数時間」「ここ数日」「ここ最近」「この週」「今週だけで」\n';
+  p += '       対象語(起点):     「寄り付きから」「開場から」「始値から」「ロンドン時間から」「東京時間から」\n';
+  p += '       対象語(目視系):   「目の前で」「今まさに」「現時点で」\n';
+  p += '       数値例: 「○円○銭の急騰」「○%の上昇」「○pipsの変動」等\n';
+  p += '       注意: 上記は網羅的ヒント。類似の口語時間表現(例: 「ここ数営業日」「この数十分で」)も同等に扱え。\n';
+  p += '     \n';
+  p += '     照合手順:\n';
+  p += '       (1) 本文から通貨ペア・数値・時間限定語を抽出\n';
+  p += '       (2) 確定データの【本日変動】セクションから該当ペアの本日変動値を取得\n';
+  p += '       (3) 以下いずれかに該当したら factErrors に必ず入れる:\n';
+  p += '           a) 誤差倍率が3倍超(例: 本日変動+0.03円 vs 主張「+0.1円以上」)\n';
+  p += '           b) 絶対値差が50銭超(例: 本日変動+0.03円 vs 主張「+1円以上」)\n';
+  p += '       (4) correct には本日変動に基づく自然な表現を入れる\n';
+  p += '     \n';
+  p += '     実例(事件13・2026-04-23 LONDON):\n';
+  p += '       投稿: 「豪ドル円、今日だけで4円17銭超の急騰」\n';
+  p += '       確定データ: AUD/JPY 本日+0.03円\n';
+  p += '       判定: 誤差倍率139倍 + 絶対値差4.14円 → 両方アウト → factErrors 必須\n';
+  p += '       correct 例: 「豪ドル円、直近24時間で+3.8%の急騰」\n';
+  p += '       reason: 本日変動は+0.03円。「今日だけで4円17銭」は日次との混同。時間軸を明示した表現に修正。\n';
+  p += '     \n';
+  p += '     ★絶対混同禁止ルール:\n';
+  p += '       - 「今日」「本日」等の時間限定語 → 【本日変動】セクション(始値比)のみを根拠にする\n';
+  p += '       - 「直近24時間」「日次」「ここ数日」 → 【通貨強弱】セクション(日次スコア)が根拠\n';
+  p += '       - 「今日だけで」と書いてあるのに日次スコアの数値を使っていたら必ず factErrors\n';
+  p += '   ■ Step 1(Step 0・0.5で問題なかった主張のみ対象):\n';
   p += '     判定優先順位: (1)確定データ > (2)Web検索 > (3)本文内数値 > (4)内部知識\n';
   p += '   ■ 確定データと矛盾する主張、Web検索で反証できる主張を検出せよ\n';
   p += '   ■ 時間軸を含む主張(「週中高値」「急落率」「〜年以来」「何時頃」等)は\n';
@@ -707,6 +740,10 @@ function applyFixesV13_(cleanedText, stageResult, postType, rates, keys) {
       fixLog += '【論理矛盾修正(Claude)】' + stageResult.logical.length + '件\n';
       for (var li = 0; li < stageResult.logical.length; li++) {
         fixLog += '  ' + (stageResult.logical[li].problem || '').substring(0, 80) + '\n';
+        // ★v14.2 T1-C: 修正パターンログ記録
+        logCorrectionPattern_(postType, '論理矛盾', 'Claude修正',
+          stageResult.logical[li].problem || '', '',
+          'Stage1', stageResult.logical[li].reason || '', []);
       }
       wasFixed = true;
     }
@@ -726,6 +763,11 @@ function applyFixesV13_(cleanedText, stageResult, postType, rates, keys) {
       fixLog += '\n';
       for (var fi = 0; fi < factFixResult.appliedList.length; fi++) {
         fixLog += '  ' + factFixResult.appliedList[fi] + '\n';
+        // ★v14.2 T1-C: 修正パターンログ記録
+        var factParts = String(factFixResult.appliedList[fi] || '').split(' → ');
+        logCorrectionPattern_(postType, '事実誤り', '機械置換',
+          factParts[0] || '', factParts[1] || '',
+          'Stage2', '確定データと不整合', []);
       }
       wasFixed = true;
     }
@@ -742,6 +784,10 @@ function applyFixesV13_(cleanedText, stageResult, postType, rates, keys) {
       fixLog += '【Web検証NG削除】' + ngClaims.length + '件\n';
       for (var ni = 0; ni < ngClaims.length; ni++) {
         fixLog += '  ❌ ' + (ngClaims[ni].claim || '').substring(0, 60) + '\n';
+        // ★v14.2 T1-C: 修正パターンログ記録
+        logCorrectionPattern_(postType, 'Web検証NG', '行削除',
+          ngClaims[ni].claim || '', '',
+          'Stage1', ngClaims[ni].reason || 'Web検索で反証', []);
       }
       wasFixed = true;
     }
@@ -757,6 +803,10 @@ function applyFixesV13_(cleanedText, stageResult, postType, rates, keys) {
       fixLog += '【Web検証WARN修正(Claude)】' + warnClaims.length + '件\n';
       for (var wi = 0; wi < warnClaims.length; wi++) {
         fixLog += '  ⚠️ ' + (warnClaims[wi].claim || '').substring(0, 60) + '\n';
+        // ★v14.2 T1-C: 修正パターンログ記録
+        logCorrectionPattern_(postType, 'Web検証WARN', 'Claude修正',
+          warnClaims[wi].claim || '', '',
+          'Stage1', warnClaims[wi].reason || '', []);
       }
       wasFixed = true;
     }
@@ -773,6 +823,10 @@ function applyFixesV13_(cleanedText, stageResult, postType, rates, keys) {
       fixLog += '【品質一括修正(Claude)】' + qualityErrors.length + '件\n';
       for (var qi = 0; qi < qualityErrors.length; qi++) {
         fixLog += '  ' + qualityErrors[qi].id + ': ' + (qualityErrors[qi].problem || '').substring(0, 60) + '\n';
+        // ★v14.2 T1-C: 修正パターンログ記録
+        logCorrectionPattern_(postType, '品質:' + (qualityErrors[qi].id || ''), 'Claude修正',
+          qualityErrors[qi].problem || '', '',
+          'Stage1', '', []);
       }
       wasFixed = true;
     }

@@ -344,7 +344,32 @@ function sendDraftNotification(drafts) {
       html += '<span style="color:#ff9800;">&#x26A0;&#xFE0F; WebApp未設定 → Sheetsで直接ステータスを変更してください</span>';
     }
     html += '</div>';
-    
+
+    // ★v14.2 T1-D: 却下理由タグボタン(任意・Phase 5 教師データに活用)
+    if (webAppUrl) {
+      html += '<div style="margin-top:12px; padding:10px; background:#fff3e0; border-left:4px solid #ff9800; border-radius:4px; font-size:13px;">';
+      html += '<div style="margin-bottom:8px; color:#666; font-weight:bold;">&#x1F4DD; 却下理由付き(理由を添えて中止・Phase 5 教師データ)</div>';
+      html += '<div style="display:flex; gap:6px; flex-wrap:wrap;">';
+      var rejectReasons = [
+        { tag: 'number',     label: '&#x274C; 数値誤り' },
+        { tag: 'name',       label: '&#x274C; 固有名詞誤り' },
+        { tag: 'logic',      label: '&#x274C; 論理矛盾' },
+        { tag: 'fact_other', label: '&#x274C; 事実誤り(その他)' },
+        { tag: 'tone',       label: '&#x274C; トーン不適' },
+        { tag: 'timing',     label: '&#x274C; タイミング不適' },
+        { tag: 'duplicate',  label: '&#x274C; 重複' },
+        { tag: 'thin',       label: '&#x274C; 内容薄い' },
+        { tag: 'other',      label: '&#x274C; その他' }
+      ];
+      for (var rr = 0; rr < rejectReasons.length; rr++) {
+        html += '<a href="' + webAppUrl + '?action=reject&reason=' + rejectReasons[rr].tag + '&id=' + encodeURIComponent(draft.postId) + '" ';
+        html += 'style="display:inline-block; padding:6px 10px; background:#fff; color:#d32f2f; text-decoration:none; border:1px solid #d32f2f; border-radius:4px; font-size:12px; font-weight:bold;">';
+        html += rejectReasons[rr].label + '</a>';
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+
     html += '</div>';
   }
   
@@ -502,11 +527,45 @@ function doGet(e) {
     if (success) {
       // 画像メタデータもクリーンアップ
       deleteImageMeta_(postId);
-      
+
       resultHtml = '<div style="text-align:center; padding:40px; font-family:sans-serif;">' +
         '<h1 style="color:#f44336;">&#x274C; 中止しました</h1>' +
         '<p style="font-size:18px;">投稿ID: ' + postId + '</p>' +
         '<p style="color:#666;">この投稿は投稿されません。</p>' +
+        '</div>';
+    } else {
+      resultHtml = buildNotFoundHtml_(postId);
+    }
+
+  // ==================
+  // 却下(理由付き・★v14.2 T1-D)
+  // ==================
+  } else if (action === 'reject') {
+    var reason = e.parameter.reason || 'other';
+    var reasonLabels = {
+      number:     '数値誤り',
+      name:       '固有名詞誤り',
+      logic:      '論理矛盾',
+      fact_other: '事実誤り(その他)',
+      tone:       'トーン不適',
+      timing:     'タイミング不適',
+      duplicate:  '重複',
+      thin:       '内容薄い',
+      other:      'その他'
+    };
+    var reasonLabel = reasonLabels[reason] || 'その他';
+
+    var rejectSuccess = updateDraftStatus(postId, '中止');
+    if (rejectSuccess) {
+      deleteImageMeta_(postId);
+      // 却下理由をログシートに記録
+      _logRejectionReason_(postId, reason, reasonLabel);
+
+      resultHtml = '<div style="text-align:center; padding:40px; font-family:sans-serif;">' +
+        '<h1 style="color:#f44336;">&#x274C; 却下しました</h1>' +
+        '<p style="font-size:18px;">投稿ID: ' + postId + '</p>' +
+        '<p style="font-size:16px; color:#d32f2f;">理由: <strong>' + reasonLabel + '</strong></p>' +
+        '<p style="color:#666;">この投稿は投稿されません。Phase 5 の教師データとして記録されました。</p>' +
         '</div>';
     } else {
       resultHtml = buildNotFoundHtml_(postId);
@@ -1116,4 +1175,346 @@ function testTask6ScriptPropertiesMigration() {
   console.log('   3. ❌ ドル円レート155円→159円の指摘');
   console.log('   4. 🔧 自動修正済み の表示');
   console.log('  上記4項目がメールに表示されていれば、下書きシートからの読み込みが成功です。');
+}
+
+
+// ========================================
+// T1-D: 却下理由ログ(★v14.2・2026-04-24)
+// ========================================
+
+/**
+ * 却下理由を「却下理由ログ」シートに記録する
+ *
+ * 背景: 承認メールで「❌ <理由タグ>」ボタンが押された時に呼ばれ、
+ *       Phase 5 の教師データ(人間によるラベル付き判定)として蓄積。
+ *
+ * @param {string} postId - 投稿ID
+ * @param {string} reasonTag - 却下理由タグ(number / name / logic / 等)
+ * @param {string} reasonLabel - 理由の日本語表示
+ * @private
+ */
+function _logRejectionReason_(postId, reasonTag, reasonLabel) {
+  try {
+    var keys = getApiKeys();
+    if (!keys || !keys.SPREADSHEET_ID) return;
+    var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('却下理由ログ');
+    if (!sheet) return;
+
+    // 下書きから投稿本文と投稿タイプを取得(失敗しても続行)
+    var postType = '';
+    var postText = '';
+    var fixCount = '';
+    try {
+      var draft = getDraftById_(postId);
+      if (draft) {
+        postType = draft.postType || '';
+        postText = (draft.text || '').substring(0, 500);
+        // 修正件数は fixLog の行数から推定(正確ではないが目安)
+        if (draft.fixLog) {
+          var fixLines = String(draft.fixLog).split('\n').filter(function(l) {
+            return /^【/.test(l);
+          });
+          fixCount = fixLines.length;
+        }
+      }
+    } catch (e) {
+      console.log('⚠️ _logRejectionReason_: 下書き取得失敗(続行): ' + e.message);
+    }
+
+    sheet.appendRow([
+      new Date().toISOString(),  // A 却下日時
+      postId,                    // B 投稿ID
+      postType,                  // C 投稿タイプ
+      reasonLabel,               // D 却下理由タグ
+      postText,                  // E 投稿本文
+      fixCount,                  // F 投稿時の修正件数
+      ''                         // G 自由記述(UI からは未入力)
+    ]);
+    console.log('📝 却下理由ログ記録: ' + postId + ' / ' + reasonLabel);
+  } catch (e) {
+    console.log('⚠️ _logRejectionReason_ 失敗(続行): ' + e.message);
+  }
+}
+
+
+// ========================================
+// T1-D 拡張: 手動記録ヘルパー(★v14.2・2026-04-24)
+// ========================================
+
+/**
+ * 却下理由を手動で記録する
+ *
+ * 用途:
+ *   - 承認メールの却下ボタンを見逃した投稿への事後記録
+ *   - 既に承認済み/中止済みだが「却下すべきだった」と後から気づいた投稿
+ *   - 本番観察で発見したパターンを Phase 5 教師データに追加
+ *
+ * 使い方: Apps Script エディタから以下を実行
+ *
+ *   logManualRejection('20260424_163044_LONDON', 'other', '通貨ペア曖昧(豪ドル→豪ドル円)');
+ *   logManualRejection('20260424_121542_LUNCH', 'other', '通貨ペア曖昧(豪ドル→豪ドル円)');
+ *
+ * 有効な理由タグ(9 種類):
+ *   number / name / logic / fact_other / tone / timing / duplicate / thin / other
+ *
+ * @param {string} postId - 投稿ID(下書きシートの A 列から取得)
+ * @param {string} reasonTag - 却下理由タグ(9 種類のいずれか)
+ * @param {string} [freeNote] - 自由記述(任意・G 列に入る)
+ * @return {Object} { success: boolean, error?: string }
+ */
+function logManualRejection(postId, reasonTag, freeNote) {
+  var reasonLabels = {
+    number:     '数値誤り',
+    name:       '固有名詞誤り',
+    logic:      '論理矛盾',
+    fact_other: '事実誤り(その他)',
+    tone:       'トーン不適',
+    timing:     'タイミング不適',
+    duplicate:  '重複',
+    thin:       '内容薄い',
+    other:      'その他'
+  };
+
+  // ★引数なしで呼ばれた場合(GAS エディタから直接実行)は使い方を表示
+  if (!postId && !reasonTag) {
+    console.log('========================================');
+    console.log('💡 logManualRejection の使い方');
+    console.log('========================================');
+    console.log('');
+    console.log('GAS エディタの「実行」ボタンは引数を渡せません。');
+    console.log('代わりに対話型の関数を使ってください:');
+    console.log('');
+    console.log('  logObservationInteractive()');
+    console.log('    → プロンプトで投稿ID・理由・自由記述を順に入力');
+    console.log('');
+    console.log('または、新規ファイルで自作ラッパーを書く:');
+    console.log('');
+    console.log('  function myRejection() {');
+    console.log('    logManualRejection("20260424_XXXXXX_TYPE", "other", "理由");');
+    console.log('  }');
+    console.log('');
+    console.log('  その後 myRejection を選択して実行');
+    console.log('');
+    console.log('有効な理由タグ:');
+    Object.keys(reasonLabels).forEach(function(k) {
+      console.log('  ' + k + ' → ' + reasonLabels[k]);
+    });
+    console.log('========================================');
+    return { success: false, error: '引数未指定(使い方を表示)' };
+  }
+
+  var reasonLabel = reasonLabels[reasonTag];
+  if (!reasonLabel) {
+    console.log('❌ 無効な理由タグ: ' + reasonTag);
+    console.log('   有効なタグ: ' + Object.keys(reasonLabels).join(' / '));
+    return { success: false, error: '無効な理由タグ' };
+  }
+
+  if (!postId) {
+    console.log('❌ postId が未指定');
+    return { success: false, error: 'postId 未指定' };
+  }
+
+  try {
+    var keys = getApiKeys();
+    if (!keys || !keys.SPREADSHEET_ID) {
+      console.log('❌ SPREADSHEET_ID 未設定');
+      return { success: false, error: 'SPREADSHEET_ID 未設定' };
+    }
+    var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('却下理由ログ');
+    if (!sheet) {
+      console.log('❌ 却下理由ログ シートが見つかりません');
+      return { success: false, error: 'シートが見つかりません' };
+    }
+
+    // 下書きから投稿情報を取得(失敗しても続行)
+    var postType = '';
+    var postText = '';
+    var fixCount = '';
+    var draftFound = false;
+    try {
+      var draft = getDraftById_(postId);
+      if (draft) {
+        draftFound = true;
+        postType = draft.postType || '';
+        postText = (draft.text || '').substring(0, 500);
+        if (draft.fixLog) {
+          var fixLines = String(draft.fixLog).split('\n').filter(function(l) {
+            return /^【/.test(l);
+          });
+          fixCount = fixLines.length;
+        }
+      }
+    } catch (e) {
+      console.log('⚠️ 下書き取得失敗(ログは記録します): ' + e.message);
+    }
+
+    if (!draftFound) {
+      console.log('⚠️ 投稿ID が下書きシートで見つかりません(ログは記録します): ' + postId);
+    }
+
+    sheet.appendRow([
+      new Date().toISOString(),        // A 却下日時(手動記録時は現在時刻)
+      postId,                           // B 投稿ID
+      postType,                         // C 投稿タイプ
+      reasonLabel,                      // D 却下理由タグ
+      postText,                         // E 投稿本文
+      fixCount,                         // F 修正件数
+      freeNote || '(手動記録)'         // G 自由記述
+    ]);
+
+    console.log('✅ 却下理由ログに手動記録しました');
+    console.log('   投稿ID: ' + postId);
+    console.log('   理由: ' + reasonLabel);
+    if (freeNote) console.log('   自由記述: ' + freeNote);
+    if (!draftFound) console.log('   ⚠️ 下書き情報なし(投稿本文・修正件数は空)');
+    return { success: true };
+  } catch (e) {
+    console.log('❌ logManualRejection 失敗: ' + e.message);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * 直近の下書き一覧を表示する(logManualRejection で使う postId を調べる用)
+ *
+ * 使い方: Apps Script エディタから実行
+ *   listRecentDrafts();
+ *
+ * 実行ログに直近 20 件の投稿情報が一覧表示される。
+ */
+function listRecentDrafts() {
+  try {
+    var sheet = getDraftsSheet_();
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('📋 下書きなし');
+      return;
+    }
+
+    var startRow = Math.max(2, lastRow - 19);
+    var colCount = getDraftColCount_();
+    var data = sheet.getRange(startRow, 1, lastRow - startRow + 1, colCount).getValues();
+
+    console.log('========================================');
+    console.log('📋 直近の下書き(' + data.length + '件・新しい順)');
+    console.log('========================================');
+    for (var i = data.length - 1; i >= 0; i--) {
+      var row = data[i];
+      var postId = row[DRAFT_COLS.POST_ID - 1];
+      var postType = row[DRAFT_COLS.POST_TYPE - 1];
+      var status = row[DRAFT_COLS.STATUS - 1];
+      var statusIcon;
+      if (status === '承認') statusIcon = '✅';
+      else if (status === '中止') statusIcon = '❌';
+      else if (status === '承認待ち') statusIcon = '⏳';
+      else if (status === '期限切れ') statusIcon = '⏰';
+      else statusIcon = '📝';
+      console.log(statusIcon + '  ' + postId + '  [' + postType + ']  (' + status + ')');
+    }
+    console.log('========================================');
+    console.log('💡 使い方例:');
+    console.log('   logManualRejection("<postId>", "other", "曖昧さあり");');
+    console.log('');
+    console.log('   有効な理由タグ: number / name / logic / fact_other /');
+    console.log('                   tone / timing / duplicate / thin / other');
+    console.log('========================================');
+  } catch (e) {
+    console.log('❌ listRecentDrafts 失敗: ' + e.message);
+  }
+}
+
+/**
+ * 却下理由を対話的に記録する(汎用・将来の観察事項用)
+ *
+ * 使い方: Apps Script エディタでこの関数を選択して「実行」
+ *   → スプレッドシート画面に 3 つのプロンプトが順に表示される
+ *     1. 投稿ID を入力(listRecentDrafts で調べられる)
+ *     2. 理由タグを入力(number/name/logic/fact_other/tone/timing/duplicate/thin/other から 1 つ)
+ *     3. 自由記述を入力(省略可)
+ *   → 却下理由ログシートに記録される
+ *
+ * ※ スプレッドシートが開いた状態で Apps Script エディタから実行してください。
+ *   プロンプトはスプレッドシート側のタブに表示されます。
+ */
+function logObservationInteractive() {
+  var ui;
+  try {
+    ui = SpreadsheetApp.getUi();
+  } catch (e) {
+    console.log('❌ SpreadsheetApp.getUi() が使えません。スプレッドシートを開いた状態で実行してください');
+    console.log('   (または logManualRejection(postId, reason, note) を直接呼ぶ自作ラッパーを使ってください)');
+    return;
+  }
+
+  // Step 1: 投稿ID
+  var postIdResp = ui.prompt(
+    '却下理由を記録(1/3)',
+    '投稿ID を入力してください。\n例: 20260424_163044_LONDON\n\n(listRecentDrafts を先に実行すると直近 20 件の ID が実行ログに表示されます)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (postIdResp.getSelectedButton() !== ui.Button.OK) {
+    console.log('ℹ️ キャンセルされました');
+    return;
+  }
+  var postId = postIdResp.getResponseText().trim();
+  if (!postId) {
+    ui.alert('❌ 投稿ID が空です。処理を中止します');
+    return;
+  }
+
+  // Step 2: 理由タグ
+  var reasonResp = ui.prompt(
+    '却下理由を記録(2/3)',
+    '理由タグを入力してください(以下から 1 つ):\n\n' +
+    'number     - 数値誤り\n' +
+    'name       - 固有名詞誤り\n' +
+    'logic      - 論理矛盾\n' +
+    'fact_other - 事実誤り(その他)\n' +
+    'tone       - トーン不適\n' +
+    'timing     - タイミング不適\n' +
+    'duplicate  - 重複\n' +
+    'thin       - 内容薄い\n' +
+    'other      - その他',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (reasonResp.getSelectedButton() !== ui.Button.OK) {
+    console.log('ℹ️ キャンセルされました');
+    return;
+  }
+  var reason = reasonResp.getResponseText().trim();
+  if (!reason) {
+    ui.alert('❌ 理由タグが空です。処理を中止します');
+    return;
+  }
+
+  // Step 3: 自由記述(任意)
+  var noteResp = ui.prompt(
+    '却下理由を記録(3/3)',
+    '自由記述(理由の詳細・省略可):\n例: 通貨ペア曖昧(豪ドル→豪ドル円)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (noteResp.getSelectedButton() !== ui.Button.OK) {
+    console.log('ℹ️ キャンセルされました');
+    return;
+  }
+  var note = noteResp.getResponseText().trim();
+
+  // 記録実行
+  var result = logManualRejection(postId, reason, note);
+  if (result && result.success) {
+    ui.alert(
+      '✅ 記録完了',
+      '投稿ID: ' + postId + '\n理由: ' + reason + (note ? '\n記述: ' + note : '') + '\n\n「却下理由ログ」シートを確認してください',
+      ui.ButtonSet.OK
+    );
+  } else {
+    ui.alert(
+      '❌ 記録失敗',
+      (result && result.error) || '不明なエラー',
+      ui.ButtonSet.OK
+    );
+  }
 }

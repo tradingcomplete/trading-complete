@@ -698,15 +698,15 @@ Supabase保存（chart_imagesにURLが格納）
 ## 💳 PaymentModule（決済・プラン管理）
 
 **ファイル**: `js/payment/PaymentModule.js`  
-**バージョン**: 3.0.0  
-**更新日**: 2026-04-22  
-**決済方式**: PAY.JP + PayPal 多層決済対応（Square対応予定）
+**バージョン**: 3.0.0（実装済み） / **3.1.0 設計完了・サーバー側デプロイ済み・フロント実装着手前**  
+**更新日**: 2026-04-25  
+**決済方式**: PAY.JP（既存・維持） + PayPal（実装済み・Sandboxテスト合格） + **Square（v3.1.0でEdge Functions 3つデプロイ済み・フロント実装待ち）**
 
 ### Public API
 
 | メソッド | 引数 | 説明 |
 |---------|------|------|
-| `initialize()` | - | 初期化（Supabaseからプラン取得・PAY.JP Checkoutコールバック登録） |
+| `initialize()` | - | 初期化（Supabaseからプラン取得・PAY.JP Checkoutコールバック登録・**Square SDK初期化 [v3.1.0]**） |
 | `getCurrentPlan()` | - | 現在のプラン取得（'free'/'pro'/'premium'） |
 | `getPlanLimits(plan)` | string/null | プラン制限取得（省略時は現在のプラン） |
 | `getStatus()` | - | 初期化状態・プラン・制限情報取得 |
@@ -714,8 +714,8 @@ Supabase保存（chart_imagesにURLが格納）
 | `canUseCloudSync()` | - | クラウド同期利用可否（Pro以上） |
 | `canUseAI()` | - | AI機能利用可否（Premium以上） |
 | `getRemainingTrades(currentCount)` | number | 残り記録可能件数 |
-| `startCheckout(planId, provider)` | string, string | 決済開始（provider: 'paypal'/'payjp'、デフォルト'paypal'） |
-| `cancelSubscription()` | - | 解約（provider自動判定でEdge Function分岐） |
+| `startCheckout(planId, provider)` | string, string | 決済開始（provider: **'paypal'/'payjp'/'square'**、デフォルト'paypal'） |
+| `cancelSubscription()` | - | 解約（provider自動判定でEdge Function分岐：paypal / payjp / **square [v3.1.0]**） |
 | `refreshSubscription()` | - | サブスクリプション情報再取得・プラン反映 |
 
 ### Static プロパティ
@@ -726,6 +726,9 @@ Supabase保存（chart_imagesにURLが格納）
 | `PLAN_IDS` | { pro_monthly, pro_yearly } | PAY.JPプランID |
 | `PAYPAL_CLIENT_ID` | ATf3cbi... | PayPal Client ID（本番切替時に差替え） |
 | `PAYPAL_PLAN_IDS` | { pro_monthly: 'P-xxx', pro_yearly: 'P-xxx' } | PayPalプランID（本番切替時に差替え） |
+| `SQUARE_APPLICATION_ID` **[v3.1.0]** | sandbox-sq0idb-xxx | Square Application ID（Web Payments SDK用・本番切替時に差替え） |
+| `SQUARE_LOCATION_ID` **[v3.1.0]** | Lxxx | Square Location ID（本番切替時に差替え） |
+| `SQUARE_PLAN_VARIATION_IDS` **[v3.1.0]** | { pro_monthly: 'xxx', pro_yearly: 'xxx' } | Square Subscription Plan Variation ID |
 | `PLAN_LIMITS` | { free, pro, premium } | プラン別制限定義 |
 
 ### プラン別制限
@@ -756,13 +759,29 @@ PAY.JPフロー（既存維持）:
     → postMessageでトークン受信
     → #handlePayjpToken(token)
     → Edge Function (create-checkout-session)
-    → subscriptionsテーブル保存（provider='payjp'）
+    → subscriptionsテーブル保存（provider='payjp')
+
+Squareフロー [v3.1.0 設計中]:
+  startCheckout(planId, 'square')
+    → #startSquareCheckout(planId)
+    → Squareカード入力モーダル表示（Web Payments SDK - Card.attach()）
+    → ユーザーがカード情報入力
+    → card.tokenize() でnonce取得
+    → #handleSquareNonce(nonce, planId)
+    → Edge Function (square-create-subscription)
+        ├─ Step1: Customers API → Customer作成
+        ├─ Step2: Cards API → Card on file 保存
+        ├─ Step3: Subscriptions API → 定期課金開始
+        └─ 失敗時: 逆順ロールバック（Card削除 → Customer削除）
+    → subscriptionsテーブル保存（provider='square')
+    → refreshSubscription() → Pro反映
 
 解約フロー（provider自動判定）:
   cancelSubscription()
     → subscription.provider で分岐
     → 'paypal' → paypal-cancel-subscription
     → 'payjp'  → cancel-subscription
+    → 'square' → square-cancel-subscription  [v3.1.0]
 ```
 
 ### bridge.js との統合（Phase 4）
@@ -808,13 +827,53 @@ if (window.PaymentModule && typeof window.PaymentModule.canUseCloudSync === 'fun
 | `cancel-subscription` | PAY.JP 解約 | - |
 | `paypal-activate-subscription` | PayPal 契約検証・DB保存 | - |
 | `paypal-cancel-subscription` | PayPal 解約 | - |
+| `square-create-subscription` **[v3.1.0 ✅ デプロイ済み 2026-04-25]** | Square Customer作成→Card保存→Subscription作成の3段階処理 | - |
+| `square-cancel-subscription` **[v3.1.0 ✅ デプロイ済み 2026-04-25]** | Square 解約 | - |
+| `square-webhook` **[v3.1.0 ✅ デプロイ済み 2026-04-25]** | Square Webhook受信（invoice.payment_made等） | `--no-verify-jwt` 必須 |
 
 ```bash
 # デプロイ元: C:\Users\focus\supabase-functions
 cd C:\Users\focus\supabase-functions && npx supabase functions deploy payjp-webhook --project-ref apqmrhksogpscdtktjwd --no-verify-jwt
 ```
 
-**詳細**: 決済システム_要件定義書_v3_6.md
+### Edge Function Secrets（v3.1.0・5つ登録済み）
+
+| Secret名 | 用途 | 状態 |
+|----------|------|------|
+| `SQUARE_ACCESS_TOKEN` | Square API認証トークン | ✅ 登録済み（2026-04-25） |
+| `SQUARE_APPLICATION_ID` | Square App ID | ✅ 登録済み（2026-04-25） |
+| `SQUARE_LOCATION_ID` | Square Location ID | ✅ 登録済み（2026-04-25） |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Webhook署名検証鍵 | ⬜ 後回し（Squareダッシュボードで Webhook 作成時に取得） |
+| `SQUARE_PLAN_VARIATION_ID_MONTHLY` | 月額プランVariation ID | ✅ 登録済み（2026-04-25） |
+| `SQUARE_PLAN_VARIATION_ID_YEARLY` | 年額プランVariation ID | ✅ 登録済み（2026-04-25・MQJEIPLXOVPHIQ2WO5QB2G7H） |
+
+### Square実装の特殊ポイント（v3.1.0 設計メモ）
+
+**1. 3段階処理とロールバック**
+
+PayPal は PayPal 側で Customer/Card/Subscription を一括管理するため1回のAPI呼出しで完結するが、Square は SaaS 側で3段階を連鎖させる必要がある。各段階で失敗した場合、**逆順でロールバック**してゴミデータを残さない設計とする。
+
+```
+正常フロー:  Customer作成 → Card保存 → Subscription作成 → DB保存
+失敗時のロールバック:
+  Card保存失敗        → Customer削除
+  Subscription作成失敗 → Card削除 → Customer削除
+  DB保存失敗          → Subscription取消 → Card削除 → Customer削除
+```
+
+**2. カード情報のトークン化**
+
+Square Web Payments SDK の `Card.attach()` でカード入力UIを描画し、`card.tokenize()` で nonce（単回使用トークン）を取得する。**生のカード番号は SaaS 側のサーバーには絶対に届かない**（PCI-DSS 対応）。
+
+**3. Subscription Plan の作成方法**
+
+Square の Subscription Plan は Catalog API の `SUBSCRIPTION_PLAN` オブジェクト型で作成する。**月額プランと年額プランはそれぞれ別の Plan Variation として登録**する（PayPal の Plan ID と同じ概念）。
+
+**4. 既存コード（PayPal / PAY.JP）への影響**
+
+v3.1.0 の実装は **全て追加のみ**。既存の PayPal フロー・PAY.JP フローは一切変更しない。`startCheckout` の provider 引数分岐に 'square' を追加し、Square 用のプライベートメソッドを新規追加するだけ。
+
+**詳細**: 決済システム_要件定義書_v3_9.md
 
 ---
 

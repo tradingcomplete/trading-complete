@@ -871,3 +871,117 @@ function getHypothesisVerificationSummary_() {
  * @return {string} 注入テキスト（最大300文字）。データ不足なら空文字
  */
 
+
+// ========================================
+// T1-C: 修正パターン週次集計(★v14.2・2026-04-24)
+// ========================================
+
+/**
+ * 修正パターンログを週次で集計し、サマリシートに出力する
+ *
+ * 背景: T1-C で蓄積した修正パターンログを、Phase 5 実装までの
+ *       中間成果として Compana さんが週次レビューできるようにする。
+ *
+ * 実行タイミング: 毎週金曜 18:00(トリガー登録は setupTier1WeeklyTrigger で実施)
+ *
+ * 出力シート: 修正パターン週次サマリ(既存シートに追記)
+ * 集計粒度: 投稿タイプ × 誤りタイプ × 過去 7 日間の件数
+ */
+function summarizeCorrectionPatternsWeekly_() {
+  try {
+    var keys = getApiKeys();
+    if (!keys || !keys.SPREADSHEET_ID) {
+      console.log('⚠️ summarizeCorrectionPatternsWeekly_: SPREADSHEET_ID 未設定');
+      return;
+    }
+    var ss = SpreadsheetApp.openById(keys.SPREADSHEET_ID);
+    var srcSheet = ss.getSheetByName('修正パターンログ');
+    var dstSheet = ss.getSheetByName('修正パターン週次サマリ');
+    if (!srcSheet || !dstSheet) {
+      console.log('⚠️ summarizeCorrectionPatternsWeekly_: 対象シートが見つからない');
+      return;
+    }
+    if (srcSheet.getLastRow() < 2) {
+      console.log('ℹ️ summarizeCorrectionPatternsWeekly_: 修正パターンログが空。スキップ');
+      return;
+    }
+
+    // 過去 7 日間の境界
+    var now = new Date();
+    var periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var periodStart = new Date(periodEnd.getTime() - 7 * 86400000);
+    var runDate = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
+    var startStr = Utilities.formatDate(periodStart, 'Asia/Tokyo', 'yyyy-MM-dd');
+    var endStr   = Utilities.formatDate(periodEnd, 'Asia/Tokyo', 'yyyy-MM-dd');
+
+    // データ読込
+    var data = srcSheet.getRange(2, 1, srcSheet.getLastRow() - 1, 11).getValues();
+
+    // 集計(投稿タイプ × 誤りタイプ)
+    var aggregateMap = {};
+    var postSet = {};
+    var totalInPeriod = 0;
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i];
+      var timestamp = row[0];
+      var postId    = row[1];
+      var postType  = row[2] || 'UNKNOWN';
+      var errorType = row[3] || 'UNKNOWN';
+
+      // タイムスタンプのパース(ISO or Date)
+      var dt;
+      if (timestamp instanceof Date) {
+        dt = timestamp;
+      } else {
+        dt = new Date(timestamp);
+      }
+      if (isNaN(dt.getTime())) continue;
+      if (dt < periodStart || dt >= new Date(periodEnd.getTime() + 86400000)) continue;
+
+      postSet[postId] = true;
+      totalInPeriod++;
+      var key = postType + '|' + errorType;
+      aggregateMap[key] = (aggregateMap[key] || 0) + 1;
+    }
+
+    var totalPosts = Object.keys(postSet).length;
+
+    // 出力(サマリシートに追記)
+    var outputRows = [];
+    var aggregateKeys = Object.keys(aggregateMap).sort();
+    for (var k = 0; k < aggregateKeys.length; k++) {
+      var parts = aggregateKeys[k].split('|');
+      var postType2 = parts[0];
+      var errorType2 = parts[1];
+      var count = aggregateMap[aggregateKeys[k]];
+      var rate = totalPosts > 0 ? (count / totalPosts * 100).toFixed(1) : '0';
+      outputRows.push([
+        runDate,       // A 集計実行日
+        startStr,      // B 対象期間開始
+        endStr,        // C 対象期間終了
+        postType2,     // D 投稿タイプ
+        errorType2,    // E 誤りタイプ
+        count,         // F 件数
+        totalPosts,    // G 全投稿数
+        rate           // H 発生率(%)
+      ]);
+    }
+
+    if (outputRows.length > 0) {
+      dstSheet.getRange(dstSheet.getLastRow() + 1, 1, outputRows.length, 8).setValues(outputRows);
+    }
+
+    console.log('========================================');
+    console.log('📊 修正パターン週次サマリ(' + startStr + ' 〜 ' + endStr + ')');
+    console.log('  修正件数合計: ' + totalInPeriod + ' 件');
+    console.log('  対象投稿数:   ' + totalPosts + ' 投稿');
+    console.log('  集計パターン: ' + outputRows.length + ' 行を追記');
+    console.log('========================================');
+  } catch (e) {
+    console.log('❌ summarizeCorrectionPatternsWeekly_ 失敗: ' + e.message);
+    // 週次集計の失敗は warning 相当(本番処理とは独立)
+    if (typeof handleError_ === 'function') {
+      handleError_('warning', 'learningManager.gs:summarizeCorrectionPatternsWeekly_', e);
+    }
+  }
+}

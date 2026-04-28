@@ -731,3 +731,173 @@ function testTCOverviewOutput() {
     console.log(e.stack);
   }
 }
+
+// ========================================
+// ★v14.0 Phase 7(2026-04-23): 数値主張の整合性チェックテスト
+// 事件13(LONDON「今日だけで4円17銭超の急騰」)再現テスト
+// ========================================
+
+/**
+ * Phase 7: anchorDataCollector.gs の toFactString が本日変動セクションを
+ *          正しく出力するかを確認する。
+ * 
+ * 期待: 【本日変動（始値比・本日限定の数値・★事件13対策の最重要基準）】セクションが
+ *       出力され、USD/JPY・AUD/JPY 等の本日変動が明示されること。
+ */
+function testPhase7BodyDeltaSection() {
+  console.log('========================================');
+  console.log('🧪 Phase 7 テスト: 本日変動セクション出力確認');
+  console.log('========================================');
+  
+  try {
+    var keys = getApiKeys();
+    var rates = getLatestRatesFromCache_(keys.SPREADSHEET_ID);
+    
+    if (!rates) {
+      console.log('❌ レートキャッシュが空。テストスキップ');
+      return false;
+    }
+    
+    console.log('📊 レート取得成功: USD/JPY=' + rates.usdjpy);
+    
+    var anchor = collectAnchorData_(rates, keys, { includeCalendar: false, includeOngoingEvents: false });
+    if (!anchor) {
+      console.log('❌ collectAnchorData_ が null を返した');
+      return false;
+    }
+    
+    var factStr = anchor.toFactString();
+    console.log('✅ toFactString() 生成: ' + factStr.length + '文字');
+    
+    // チェック項目
+    var checks = [
+      { name: '本日変動セクション存在', pattern: '【本日変動（始値比' },
+      { name: '事件13対策の明示', pattern: '事件13対策' },
+      { name: '通貨強弱の注記', pattern: '直近24時間の複数ペア総合スコア' },
+      { name: '混同禁止ルール明示', pattern: '直近24時間変動を絶対に混同するな' },
+    ];
+    
+    var allPass = true;
+    for (var ci = 0; ci < checks.length; ci++) {
+      var c = checks[ci];
+      if (factStr.indexOf(c.pattern) !== -1) {
+        console.log('   ✅ ' + c.name);
+      } else {
+        console.log('   ❌ ' + c.name + ' (パターン未検出: 「' + c.pattern + '」)');
+        allPass = false;
+      }
+    }
+    
+    // 本日変動セクションの抜粋を表示
+    var deltaIdx = factStr.indexOf('【本日変動');
+    if (deltaIdx !== -1) {
+      var deltaEnd = factStr.indexOf('\n\n', deltaIdx);
+      if (deltaEnd === -1) deltaEnd = deltaIdx + 600;
+      console.log('');
+      console.log('--- 本日変動セクション抜粋 ---');
+      console.log(factStr.substring(deltaIdx, Math.min(deltaEnd, deltaIdx + 600)));
+      console.log('------------------------------');
+    }
+    
+    console.log('');
+    if (allPass) {
+      console.log('🎉 Phase 7 テスト PASS');
+    } else {
+      console.log('⚠️ Phase 7 テスト 一部項目 FAIL');
+    }
+    return allPass;
+    
+  } catch (e) {
+    console.log('❌ 例外: ' + e.message);
+    console.log(e.stack);
+    return false;
+  }
+}
+
+
+/**
+ * Phase 7: Stage 1 プロンプトに Step 0.5 が正しく含まれているかを確認する。
+ * 
+ * 期待: buildComprehensiveReviewPrompt_ の生成結果に 
+ *       「Step 0.5: 時間限定数値主張の整合性チェック」が含まれること。
+ */
+function testPhase7Step05InPrompt() {
+  console.log('========================================');
+  console.log('🧪 Phase 7 テスト: Stage 1 プロンプトに Step 0.5 が入っているか');
+  console.log('========================================');
+  
+  try {
+    if (typeof buildComprehensiveReviewPrompt_ !== 'function') {
+      console.log('❌ buildComprehensiveReviewPrompt_ 関数が見つからない');
+      return false;
+    }
+    
+    var dummyText = '📝豪ドル円、今日だけで4円17銭超の急騰。\n→昨日のS&P500最高値更新によるリスクオン...\n#FX #豪ドル円';
+    var dummyTypeConfig = { label: 'ロンドン市場オープン', charMin: 200, charMax: 420 };
+    var dummyAnchorData = null;  // 意図的にnullで構造チェックのみ
+    var dummyPreviousPosts = [];
+    
+    var prompt = buildComprehensiveReviewPrompt_(
+      dummyText, 'LONDON', dummyTypeConfig, 200, 420, dummyAnchorData, dummyPreviousPosts
+    );
+    
+    console.log('✅ プロンプト生成成功: ' + prompt.length + '文字');
+    
+    var checks = [
+      { name: 'Step 0.5 見出し', pattern: 'Step 0.5: 時間限定数値主張の整合性チェック' },
+      { name: '事件13 背景説明', pattern: '2026-04-23 LONDON で「豪ドル円、今日だけで4円17銭超の急騰」' },
+      { name: '対象語リスト', pattern: '「今日」「本日」「今日だけで」' },
+      { name: '誤差倍率3倍超ルール', pattern: '誤差倍率が3倍超' },
+      { name: '絶対値差50銭超ルール', pattern: '絶対値差が50銭超' },
+      { name: '混同禁止ルール', pattern: '絶対混同禁止ルール' },
+    ];
+    
+    var allPass = true;
+    for (var ci = 0; ci < checks.length; ci++) {
+      var c = checks[ci];
+      if (prompt.indexOf(c.pattern) !== -1) {
+        console.log('   ✅ ' + c.name);
+      } else {
+        console.log('   ❌ ' + c.name + ' (パターン未検出)');
+        allPass = false;
+      }
+    }
+    
+    console.log('');
+    if (allPass) {
+      console.log('🎉 Phase 7 Step 0.5 テスト PASS');
+    } else {
+      console.log('⚠️ Phase 7 Step 0.5 テスト 一部 FAIL');
+    }
+    return allPass;
+    
+  } catch (e) {
+    console.log('❌ 例外: ' + e.message);
+    console.log(e.stack);
+    return false;
+  }
+}
+
+
+/**
+ * Phase 7 総合テスト: 上記2つを連続実行
+ */
+function testPhase7All() {
+  console.log('');
+  console.log('########################################');
+  console.log('# Phase 7 総合テスト実行');
+  console.log('########################################');
+  console.log('');
+  
+  var r1 = testPhase7BodyDeltaSection();
+  console.log('');
+  var r2 = testPhase7Step05InPrompt();
+  console.log('');
+  
+  console.log('########################################');
+  console.log('# Phase 7 総合テスト結果');
+  console.log('#   本日変動セクション: ' + (r1 ? '✅ PASS' : '❌ FAIL'));
+  console.log('#   Stage 1 Step 0.5:  ' + (r2 ? '✅ PASS' : '❌ FAIL'));
+  console.log('#   総合: ' + ((r1 && r2) ? '🎉 全PASS' : '⚠️ 一部FAIL'));
+  console.log('########################################');
+}
