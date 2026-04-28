@@ -51,7 +51,7 @@ GitHub/
 | 📝 note記事制作 | `../trading-articles/.claude/skills/note-article/SKILL.md` |
 | 🔧 技術仕様 | `docs/MODULES.md` |
 | 🎯 ミッション・ビジョン | `docs/marketing/Trading_Complete_ミッションステートメント_v1_3.md` |
-| 📁 docs フォルダ全体 | `docs/docs_フォルダ整理ガイド_v2.md` |
+| 📁 docs フォルダ全体 | `docs/docs_フォルダ整理ガイド.md` |
 
 ---
 
