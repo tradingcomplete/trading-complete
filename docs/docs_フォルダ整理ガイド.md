@@ -48,17 +48,16 @@ docs/
 │   └── 他、機能別仕様書
 │
 ├── 📂 marketing/            マーケティング・戦略
+│   ├── ⭐ Trading_Complete_マーケティング戦略.md          ← 実行マスター（旧3本を統合）
 │   ├── ⭐ Trading_Complete_中核オファー要件定義書_v1_0.md  ← 価格の正
-│   ├── Trading_Complete_ミッションステートメント_v1_3.md
-│   ├── Trading_Complete_ビジョン_ソロ起業の実践.md
-│   ├── Trading_Complete_最終収益モデル戦略_v2_0.md  ⚠️ 旧価格（バナー注記済）
-│   ├── Trading_Complete_マーケティング戦略_2025-2027_v2_0.md  ⚠️ 旧価格
-│   ├── Trading_Complete_マーケティング戦略50選.md  ⚠️ 旧時期
-│   ├── TC_競合分析レポート.md  ⚠️ 旧価格
-│   ├── Trading Complete構造的位置づけ検証.md  ⚠️ 注記済
-│   ├── TC_広告戦略_要件定義書_v1_1.md
-│   ├── CompanaTrading開発物語_マーケティング.md
-│   └── コンパナがリスペクトするFX_YouTuber_v2.md
+│   ├── ⭐ Trading_Complete_ミッションステートメント_v1_3.md  ブランドの軸
+│   ├── ⭐ Trading_Complete_ビジョン_ソロ起業の実践.md       思想の軸
+│   ├── 📋 補助資料（深掘り用・残置）
+│   │   ├── CompanaTrading開発物語_マーケティング.md         Build in Public素材
+│   │   ├── コンパナがリスペクトするFX_YouTuber_v2.md        競合学習
+│   │   ├── TC_広告戦略_要件定義書_v1_1.md                   広告施策の深掘り
+│   │   ├── TC_競合分析レポート.md                           競合理解（バナー注記済）
+│   │   └── Trading Complete構造的位置づけ検証.md            市場分析・リスク（注記済）
 │
 ├── 📂 note/                 note記事関連
 │   ├── note記事_ライティングスタイルガイド.md
@@ -74,6 +73,9 @@ docs/
 │
 └── 📂 archive/              旧バージョン・廃止
     ├── PAY_JP_決済システム_要件定義書_v2_0.md（v3.9へ統合・PAY.JP否決）
+    ├── Trading_Complete_マーケティング戦略50選.md（マーケティング戦略.mdに統合）
+    ├── Trading_Complete_マーケティング戦略_2025-2027_v2_0.md（マーケティング戦略.mdに統合）
+    ├── Trading_Complete_最終収益モデル戦略_v2_0.md（マーケティング戦略.mdに統合・旧価格）
     ├── Trading_Complete_最終収益モデル戦略_v1_0.md
     ├── Trading_Complete_ミッションステートメント_v1_2.md
     ├── Trading_Complete_マーケティング戦略_2025-2027_v1_旧価格版.md
@@ -139,6 +141,8 @@ docs/
 | `PAY_JP_決済システム_要件定義書_v2_0.md` を archive へ | PAY.JP否決により役目終了 |
 | `ai-tools/docs_フォルダ整理ガイド_v2.md` を削除（重複） | 本ファイルが正 |
 | `PAY.JP_APIキーの情報.txt` を .gitignore + git untrack | テストキーであっても git に置かない |
+| `Trading_Complete_マーケティング戦略.md` を新規作成（実行マスター） | 50選・3年計画・収益モデルの3本から「今やる」エッセンスを統合・1人リソースで回せる施策に絞り込み |
+| 旧マーケ戦略3本（50選・2025-2027 v2_0・最終収益モデル v2_0）を archive へ | 新マスターに統合済み・参考のみで保管 |
 
 ---
 
