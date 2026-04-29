@@ -33,6 +33,11 @@
         #eventBus = null;
         #initialized = false;
         #syncInProgress = false;
+        // 計算ロジック検証_要件定義書 WARNING W10 対応
+        // mergeAllWithCloud 実行中は個別マージの emit を抑制し、
+        // 全マージ完了後に sync:merge:complete のみ発火する。
+        // リスナーが「マージ途中の不確定状態」で再計算するのを防ぐ。
+        #suppressIndividualEmits = false;
         
         // ========== セキュリティ: エラーハンドリング ==========
         
@@ -1965,54 +1970,73 @@
             
             console.log('[SyncModule] === オフライン復帰マージ開始 ===');
             this.#eventBus?.emit('sync:merge:start', {});
-            
+
+            // 計算ロジック検証_要件定義書 WARNING W10 対応
+            // 個別マージメソッドが順次 emit すると、リスナーが「途中の不確定状態」で
+            // 再計算してしまう問題があった。マージ中は個別 emit を抑制する。
+            this.#suppressIndividualEmits = true;
+
             const results = {
                 trades: false,
                 notes: false,
                 expenses: false,
                 capital: false
             };
-            
+            // 各マージで保存された件数を集約・最後にまとめて emit する
+            const mergedCounts = { trades: 0, notes: 0, expenses: 0, capital: 0 };
+
             try {
                 // 1. トレード
                 try {
                     const r = await this.mergeTradesWithCloud();
                     results.trades = r.success;
+                    if (typeof r.count === 'number') mergedCounts.trades = r.count;
                 } catch (e) {
                     console.error('[SyncModule] トレードマージエラー:', e);
                 }
-                
+
                 // 2. ノート
                 try {
                     const r = await this.mergeNotesWithCloud();
                     results.notes = r.success;
+                    if (typeof r.count === 'number') mergedCounts.notes = r.count;
                 } catch (e) {
                     console.error('[SyncModule] ノートマージエラー:', e);
                 }
-                
+
                 // 3. 経費
                 try {
                     const r = await this.mergeExpensesWithCloud();
                     results.expenses = r.success;
+                    if (typeof r.count === 'number') mergedCounts.expenses = r.count;
                 } catch (e) {
                     console.error('[SyncModule] 経費マージエラー:', e);
                 }
-                
+
                 // 4. 入出金
                 try {
                     const r = await this.mergeCapitalRecordsWithCloud();
                     results.capital = r.success;
+                    if (typeof r.count === 'number') mergedCounts.capital = r.count;
                 } catch (e) {
                     console.error('[SyncModule] 入出金マージエラー:', e);
                 }
-                
+
+                // 全マージ完了後にまとめて emit（順序を保証）
+                this.#suppressIndividualEmits = false;
+                if (results.trades) this.#eventBus?.emit('sync:trades:synced', { count: mergedCounts.trades });
+                if (results.notes) this.#eventBus?.emit('sync:notes:synced', { count: mergedCounts.notes });
+                if (results.expenses) this.#eventBus?.emit('sync:expenses:synced', { count: mergedCounts.expenses });
+                if (results.capital) this.#eventBus?.emit('sync:capital:synced', { count: mergedCounts.capital });
+
                 const allSuccess = Object.values(results).every(v => v === true);
                 console.log('[SyncModule] === オフライン復帰マージ完了 ===', results);
-                this.#eventBus?.emit('sync:merge:complete', { results, success: allSuccess });
-                
+                this.#eventBus?.emit('sync:merge:complete', { results, success: allSuccess, counts: mergedCounts });
+
                 return { success: allSuccess, ...results };
-                
+
             } catch (error) {
+                this.#suppressIndividualEmits = false; // 必ずリセット
                 console.error('[SyncModule] mergeAllWithCloud例外:', error);
                 this.#eventBus?.emit('sync:merge:error', { error: this.#toUserMessage(error) });
                 return { success: false, error: this.#toUserMessage(error) };
@@ -2110,9 +2134,12 @@
                 }
                 
                 console.log(`[SyncModule] トレードマージ完了: 合計${merged.length}件, アップロード${toUpload.length}件, ダウンロード${downloadedCount}件`);
-                this.#eventBus?.emit('sync:trades:synced', { count: merged.length });
-                
-                return { success: true, total: merged.length, uploaded: toUpload.length, downloaded: downloadedCount };
+                // W10: mergeAllWithCloud 中は emit 抑制（mergeAllWithCloud 側でまとめて発火）
+                if (!this.#suppressIndividualEmits) {
+                    this.#eventBus?.emit('sync:trades:synced', { count: merged.length });
+                }
+
+                return { success: true, total: merged.length, count: merged.length, uploaded: toUpload.length, downloaded: downloadedCount };
                 
             } catch (error) {
                 console.error('[SyncModule] mergeTradesWithCloud例外:', error);
@@ -2201,9 +2228,12 @@
                 
                 const totalCount = Object.keys(merged).length;
                 console.log(`[SyncModule] ノートマージ完了: 合計${totalCount}件, アップロード${toUpload.length}件, ダウンロード${downloadedCount}件`);
-                this.#eventBus?.emit('sync:notes:synced', { count: totalCount });
-                
-                return { success: true, total: totalCount, uploaded: toUpload.length, downloaded: downloadedCount };
+                // W10: mergeAllWithCloud 中は emit 抑制
+                if (!this.#suppressIndividualEmits) {
+                    this.#eventBus?.emit('sync:notes:synced', { count: totalCount });
+                }
+
+                return { success: true, total: totalCount, count: totalCount, uploaded: toUpload.length, downloaded: downloadedCount };
                 
             } catch (error) {
                 console.error('[SyncModule] mergeNotesWithCloud例外:', error);
@@ -2263,7 +2293,10 @@
                 localStorage.setItem('tc_expenses', JSON.stringify(merged));
                 
                 console.log(`[SyncModule] 経費マージ完了: 合計${merged.length}件, アップロード${toUpload.length}件, ダウンロード${toDownload.length}件`);
-                this.#eventBus?.emit('sync:expenses:synced', { count: merged.length });
+                // W10: mergeAllWithCloud 中は emit 抑制
+                if (!this.#suppressIndividualEmits) {
+                    this.#eventBus?.emit('sync:expenses:synced', { count: merged.length });
+                }
                 
                 return { success: true, total: merged.length, uploaded: toUpload.length, downloaded: toDownload.length };
                 
@@ -2325,9 +2358,12 @@
                 localStorage.setItem('depositWithdrawals', JSON.stringify(merged));
                 
                 console.log(`[SyncModule] 入出金マージ完了: 合計${merged.length}件, アップロード${toUpload.length}件, ダウンロード${toDownload.length}件`);
-                this.#eventBus?.emit('sync:capital:synced', { count: merged.length });
-                
-                return { success: true, total: merged.length, uploaded: toUpload.length, downloaded: toDownload.length };
+                // W10: mergeAllWithCloud 中は emit 抑制
+                if (!this.#suppressIndividualEmits) {
+                    this.#eventBus?.emit('sync:capital:synced', { count: merged.length });
+                }
+
+                return { success: true, total: merged.length, count: merged.length, uploaded: toUpload.length, downloaded: toDownload.length };
                 
             } catch (error) {
                 console.error('[SyncModule] mergeCapitalRecordsWithCloud例外:', error);
