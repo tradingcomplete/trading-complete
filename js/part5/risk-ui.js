@@ -132,35 +132,67 @@ function updateRiskToleranceDisplay() {
 
 /**
  * 通貨ペア変更時の処理
+ * 計算ロジック検証_要件定義書 CRITICAL #3 対応（Q1=A 手動入力 / FIX-10）
  */
 function onPairChanged() {
     const pairInput = document.getElementById('pair');
     const rateInput = document.getElementById('quote-currency-rate');
     const rateLabel = document.getElementById('quote-currency-label');
-    
+    const rateWarning = document.getElementById('quote-currency-warning');
+
     if (!pairInput || !rateInput) return;
-    
+
     const pairValue = pairInput.value.toUpperCase();
-    
+
     // 決済通貨を判定
     const quoteCurrency = getQuoteCurrency(pairValue);
-    
+
     if (quoteCurrency === 'JPY') {
-        // クロス円の場合は自動で1.00
+        // クロス円の場合は自動で1.00（円換算は pipUtils 側で JPY ペア特別扱い）
         rateInput.value = '1.00';
         rateInput.disabled = true;
         rateInput.style.backgroundColor = 'rgba(255,255,255,0.05)';
-        if (rateLabel) rateLabel.textContent = '（円建て）';
+        if (rateLabel) rateLabel.textContent = '（円建て / 自動）';
+        if (rateWarning) rateWarning.style.display = 'none';
     } else {
-        // それ以外は手動入力
+        // それ以外は手動入力（未入力時は円換算スキップ）
         rateInput.disabled = false;
         rateInput.style.backgroundColor = '';
         rateInput.value = '';
-        if (rateLabel) rateLabel.textContent = `（${quoteCurrency}/JPY）`;
+        if (rateLabel) rateLabel.textContent = `（${quoteCurrency}/JPY を入力）`;
+        if (rateWarning) rateWarning.style.display = 'block';
     }
-    
+
     // 適正ロット再計算
     calculateOptimalLot();
+}
+
+/**
+ * 決済通貨レート入力欄の状態を更新（警告表示制御）
+ * 計算ロジック検証_要件定義書 FIX-10 対応
+ */
+function updateQuoteCurrencyWarning() {
+    const rateInput = document.getElementById('quote-currency-rate');
+    const rateWarning = document.getElementById('quote-currency-warning');
+    if (!rateInput || !rateWarning) return;
+
+    // 無効化中（JPYペア）は警告非表示
+    if (rateInput.disabled) {
+        rateWarning.style.display = 'none';
+        return;
+    }
+
+    const v = parseFloat(rateInput.value);
+    if (isNaN(v) || v <= 0) {
+        rateWarning.style.display = 'block';
+    } else {
+        rateWarning.style.display = 'none';
+    }
+}
+
+// グローバル公開
+if (typeof window !== 'undefined') {
+    window.updateQuoteCurrencyWarning = updateQuoteCurrencyWarning;
 }
 
 /**

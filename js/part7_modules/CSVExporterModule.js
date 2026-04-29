@@ -77,12 +77,15 @@ class CSVExporterModule {
 
         const rows = [headers];
 
-        // 年度でフィルタリング
+        // 年度でフィルタリング - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const yearTrades = trades.filter(trade => {
-            const tradeDate = new Date(trade.date);
-            return tradeDate.getFullYear() === year;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year;
         });
-        
+
         console.log(`${year}年のトレード数:`, yearTrades.length);
 
         // データ行を作成
@@ -260,10 +263,13 @@ class CSVExporterModule {
         const headers = ['項目', '金額（円）'];
         const rows = [headers];
 
-        // トレード集計
+        // トレード集計 - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const yearTrades = trades.filter(trade => {
-            const tradeDate = new Date(trade.date);
-            return tradeDate.getFullYear() === year;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year;
         });
 
         const totalProfit = yearTrades.reduce((sum, t) => 
@@ -318,23 +324,149 @@ class CSVExporterModule {
     }
 
     /**
-     * CSV生成とダウンロード
+     * CSV文字列生成（ダウンロードなし）
+     * 計算ロジック検証_要件定義書 W9 対応（FIX-14）
      * @param {Array} rows - CSV行データの2次元配列
-     * @param {string} filename - ファイル名（拡張子なし）
-     * @returns {Object} 結果 {success: boolean, filename: string, rowCount: number}
+     * @returns {string} CSV テキスト（BOM なし）
      */
-    generateCSV(rows, filename) {
-        // CSVテキストを生成
-        const csvContent = rows.map(row => 
+    rowsToCSVString(rows) {
+        return rows.map(row =>
             row.map(cell => {
-                // セル内容をエスケープ
-                const cellStr = String(cell || '');
+                const cellStr = String(cell == null ? '' : cell);
                 if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
                     return `"${cellStr.replace(/"/g, '""')}"`;
                 }
                 return cellStr;
             }).join(this.#delimiter)
         ).join('\n');
+    }
+
+    /**
+     * CSV文字列を行配列に再パース（基本的な実装・検証用）
+     * RFC4180 準拠（クオート内の "" エスケープ対応・カンマと改行はクオート内で許容）
+     * 計算ロジック検証_要件定義書 W9 対応（FIX-14）
+     * @param {string} csvText
+     * @returns {Array<Array<string>>}
+     */
+    parseCSVString(csvText) {
+        const rows = [];
+        let row = [];
+        let cell = '';
+        let inQuotes = false;
+        for (let i = 0; i < csvText.length; i++) {
+            const ch = csvText[i];
+            if (inQuotes) {
+                if (ch === '"') {
+                    if (csvText[i + 1] === '"') { cell += '"'; i++; }
+                    else { inQuotes = false; }
+                } else {
+                    cell += ch;
+                }
+            } else {
+                if (ch === '"') { inQuotes = true; }
+                else if (ch === this.#delimiter) { row.push(cell); cell = ''; }
+                else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+                else if (ch === '\r') { /* skip */ }
+                else { cell += ch; }
+            }
+        }
+        // 最終セル
+        if (cell !== '' || row.length > 0) { row.push(cell); rows.push(row); }
+        return rows;
+    }
+
+    /**
+     * トレード CSV エクスポートの自己検証（ラウンドトリップ）
+     * 計算ロジック検証_要件定義書 W9 対応（FIX-14）
+     * export → parse して件数・合計値が元データと一致するか確認
+     *
+     * @param {number} year - 対象年度
+     * @returns {Object} 検証結果 {success, rowCount, expectedCount, totals, expectedTotals, mismatches}
+     */
+    validateTradeExport(year) {
+        const tradeManager = this.#tradeManager || TradeManager.getInstance();
+        if (!tradeManager) return { success: false, error: 'TradeManager not found' };
+
+        const trades = tradeManager.getAllTrades() || [];
+        // FIX-6 と整合: exit_date ベース
+        const yearTrades = trades.filter(t => {
+            if (!t.exits || t.exits.length === 0) return false;
+            const d = new Date(t.exits[t.exits.length - 1].time);
+            if (isNaN(d.getTime())) return false;
+            return d.getFullYear() === year;
+        });
+
+        const expectedTotals = {
+            netProfit: yearTrades.reduce((s, t) => s + parseFloat(t.yenProfitLoss?.netProfit || 0), 0),
+            profitLoss: yearTrades.reduce((s, t) => s + parseFloat(t.yenProfitLoss?.profitLoss || 0), 0),
+            swap: yearTrades.reduce((s, t) => s + parseFloat(t.yenProfitLoss?.swap || 0), 0),
+            commission: yearTrades.reduce((s, t) => s + parseFloat(t.yenProfitLoss?.commission || 0), 0)
+        };
+
+        // 行データ作成（exportTrades と同じヘッダ・順序）
+        const headers = ['日付','商品名','売買区分','数量','エントリー価格','決済価格',
+                         '決済損益（円）','スワップ（円）','手数料（円）','純損益（円）','メモ'];
+        const rows = [headers];
+        yearTrades.forEach(t => {
+            rows.push([
+                t.date || '', t.symbol || t.pair || '', t.direction || '',
+                t.quantity || t.lots || '', t.entryPrice || '', t.exitPrice || '',
+                t.yenProfitLoss?.profitLoss || '0', t.yenProfitLoss?.swap || '0',
+                t.yenProfitLoss?.commission || '0', t.yenProfitLoss?.netProfit || '0',
+                t.memo || ''
+            ]);
+        });
+
+        // ラウンドトリップ
+        const csvText = this.rowsToCSVString(rows);
+        const parsed = this.parseCSVString(csvText);
+
+        // 検証: ヘッダ行 + データ行 = 期待件数
+        const dataRows = parsed.slice(1).filter(r => r.length > 1);
+        const totals = dataRows.reduce((acc, r) => ({
+            profitLoss: acc.profitLoss + parseFloat(r[6] || 0),
+            swap: acc.swap + parseFloat(r[7] || 0),
+            commission: acc.commission + parseFloat(r[8] || 0),
+            netProfit: acc.netProfit + parseFloat(r[9] || 0)
+        }), { profitLoss: 0, swap: 0, commission: 0, netProfit: 0 });
+
+        const mismatches = [];
+        if (dataRows.length !== yearTrades.length) {
+            mismatches.push(`件数不一致: parsed=${dataRows.length} expected=${yearTrades.length}`);
+        }
+        ['profitLoss','swap','commission','netProfit'].forEach(k => {
+            if (Math.abs(totals[k] - expectedTotals[k]) > 0.5) {
+                mismatches.push(`${k} 合計不一致: parsed=${totals[k]} expected=${expectedTotals[k]}`);
+            }
+        });
+
+        const result = {
+            success: mismatches.length === 0,
+            year: year,
+            rowCount: dataRows.length,
+            expectedCount: yearTrades.length,
+            totals: totals,
+            expectedTotals: expectedTotals,
+            mismatches: mismatches
+        };
+
+        if (result.success) {
+            console.log(`✅ [CSVExporter] ラウンドトリップ検証合格: ${year}年 ${dataRows.length}件`);
+        } else {
+            console.error('❌ [CSVExporter] ラウンドトリップ検証失敗:', result);
+        }
+        return result;
+    }
+
+    /**
+     * CSV生成とダウンロード
+     * @param {Array} rows - CSV行データの2次元配列
+     * @param {string} filename - ファイル名（拡張子なし）
+     * @returns {Object} 結果 {success: boolean, filename: string, rowCount: number}
+     */
+    generateCSV(rows, filename) {
+        // CSVテキストを生成（rowsToCSVString に委譲）
+        const csvContent = this.rowsToCSVString(rows);
 
         // BOM付きUTF-8でエンコード（Excelで文字化け防止）
         const bom = '\uFEFF';
@@ -392,10 +524,13 @@ class CSVExporterModule {
         const monthStr = String(month).padStart(2, '0');
         const filename = `monthly_${year}_${monthStr}`;
         
-        // 該当月のデータをフィルタリング
+        // 該当月のデータをフィルタリング - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const monthTrades = trades.filter(trade => {
-            const tradeDate = new Date(trade.date);
-            return tradeDate.getFullYear() === year && tradeDate.getMonth() + 1 === month;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year && exitDate.getMonth() + 1 === month;
         });
 
         const monthExpenses = expenses.filter(expense => {

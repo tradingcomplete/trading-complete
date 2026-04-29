@@ -138,71 +138,120 @@
             return [...this._trades];
         }
         
+        // 計算ロジック検証_要件定義書 CRITICAL #7 対応（FIX-11）
+        // 締め月チェック - 締め済み月のトレードは編集不可（Q4=B 解除機能あり）
+        // forceUnlocked=true でバイパス可能（締め解除フロー用）
+        _checkClosedGuard(trade, action, forceUnlocked) {
+            if (forceUnlocked === true) return null;
+            if (!window.ClosingManagerModule || typeof window.ClosingManagerModule.isTradeInClosedMonth !== 'function') {
+                return null; // ClosingManager 未ロード時はガードなし
+            }
+            if (window.ClosingManagerModule.isTradeInClosedMonth(trade)) {
+                const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+                const msg = `${exitDate.getFullYear()}年${exitDate.getMonth() + 1}月は締め済みです。\n編集するには先に締めを解除してください。`;
+                console.warn(`[TradeManager] ${action}拒否（締め済み月）:`, trade.id, msg);
+                if (typeof alert === 'function') {
+                    try { alert('⚠ ' + msg); } catch (e) { /* alert使用不可環境 */ }
+                }
+                return msg;
+            }
+            return null;
+        }
+
         // トレード追加(正規化付き)
-        addTrade(trade) {
+        addTrade(trade, options = {}) {
             const normalizedTrade = this._normalizeTradeData(trade);
             normalizedTrade.id = normalizedTrade.id || String(Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+
+            // 締め月ガード（FIX-11）
+            const blocked = this._checkClosedGuard(normalizedTrade, '追加', options.forceUnlocked);
+            if (blocked) return null;
+
             this._trades.push(normalizedTrade);
             this._saveToStorage();
             this._notifyListeners('add', normalizedTrade);
-            
+
             // Supabase同期（バックグラウンド）
             this._syncToCloud(normalizedTrade);
-            
+
             return normalizedTrade;
         }
-        
+
         // トレード更新(正規化付き)
-        updateTrade(id, updates) {
+        updateTrade(id, updates, options = {}) {
             const index = this._trades.findIndex(t => t.id === id);
             if (index === -1) return null;
-            
-            const normalizedUpdates = this._normalizeTradeData({ ...this._trades[index], ...updates });
-            this._trades[index] = normalizedUpdates;
+
+            // 締め月ガード（FIX-11）- 編集前後どちらかが締め月なら拒否
+            const before = this._trades[index];
+            const after = this._normalizeTradeData({ ...before, ...updates });
+            const blockedBefore = this._checkClosedGuard(before, '編集', options.forceUnlocked);
+            if (blockedBefore) return null;
+            const blockedAfter = this._checkClosedGuard(after, '編集', options.forceUnlocked);
+            if (blockedAfter) return null;
+
+            this._trades[index] = after;
             this._saveToStorage();
             this._notifyListeners('update', this._trades[index]);
-            
+
             // Supabase同期（バックグラウンド）
             this._syncToCloud(this._trades[index]);
-            
+
             return this._trades[index];
         }
-        
+
         // トレード削除
-        deleteTrade(id) {
+        deleteTrade(id, options = {}) {
             const index = this._trades.findIndex(t => t.id === id);
             if (index === -1) return false;
-            
+
+            // 締め月ガード（FIX-11）
+            const blocked = this._checkClosedGuard(this._trades[index], '削除', options.forceUnlocked);
+            if (blocked) return false;
+
             const deleted = this._trades.splice(index, 1)[0];
             this._saveToStorage();
             this._notifyListeners('delete', deleted);
-            
+
             // Supabase同期（バックグラウンド）
             this._deleteFromCloud(id);
-            
+
             return true;
         }
         
         // 一括トレード追加
-        bulkAddTrades(trades) {
+        bulkAddTrades(trades, options = {}) {
             if (!Array.isArray(trades)) {
                 throw new Error('引数は配列である必要があります');
             }
-            
+
             const addedTrades = [];
+            const skippedTrades = [];
             trades.forEach(trade => {
                 const normalizedTrade = this._normalizeTradeData(trade);
                 normalizedTrade.id = normalizedTrade.id || String(Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+
+                // 締め月ガード（FIX-11）- alertは出さずスキップ集計のみ（一括処理用）
+                if (options.forceUnlocked !== true && window.ClosingManagerModule?.isTradeInClosedMonth?.(normalizedTrade)) {
+                    skippedTrades.push(normalizedTrade);
+                    console.warn('[TradeManager] bulkAddTrades: 締め済み月のためスキップ', normalizedTrade.id);
+                    return;
+                }
+
                 this._trades.push(normalizedTrade);
                 addedTrades.push(normalizedTrade);
             });
-            
+
             this._saveToStorage();
             this._notifyListeners('bulk-add', addedTrades);
-            
+
             // Supabase同期（バックグラウンド・一括）
             this._bulkSyncToCloud(addedTrades);
-            
+
+            if (skippedTrades.length > 0) {
+                console.warn(`[TradeManager] bulkAddTrades: ${skippedTrades.length}件スキップ（締め済み月）`);
+            }
+
             return addedTrades;
         }
         

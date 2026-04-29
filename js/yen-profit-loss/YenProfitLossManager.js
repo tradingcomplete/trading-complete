@@ -109,37 +109,47 @@ class YenCalculator {
     
     /**
      * pipsから円への換算
+     * 計算ロジック検証_要件定義書 CRITICAL #2 対応（FIX-4）
+     * pipUtils.getYenPerPipPerLot を使った正規実装に置換。
+     * 旧実装はドルストレートを 1500円/pip でハードコードしていたが、
+     * quote_currency_rate を使うことで実レートを反映できる。
+     *
      * @param {number} pips - pips値
      * @param {string} pair - 通貨ペア
-     * @param {number} lotSize - ロットサイズ（1lot = 10万通貨）
-     * @returns {number} 円換算値
+     * @param {number} lotSize - ロットサイズ（標準=1で、内部的に1lot=10万通貨換算）
+     * @param {number} [quoteCurrencyRate] - クォート通貨/JPY レート（USD/JPYペアでは150等）
+     * @returns {number|null} 円換算値（quote_currency_rate 必須ペアで未指定時は null）
      */
-    convertPipsToYen(pips, pair, lotSize) {
-        const pipValue = this.getPipValue(pair);
-        return Math.round(pips * lotSize * pipValue);
+    convertPipsToYen(pips, pair, lotSize, quoteCurrencyRate) {
+        const yenPerPipPerStdLot = this.getPipValue(pair, quoteCurrencyRate);
+        if (yenPerPipPerStdLot === null) return null;
+        // 旧API互換: lotSize は「ロット数」（1.0 等）として扱う
+        return Math.round(pips * lotSize * yenPerPipPerStdLot);
     }
-    
+
     /**
-     * 通貨ペアごとのpip値を取得
+     * 1pip × 1標準ロットあたりの円換算額を取得
+     * 計算ロジック検証_要件定義書 CRITICAL #2 対応（FIX-4）
+     *
      * @param {string} pair - 通貨ペア
-     * @returns {number} pip値（円）
+     * @param {number} [quoteCurrencyRate] - クォート通貨/JPY レート
+     * @returns {number|null} 1pip × 1lot の円換算額（rate 必須ペアで未指定時は null）
      */
-    getPipValue(pair) {
-        // クロス円の場合: 1pip = 1000円/lot
-        if (pair.endsWith('/JPY')) {
-            return 1000;
+    getPipValue(pair, quoteCurrencyRate) {
+        // pipUtils が利用可能なら正規実装に委譲（推奨パス）
+        if (window.PipUtils && typeof window.PipUtils.getYenPerPipPerLot === 'function') {
+            // 標準ロット = 100,000 通貨（メタル系は pipUtils 内部でハンドリング）
+            return window.PipUtils.getYenPerPipPerLot(pair || '', quoteCurrencyRate, 100000);
         }
-        
-        // ドルストレートの場合: レートによって変動（仮値）
+
+        // フォールバック（pipUtils未ロード時）
+        // ⚠️ 旧実装と同じハードコード値・XAU 非対応
+        console.warn('[YenCalculator] pipUtils未ロード - フォールバック動作（ドルストレートはハードコード値）');
+        if (pair && pair.endsWith('/JPY')) return 1000;
         const pipValues = {
-            'EUR/USD': 1500, // 1ドル150円として計算
-            'GBP/USD': 1500,
-            'AUD/USD': 1500,
-            'NZD/USD': 1500,
-            'USD/CHF': 1500,
-            'USD/CAD': 1500
+            'EUR/USD': 1500, 'GBP/USD': 1500, 'AUD/USD': 1500,
+            'NZD/USD': 1500, 'USD/CHF': 1500, 'USD/CAD': 1500
         };
-        
         return pipValues[pair] || 1000;
     }
 }

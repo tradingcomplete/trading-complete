@@ -297,17 +297,22 @@
                                 </div>
                                 
                                 <!-- 決済通貨レート -->
+                                <!-- 計算ロジック検証_要件定義書 CRITICAL #3 対応（Q1=A 手動入力 / FIX-10） -->
                                 <div class="input-group" style="margin: 0;">
                                     <label for="quote-currency-rate" style="font-size: 12px;">
                                         決済通貨レート
                                         <span id="quote-currency-label" style="color: #7a8599;"></span>
                                     </label>
-                                    <input type="number" 
-                                           id="quote-currency-rate" 
-                                           step="0.01" 
-                                           placeholder="例: 150.00"
-                                           oninput="calculateOptimalLot()"
-                                           style="max-width: 120px;">
+                                    <input type="number"
+                                           id="quote-currency-rate"
+                                           step="0.01"
+                                           placeholder="例: 150.00（未入力なら円建て計算スキップ）"
+                                           oninput="calculateOptimalLot(); if(window.updateQuoteCurrencyWarning) window.updateQuoteCurrencyWarning();"
+                                           title="ドルストレート等の場合、決済時刻のクオート通貨/JPYレートを入力。未入力なら円建て損益は計算されません。"
+                                           style="max-width: 180px;">
+                                    <div id="quote-currency-warning" style="font-size: 11px; color: #ff9966; margin-top: 4px; display: none;">
+                                        ⚠ 未入力 → 円建て損益は計算されません
+                                    </div>
                                 </div>
                                 
                                 <!-- 適正ロット -->
@@ -3124,6 +3129,9 @@
     <!-- Phase 2: 入出金管理UI -->
     <script src="js/part5/capital-ui.js"></script>
 
+    <!-- 計算ロジック整合性検証スクリプト（FIX-17）
+         コンソールから window.runCalcLogicVerification() で実行 -->
+    <script src="js/utils/calcLogicVerification.js"></script>
 
     <script>
     // ページ読み込み時にチェックリスト表示を初期化

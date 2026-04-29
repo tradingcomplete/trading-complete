@@ -2298,8 +2298,8 @@
                     this.#eventBus?.emit('sync:expenses:synced', { count: merged.length });
                 }
                 
-                return { success: true, total: merged.length, uploaded: toUpload.length, downloaded: toDownload.length };
-                
+                return { success: true, total: merged.length, count: merged.length, uploaded: toUpload.length, downloaded: toDownload.length };
+
             } catch (error) {
                 console.error('[SyncModule] mergeExpensesWithCloud例外:', error);
                 return { success: false, error: this.#toUserMessage(error) };
