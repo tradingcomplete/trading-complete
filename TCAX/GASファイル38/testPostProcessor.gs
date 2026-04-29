@@ -219,29 +219,30 @@ function testPostProcessorChain() {
   console.log('');
   
   // --- convertExactRatesToRange_ ---
+  // ★2026-04-29: TOKYO削除に伴い TOKYO テスト群を LUNCH に書き換え
   console.log('--- convertExactRatesToRange_ ---');
-  
-  // 1. TOKYO: 「円」付きレート → 台変換
-  var cr1 = convertExactRatesToRange_('ドル円は158.97円で推移。', 'TOKYO');
-  run(assert_('TOKYO: 円付き→台', 'ドル円は158円台で推移。', cr1));
-  
-  // 2. TOKYO: 「円」なしレート → 台変換（本番で発生したパターン）
-  var cr2 = convertExactRatesToRange_('ドル円158.97、豪ドル円113.26。', 'TOKYO');
-  run(assertContains_('TOKYO: ドル円台変換', 'ドル円158円台', cr2));
-  run(assertContains_('TOKYO: 豪ドル円台変換', '豪ドル円113円台', cr2));
-  
-  // 3. TOKYO: USDペア → ドル台変換
-  var cr3 = convertExactRatesToRange_('豪ドル米ドルは0.7125ドルで推移。', 'TOKYO');
-  run(assertContains_('TOKYO: USDドル台変換', '0.71ドル台', cr3));
-  
-  // 4. MORNING: 変換しない（TOKYO/LUNCH以外）
+
+  // 1. LUNCH: 「円」付きレート → 台変換
+  var cr1 = convertExactRatesToRange_('ドル円は158.97円で推移。', 'LUNCH');
+  run(assert_('LUNCH: 円付き→台', 'ドル円は158円台で推移。', cr1));
+
+  // 2. LUNCH: 「円」なしレート → 台変換（本番で発生したパターン）
+  var cr2 = convertExactRatesToRange_('ドル円158.97、豪ドル円113.26。', 'LUNCH');
+  run(assertContains_('LUNCH: ドル円台変換', 'ドル円158円台', cr2));
+  run(assertContains_('LUNCH: 豪ドル円台変換', '豪ドル円113円台', cr2));
+
+  // 3. LUNCH: USDペア → ドル台変換
+  var cr3 = convertExactRatesToRange_('豪ドル米ドルは0.7125ドルで推移。', 'LUNCH');
+  run(assertContains_('LUNCH: USDドル台変換', '0.71ドル台', cr3));
+
+  // 4. MORNING: 変換しない（LUNCH以外）
   var cr4 = convertExactRatesToRange_('ドル円は158.97円で推移。', 'MORNING');
   run(assertContains_('MORNING: 変換しない', '158.97', cr4));
-  
+
   // 5. 既に「台」表現なら触らない
-  var cr5 = convertExactRatesToRange_('ドル円は158円台で推移。', 'TOKYO');
-  run(assert_('TOKYO: 台は二重変換しない', 'ドル円は158円台で推移。', cr5));
-  
+  var cr5 = convertExactRatesToRange_('ドル円は158円台で推移。', 'LUNCH');
+  run(assert_('LUNCH: 台は二重変換しない', 'ドル円は158円台で推移。', cr5));
+
   // 6. スペース区切り「豪ドル円 113.39」も変換（本番で発生したパターン）
   var cr6 = convertExactRatesToRange_('豪ドル円 113.39と底堅い。', 'LUNCH');
   run(assertContains_('LUNCH: スペース区切り変換', '113円台', cr6));

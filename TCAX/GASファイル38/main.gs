@@ -825,11 +825,11 @@ function handleAutoMode_(postType, postText, generated, startTime) {
 
 // ===== 平日投稿関数（スケジューラから呼ばれる） =====
 function runMorning()  { return executePost('MORNING'); }
-function runTokyo()    { return executePost('TOKYO'); }
 function runLunch()    { return executePost('LUNCH'); }
 function runLondon()   { return executePost('LONDON'); }
 function runGolden()   { return executePost('GOLDEN'); }
 // ★v12.7: runNy() 削除（NY投稿タイプ廃止）
+// ★2026-04-29: runTokyo() 削除（平日5投稿→4投稿に削減・MORNINGとの近接重複対策）
 
 // ===== 週末投稿関数 =====
 function runWeeklyReview()     { return executePost('WEEKLY_REVIEW'); }

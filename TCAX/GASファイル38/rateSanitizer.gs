@@ -8,7 +8,7 @@
  *   - normalizeRateDecimals_:   小数点桁数の正規化
  *   - validateFinalFormat_:     最終フォーマット検証(安全網)
  *   - findCorrectRate_:         壊れたレートに対して正しい値を検索
- *   - convertExactRatesToRange_: TOKYO/LUNCH 用にレート数値をレンジ表現へ変換
+ *   - convertExactRatesToRange_: LUNCH 用にレート数値をレンジ表現へ変換(★2026-04-29: TOKYO削除)
  *
  * 設計の鉄則:
  *   - 正規表現で \b は使わない(二重小数点バグの原因)
@@ -434,20 +434,21 @@ function findCorrectRate_(brokenRate, unit, rates) {
 
 
 
-// ===== ★v12.6: TOKYO/LUNCHのレート数値を「台」表現に変換 =====
+// ===== ★v12.6: LUNCHのレート数値を「台」表現に変換 =====
+// ★2026-04-29: TOKYO削除に伴い LUNCH 専用に変更(平日5投稿→4投稿)
 /**
  * 100〜180字の短い投稿で具体的なレート数値（158.97等）は不要。
  * 「158円台」「0.71ドル台」のようにレベル感で伝える。
- * 
+ *
  * プロンプトで指示しても守られないケースの安全網。
  * fixHallucinatedRates_・normalizeRateDecimals_の後に実行する。
- * 
+ *
  * @param {string} text - 投稿テキスト
  * @param {string} postType - 投稿タイプ
  * @return {string} 変換後テキスト
  */
 function convertExactRatesToRange_(text, postType) {
-  if (postType !== 'TOKYO' && postType !== 'LUNCH') return text;
+  if (postType !== 'LUNCH') return text;
   
   var original = text;
   

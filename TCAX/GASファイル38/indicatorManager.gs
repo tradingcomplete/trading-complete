@@ -25,7 +25,8 @@ function refreshTodayIndicatorResults() {
 }
 
 // ===== 今日の発表済み指標を取得してI列に書き込む ★v6.7追加 =====
-// TOKYO/LUNCH/LONDON/GOLDEN/NY生成時に呼び出し。時刻が過ぎた今日の指標を対象にする。
+// LUNCH/LONDON/GOLDEN生成時に呼び出し。時刻が過ぎた今日の指標を対象にする。
+// ★2026-04-29: TOKYO削除(平日5投稿→4投稿)・★v12.7: NY削除済
 function fetchTodayAnnouncedResults_(spreadsheetId, geminiApiKey) {
   try {
     var ss = SpreadsheetApp.openById(spreadsheetId);

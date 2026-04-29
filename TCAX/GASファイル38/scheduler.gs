@@ -205,11 +205,11 @@ function cleanupPostTriggers_() {
 function getFunctionName_(postType) {
   var map = {
     'MORNING': 'runMorning',
-    'TOKYO': 'runTokyo',
     'LUNCH': 'runLunch',
     'LONDON': 'runLondon',
     'GOLDEN': 'runGolden',
     // ★v12.7: NY削除
+    // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
     'WEEKLY_REVIEW': 'runWeeklyReview',
     'RULE_1': 'runRule1',
     'RULE_2': 'runRule2',

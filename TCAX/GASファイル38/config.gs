@@ -210,14 +210,9 @@ var POST_TYPES = {
     charMin: 150,
     charMax: 300
   },
-  TOKYO: {
-    id: 'tokyo',
-    label: 'TOKYO OPEN',
-    emoji: '📊',
-    frameColor: null,
-    charMin: 100,
-    charMax: 180
-  },
+  // ★2026-04-29: TOKYO削除。平日5投稿→4投稿に削減
+  //   理由: MORNING(07:30頃)と TOKYO(09:20頃)の時間距離が約1.5時間で近接し内容が重複/
+  //         09:20は仕事中で可視性が低い/X アルゴリズムの連続露出抑制でリーチ希釈
   LUNCH: {
     id: 'lunch',
     label: 'LUNCH',
@@ -327,27 +322,28 @@ var POST_TYPES = {
 
 // ===== 曜日別スケジュール（1分単位 + Bot判定回避） =====
 // ★v12.7/v12.8: NYを削除。平日5投稿に統一
+// ★2026-04-29: TOKYO削除。平日5投稿→4投稿に削減(過密リーチ希釈対策・MORNING との時間距離が近接していた)
 //   types削除 + times削除を完全同期。不整合で undefined → runMorning 誤発火を防止
 var SCHEDULE = {
   1: { // 月曜 ★v12.3.1: MORNING 07:28→08:03（原油先物開場+1h確保。週末ニュースのGrounding精度向上）
-    times: ['08:03', '09:18', '12:08', '17:22', '20:47'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
+    times: ['08:03', '12:08', '17:22', '20:47'],
+    types: ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   2: { // 火曜
-    times: ['07:43', '09:33', '12:14', '17:18', '20:53'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
+    times: ['07:43', '12:14', '17:18', '20:53'],
+    types: ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   3: { // 水曜
-    times: ['07:35', '09:11', '12:06', '17:28', '20:42'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
+    times: ['07:35', '12:06', '17:28', '20:42'],
+    types: ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   4: { // 木曜
-    times: ['07:47', '09:26', '12:19', '17:14', '20:56'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
+    times: ['07:47', '12:19', '17:14', '20:56'],
+    types: ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   5: { // 金曜
-    times: ['07:22', '09:38', '12:11', '17:24', '20:49'],
-    types: ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN']
+    times: ['07:22', '12:11', '17:24', '20:49'],
+    types: ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN']
   },
   6: { // 土曜
     times: ['08:22', '11:48', '15:14', '20:32'],

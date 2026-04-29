@@ -116,11 +116,11 @@ function testWEEK() {
 // ========================================
 
 function testPro_MORNING()          { testBatch_(['MORNING'], 'Pro MORNING'); }
-function testPro_TOKYO()            { testBatch_(['TOKYO'], 'Pro TOKYO'); }
 function testPro_LUNCH()            { testBatch_(['LUNCH'], 'Pro LUNCH'); }
 function testPro_LONDON()           { testBatch_(['LONDON'], 'Pro LONDON'); }
 function testPro_GOLDEN()           { testBatch_(['GOLDEN'], 'Pro GOLDEN'); }
 // ★v12.9: testPro_NY削除（NYタイプ廃止）
+// ★2026-04-29: testPro_TOKYO削除（TOKYOタイプ廃止・平日5投稿→4投稿）
 function testPro_INDICATOR()        { testBatch_(['INDICATOR'], 'Pro INDICATOR'); }
 function testPro_KNOWLEDGE()        { testBatch_(['KNOWLEDGE'], 'Pro KNOWLEDGE'); }
 function testPro_WEEKLY_REVIEW()    { testBatch_(['WEEKLY_REVIEW'], 'Pro WEEKLY_REVIEW'); }

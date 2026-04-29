@@ -75,7 +75,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   var characterPrompt = getCharacterPrompt();
   
   // ★v8.6: TC言及禁止タイプではTC導線セクションを除外（不要な指示でGeminiの注意を分散させない）
-  var tcProhibitedTypes = ['MORNING', 'TOKYO', 'LONDON', 'INDICATOR', 'KNOWLEDGE'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var tcProhibitedTypes = ['MORNING', 'LONDON', 'INDICATOR', 'KNOWLEDGE'];
   if (tcProhibitedTypes.indexOf(postType) !== -1) {
     characterPrompt = characterPrompt.replace(/【TC導線】[\s\S]*?(?=【|$)/, '');
     characterPrompt = characterPrompt.replace(/【TC導線のトーン】[\s\S]*?(?=【|$)/, '');
@@ -128,8 +129,9 @@ function buildPrompt_(postType, typeConfig, context, rates) {
       }
       
       
-      // ★v5.7 Layer 1: 前日の経済指標結果を注入（MORNING, TOKYO）
-      var indicatorResultTypes = ['MORNING', 'TOKYO'];
+      // ★v5.7 Layer 1: 前日の経済指標結果を注入
+      // ★2026-04-29: TOKYO削除に伴い MORNING のみに
+      var indicatorResultTypes = ['MORNING'];
       if (indicatorResultTypes.indexOf(postType) !== -1) {
         try {
           var indicatorReview = fetchIndicatorResults_(keys.SPREADSHEET_ID, keys.GEMINI_API_KEY);
@@ -286,9 +288,10 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   //   目的: 毎日同じ静的データ(ゴトー日・通貨強弱%のみ)を選ぶ現象を解消し、
   //         「今この瞬間のホットな材料」を起点にした投稿を実現する。
   //   背景: TCAX_REFERENCE.md 事件8 参照。
-  //   対象: 市場系投稿(MORNING/TOKYO/LUNCH/LONDON/GOLDEN)のみ。
+  //   対象: 市場系投稿(MORNING/LUNCH/LONDON/GOLDEN)のみ。
   //   失敗時: null が返るので従来動作にフォールバック(従来のプロンプトがそのまま使われる)。
-  var hotTopicEnabledTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var hotTopicEnabledTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN'];
   if (hotTopicEnabledTypes.indexOf(postType) !== -1 && _hotTopicMarketNews) {
     try {
       // 継続中重大事象を取得(Stage 1 で既に使われているが、選定にも渡す)
@@ -393,7 +396,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
     var calScope = 'today'; // デフォルト: 今日のみ
     
     // タイプ別にスコープを変える
-    var dailyTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
+    // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+    var dailyTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN'];
     if (dailyTypes.indexOf(postType) !== -1) {
       calScope = 'today';
     } else if (postType === 'INDICATOR') {
@@ -444,7 +448,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   
   // ★v8.8.1: スプレッドシートの投稿プロンプトに古い構造指示が含まれている場合、
   // 以下のコード側の構造指示が最終版。矛盾する場合はコード側を100%優先。
-  var hypothesisTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var hypothesisTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN'];
   if (hypothesisTypes.indexOf(postType) !== -1) {
     staticPart += '\n【★重要: 以下の構造指示が最終版。上のシート指示と矛盾する場合、以下を100%優先せよ】\n';
   }
@@ -523,7 +528,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
 
   // ★v8.16: 仮説的中率サマリーを全市場投稿に拡大（以前はWEEKLY_HYPOTHESISのみ）
   // AIが「自分が最近何を外しているか」を知ることで、仮説の精度が向上する
-  var verifTargetTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN',
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var verifTargetTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN',
                           'WEEKLY_REVIEW', 'WEEKLY_HYPOTHESIS'];
   if (verifTargetTypes.indexOf(postType) !== -1) {
     var verifSummary = getHypothesisVerificationSummary_();
@@ -552,8 +558,9 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   }
 
   // ④-b 学びログ（過去の引き出しを注入）★v5.5: 全タイプに拡張
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
   var learningMaxMap = {
-    'MORNING': 2, 'TOKYO': 1, 'LUNCH': 1, 'LONDON': 1, 'GOLDEN': 2,
+    'MORNING': 2, 'LUNCH': 1, 'LONDON': 1, 'GOLDEN': 2,
     'INDICATOR': 1, 'NEXT_WEEK': 2,
     'WEEKLY_REVIEW': 3, 'WEEKLY_LEARNING': 5, 'WEEKLY_HYPOTHESIS': 3,
     'RULE_1': 3, 'RULE_2': 3, 'RULE_3': 3, 'RULE_4': 3,
@@ -572,7 +579,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   
   // ⑥ コンテキスト（仮説・学びを投稿履歴シート＋レートキャッシュから自動取得）
   // 仮説は市場系・週末系のみ注入（RULE系・KNOWLEDGEには不要）
-  var hypothesisTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN',
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var hypothesisTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN',
                          'WEEKLY_REVIEW', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
   var needsHypothesis = hypothesisTypes.indexOf(postType) !== -1;
   
@@ -580,7 +588,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   
   // ★v8.16: 仮説の振り返りは1日1回だけ（平日市場系のみ）
   // 2投稿目以降は「振り返り済み」指示に切り替え、同じ答え合わせの繰り返しを防ぐ
-  var dailyMarketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var dailyMarketTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN'];
   var isDailyMarket = dailyMarketTypes.indexOf(postType) !== -1;
   var alreadyReviewed = false;
   
@@ -678,7 +687,9 @@ function buildPrompt_(postType, typeConfig, context, rates) {
   staticPart += '5. 絵文字行は体言止め・動詞止めで短く。→行で人間味を出せ。\n';
   staticPart += '6. ★時間軸は基本「日足」(デイ〜スイング目線)。短期(数時間)は補足で触れる程度にせよ。\n';
   staticPart += '7. 完成したら声に出して読め。硬い文が1文でもあれば書き直せ。\n';
-  
+  // ★2026-04-29 テーマブロックの原則の駄目押し(全投稿共通・末尾駄目押し)
+  staticPart += '8. ★テーマを混ぜるな・分けるな。同じテーマを冒頭と末尾に分けるな。最後の段落で冒頭テーマに戻るな。\n';
+
   // ★v14.0 Phase R-5 末尾再確認マーカー(Q2: 2項目版・動的サフィックス末尾)
   //   役割: 動的データに引っ張られた Claude を冒頭ルールに引き戻す watch 役
   dynamicPart += '\n【★再確認(最終チェック)】\n';

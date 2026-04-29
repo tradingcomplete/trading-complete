@@ -159,7 +159,8 @@ function generatePost(postType, context, cachedRates, options) {
   // 通貨強弱で算出した主役ペアが本文に含まれていなければリトライ
   // ★v8.8: INDICATORを除外（指標の通貨ペアが主役であるべきで、通貨強弱の主役とは一致しないことが多い）
   // ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
-  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var marketTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN'];
   if (marketTypes.indexOf(postType) !== -1 && rates) {
     try {
       var hotCheck = detectHotPair_(rates, keys.SPREADSHEET_ID);
@@ -200,7 +201,8 @@ function generatePost(postType, context, cachedRates, options) {
   // === リスクセンチメント誤記チェック（市場系投稿のみ） ===
   // 「リスクオフ」+「円売り」の組み合わせは絶対禁止。検出したらリトライ
   // ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
-  var riskSentimentTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var riskSentimentTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   if (riskSentimentTypes.indexOf(postType) !== -1) {
     try {
       var bodyForRiskCheck = cleanedText.split(/\n\n#/)[0];

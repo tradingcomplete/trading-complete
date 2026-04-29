@@ -18,7 +18,7 @@
  *   → [rates有の場合のみ以下5段階]
  *   → fixMissingDecimalPoint_ → fixHallucinatedRates_
  *   → normalizeRateDecimals_
- *   → convertExactRatesToRange_(TOKYO/LUNCHのレート台変換)
+ *   → convertExactRatesToRange_(LUNCHのレート台変換・★2026-04-29: TOKYO削除)
  *   → validateFinalFormat_(安全網)
  *
  * 依存する関数(他ファイル):
@@ -75,7 +75,7 @@ function applyPostProcessingChain_(text, postType, rates) {
     text = fixMissingDecimalPoint_(text, rates);
     text = fixHallucinatedRates_(text, rates);
     text = normalizeRateDecimals_(text);
-    text = convertExactRatesToRange_(text, postType);  // ★v12.6: TOKYO/LUNCHのレート台変換
+    text = convertExactRatesToRange_(text, postType);  // ★v12.6: LUNCHのレート台変換(★2026-04-29: TOKYO削除)
     text = validateFinalFormat_(text, rates);
   }
   

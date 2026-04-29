@@ -405,11 +405,11 @@ function sendDraftNotification(drafts) {
 /**
  * 投稿タイプに対応する絵文字を返す
  * ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
+ * ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
  */
 function getTypeEmoji_(postType) {
   var emojis = {
     'MORNING': '🌅',
-    'TOKYO': '📊',
     'LUNCH': '🍱',
     'LONDON': '🌆',
     'GOLDEN': '🔥',

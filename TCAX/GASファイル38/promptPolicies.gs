@@ -6,7 +6,7 @@
  *   - buildBeforeAfterExamples_:   Before/After 例の構築
  *   - buildFormatRules_:           フォーマットルール(絵文字・文字数・口調等)
  *   - getQualityFeedback_:         投稿品質フィードバック(エンゲージメント集計)
- *   - buildMarketTypePolicy_:      市場系投稿(MORNING/TOKYO/LUNCH/LONDON/GOLDEN)のポリシー
+ *   - buildMarketTypePolicy_:      市場系投稿(MORNING/LUNCH/LONDON/GOLDEN)のポリシー
  *   - buildKnowledgePolicy_:       KNOWLEDGE 投稿のポリシー
  *   - buildIndicatorPolicy_:       INDICATOR 投稿のポリシー
  *   - buildWeekendPolicy_:         週末系(WEEKLY_REVIEW/WEEKLY_HYPOTHESIS/NEXT_WEEK 等)のポリシー
@@ -200,7 +200,8 @@ function buildFormatRules_(charMin, charMax, postType) {
   rules += '\n';
   
   // ★v8.6: 投稿タイプ分類（セクションの条件分岐用）
-  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var marketTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   var isMarketType = marketTypes.indexOf(postType) !== -1;
   var weekendMarketTypes = ['WEEKLY_REVIEW', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
   var isWeekendMarket = weekendMarketTypes.indexOf(postType) !== -1;
@@ -216,7 +217,25 @@ function buildFormatRules_(charMin, charMax, postType) {
     rules += 'A資金管理 / B具体レベル / C時間軸提案 / D逆張り目線 / E経験からの教訓 / F通貨ペア切替 / Gリスクリワード / H感情の吐露\n';
     rules += '「静観」は1日最大1回まで。\n';
   }
-  
+
+  // === ★2026-04-29 テーマブロックの原則(市場系・週末系・学び系のみ) ===
+  //   背景: 2026-04-29 GOLDEN 投稿で豪ドル円(冒頭)→米耐久財→明日のイベント→豪ドル円(末尾)と
+  //         テーマAが冒頭と末尾に分断され、テーマB/Cが「事実+一般論」で薄っぺら締めになった
+  //   目的: 各テーマブロック内で「事実→自分の見方/仮説→一言締め」を1セット完結させ、
+  //         テーマの分断・逆戻りを禁止する
+  //   対象: needsMarketRules(市場系・週末系・WEEKLY_LEARNING)。
+  //         RULE_1〜4 / KNOWLEDGE は1テーマ完結が基本のため対象外
+  if (needsMarketRules) {
+    rules += '\n【★テーマブロックの原則(絶対遵守)】\n';
+    rules += '・1 投稿に複数テーマ可(主役 1 + 従 0〜2 が目安)\n';
+    rules += '・各テーマブロック内で「事実 → 自分の見方/仮説 → 一言締め」を 1 セットで完結させよ\n';
+    rules += '・同じテーマを 2 箇所以上に分けるな(冒頭で書いたテーマを末尾で再登場させるな)\n';
+    rules += '・最後の段落で全体をまとめようとして冒頭テーマに逆戻りするな。末尾は最後のテーマで閉じよ\n';
+    rules += '・絵文字行はテーマの境目に置け。テーマ内の続きを絵文字行で割るな\n';
+    rules += '・NG例: 段落1で豪ドル円 → 段落3で米指標 → 段落5で豪ドル円(分断・逆戻り)\n';
+    rules += '・OK例: 段落1〜2で豪ドル円(事実→見方→締め) → 段落3で米指標(同) → 段落4で明日のイベント(同)\n';
+  }
+
   // === コンパナ経歴（全タイプ共通） ===
   rules += '\n【コンパナの経歴ファクト】\n';
   rules += 'FX歴7年（2019年〜）。1年目: 500万を溶かしかけた。2〜4年目: 記録開始→3年で収支安定。\n';
@@ -333,8 +352,9 @@ function buildFormatRules_(charMin, charMax, postType) {
   // ★v14.0 Phase R-4 統合案B: TC言及禁止を統合(見出し削除・番号付き項目化)
   // ★Phase 1 選択肢A (2026-04-21): tcWeekdayTypes の TC導線指示を削除
   //   getTCOverview() 統合版に同等内容が含まれるため重複。-65字
-  //   tcNoTypes の「TC言及禁止」指示は保持(MORNING/TOKYO等で必須の制御)
-  var tcNoTypes = ['MORNING', 'TOKYO', 'LONDON', 'INDICATOR', 'KNOWLEDGE'];
+  //   tcNoTypes の「TC言及禁止」指示は保持(MORNING等で必須の制御)
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var tcNoTypes = ['MORNING', 'LONDON', 'INDICATOR', 'KNOWLEDGE'];
   if (tcNoTypes.indexOf(postType) !== -1) {
     rules += '12. [' + postType + ']TC(Trading Complete)への言及禁止。純粋な価値提供のみ。\n';
   }
@@ -359,7 +379,8 @@ function buildFormatRules_(charMin, charMax, postType) {
   }
   
   // === 断言ルールと人間味ルール ===
-  var assertTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR',
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var assertTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR',
                      'WEEKLY_REVIEW', 'WEEKLY_LEARNING', 'NEXT_WEEK', 'WEEKLY_HYPOTHESIS'];
   if (assertTypes.indexOf(postType) !== -1) {
     // ★v13.1 S4 統合案A: 【絵文字行と→行の書き分けルール】は【投稿フォーマット】に統合済み
@@ -455,7 +476,7 @@ function getQualityFeedback_(postType) {
 
 /**
  * ★v8.10: 市場系投稿の方針（②-c〜②-c2）
- * 対象: MORNING, TOKYO, LUNCH, LONDON, GOLDEN, INDICATOR
+ * 対象: MORNING, LUNCH, LONDON, GOLDEN, INDICATOR
  * 仮説ベース構造、レートデータ使い方、月曜コンテキスト等を含む
  * ★v13.0.9(2026-04-20): NY削除の残骸整理(v12.7でNYタイプ廃止済み)
  */
@@ -463,7 +484,8 @@ function buildMarketTypePolicy_(postType, now) {
   var text = '';
   
   // ②-c 市場系投稿の方針（buildFormatRules_と重複しない項目のみ）
-  var marketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var marketTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   if (marketTypes.indexOf(postType) !== -1) {
     // ★v14.0 Phase R-4 統合案C(2026-04-23): 【市場系投稿の方針】と【ストーリー主導の鉄則】を統合
     //   旧: 【市場系投稿の方針(最重要)】+ ■見出し【ストーリー主導の鉄則】
@@ -527,8 +549,9 @@ function buildMarketTypePolicy_(postType, now) {
     text += '■ ★「トレードした」「エントリーした」「利確した」は禁止（実際にトレードしていない）。\n';
     text += '  ・「自分はこう読んでいる」「こう見ている」「こういう展開を想定している」で表現。\n';
     // ★v13.1 S3 統合案D: 【レートデータの使い方】は【事実・論理・数値の正確性】に統合されたため削除
-    if (postType === 'TOKYO' || postType === 'LUNCH') {
-      text += '■ ★v12.6【TOKYO/LUNCH専用】具体的なレート数値（158.97等）は一切書くな。「158円台」「0.71ドル台」のようにレベル感で伝えよ。\n';
+    // ★2026-04-29: TOKYO削除に伴い LUNCH 専用に変更
+    if (postType === 'LUNCH') {
+      text += '■ ★v12.6【LUNCH専用】具体的なレート数値（158.97等）は一切書くな。「158円台」「0.71ドル台」のようにレベル感で伝えよ。\n';
     }
     text += '\n【経済イベントの日付・時制(絶対遵守)】\n';
     text += '■ 日付:「〜が控えています」と書くときは必ず経済カレンダーで今日の日付を確認。今日の日付に載っていないイベントを「今日控えている」と書くな。\n';
@@ -549,14 +572,7 @@ function buildMarketTypePolicy_(postType, now) {
     text += '■ 同じ段落で異なる通貨ペアのレートを混ぜるな。\n';
   }
   
-  // ②-c1.6 TOKYO共通: 東京市場序盤の認識（全曜日共通） ★v6.6追加 ★v10.1: 理由必須
-  if (postType === 'TOKYO') {
-    text += '\n【TOKYO投稿の役割】\n';
-    text += '■ 朝9:11〜9:43頃配信。東京オープン後10〜40分。「予想」ではなく「観察」。\n';
-    text += '■ MORNINGの仮説の「途中経過」を1文入れろ。東京勢の空気感を描写(実需の動き・輸出勢の売り等)。\n';
-    text += '■ 8:50の日本指標が発表済みなら結果に触れよ。\n';
-    text += '■ ★v12.6【レートは「台」で表現】具体的な数値(158.97等)は書くな。「158円台」「0.71ドル台」のようにレベル感で伝えよ。100〜180字の短い投稿で5分後に変わる数字に字数を使うな。\n';
-  }
+  // ★2026-04-29: 【TOKYO投稿の役割】セクション削除(TOKYO投稿タイプ廃止に伴う・平日5投稿→4投稿)
   if (postType === 'GOLDEN') {
     text += '\n【GOLDEN投稿の役割】\n';
     text += '■ 夜20-21時台配信。1日の振り返りを冷静に。\n';
@@ -573,7 +589,8 @@ function buildMarketTypePolicy_(postType, now) {
   
   // ②-c2 月曜日コンテキスト（市場系全投稿共通）★v5.6追加
   var todayDayOfWeek = now.getDay(); // 0=日, 1=月, ..., 6=土
-  var mondayMarketTypes = ['MORNING', 'TOKYO', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
+  // ★2026-04-29: TOKYO削除(平日5投稿→4投稿)
+  var mondayMarketTypes = ['MORNING', 'LUNCH', 'LONDON', 'GOLDEN', 'INDICATOR'];
   if (todayDayOfWeek === 1 && mondayMarketTypes.indexOf(postType) !== -1) {
     text += '\n【月曜日の投稿方針(本日は週明け・全市場系投稿で厳守)】\n';
     text += '■ 今日は月曜日。土日は為替市場が閉まっていた。\n';
@@ -594,14 +611,8 @@ function buildMarketTypePolicy_(postType, now) {
       text += '■ 先週のWEEKLY_HYPOTHESISの仮説との対比があれば触れてよい。\n';
     }
     
-    // TOKYO固有の追加指示
-    if (postType === 'TOKYO') {
-      text += '■ 【TOKYO固有】月曜の東京オープンの特殊性:\n';
-      text += '  → 週末のニュースに対する東京市場の最初の本格的反応。\n';
-      text += '  → 窓埋め（ギャップフィル）が起きているか、窓方向にさらに走っているか。\n';
-      text += '  → 「金曜NYの流れ」ではなく「週末を挟んだ変化」に対する東京の反応として書く。\n';
-    }
-    
+    // ★2026-04-29: TOKYO固有の追加指示削除(TOKYO投稿タイプ廃止に伴う・平日5投稿→4投稿)
+
     // LUNCH固有の追加指示
     if (postType === 'LUNCH') {
       text += '■ 【LUNCH固有】月曜午前の振り返り:\n';
