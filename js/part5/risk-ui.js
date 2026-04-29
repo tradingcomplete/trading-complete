@@ -222,10 +222,18 @@ function updateStopLossPips() {
  * @returns {number} pip値
  */
 function getPipValue(pair) {
+    // 計算ロジック検証_要件定義書 CRITICAL #1 対応
+    // pipUtils.js が読み込まれていれば優先使用（XAU/XAG等のメタル対応）
+    if (window.PipUtils && typeof window.PipUtils.getPipSize === 'function') {
+        return window.PipUtils.getPipSize(pair || '');
+    }
+
+    // フォールバック（pipUtils未ロード時）
     if (!pair) return 0.01;
     const upperPair = pair.toUpperCase();
-    
+
     // JPY絡みは0.01、それ以外は0.0001
+    // ⚠️ メタル（XAU等）は誤判定（要pipUtils読込）
     if (upperPair.includes('JPY')) {
         return 0.01;
     }

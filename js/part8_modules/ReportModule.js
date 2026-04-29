@@ -47,6 +47,22 @@ class ReportModule {
      * @param {Date} date - 判定する日付
      * @returns {boolean} true = 夏時間期間中
      */
+    /**
+     * 指定月の第N日曜日の日付を取得（DST判定の補助）
+     * @private
+     * @param {number} year - 西暦年
+     * @param {number} monthIndex - 月（0-indexed: 0=Jan, 2=Mar, 10=Nov）
+     * @param {number} n - N番目（1=第1日曜, 2=第2日曜）
+     * @returns {number} その月の N番目の日曜の日付（1-31）
+     */
+    #getNthSundayOfMonth(year, monthIndex, n) {
+        const firstDayOfMonth = new Date(year, monthIndex, 1);
+        const firstDayWeekday = firstDayOfMonth.getDay(); // 0=日曜日
+        // 1日が日曜ならその日が第1日曜、それ以外は (7 - firstDayWeekday) 日後が第1日曜
+        const firstSunday = firstDayWeekday === 0 ? 1 : (7 - firstDayWeekday) + 1;
+        return firstSunday + (n - 1) * 7;
+    }
+
     #isUSDaylightSaving(date) {
         const year = date.getFullYear();
         const month = date.getMonth() + 1; // 1-12
@@ -57,16 +73,17 @@ class ReportModule {
         if (month === 12 || month <= 2) return false;
 
         // 3月: 第2日曜日以降が夏時間
+        // 計算ロジック検証_要件定義書 CRITICAL #5 対応（v1.1）
+        // 旧式 (7 - firstDay) + 8 は firstDay によって第3日曜になっていた。
+        // Date オブジェクトで第2日曜日を直接求めることで bug 解消。
         if (month === 3) {
-            const firstDay = new Date(year, 2, 1).getDay();
-            const secondSunday = firstDay === 0 ? 8 : (7 - firstDay) + 8;
+            const secondSunday = this.#getNthSundayOfMonth(year, 2 /* March, 0-indexed */, 2);
             return date.getDate() >= secondSunday;
         }
 
         // 11月: 第1日曜日より前が夏時間
         if (month === 11) {
-            const firstDay = new Date(year, 10, 1).getDay();
-            const firstSunday = firstDay === 0 ? 1 : (7 - firstDay) + 1;
+            const firstSunday = this.#getNthSundayOfMonth(year, 10 /* November, 0-indexed */, 1);
             return date.getDate() < firstSunday;
         }
 

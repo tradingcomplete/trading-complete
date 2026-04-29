@@ -9,26 +9,25 @@
             console.log('TradeCalculator初期化完了');
         }
         
-        // pips計算
+        // pips計算（v1.1.0 - pipUtils 使用に変更 / XAU・XAG等のメタル対応）
+        // 計算ロジック検証_要件定義書 CRITICAL #1 対応
         calculatePips(pair, direction, entryPrice, exitPrice) {
+            // pipUtils.js が読み込まれていれば優先使用（推奨パス）
+            if (window.PipUtils && typeof window.PipUtils.calculatePips === 'function') {
+                return window.PipUtils.calculatePips(pair, direction, entryPrice, exitPrice);
+            }
+
+            // フォールバック（pipUtils未ロード時 / 過去互換）
+            // ⚠️ メタル（XAU等）は誤計算するためpipUtilsの読込必須
+            console.warn('[TradeCalculator] pipUtils未ロード - フォールバック動作（XAU/XAG等は誤計算します）');
             const entry = parseFloat(entryPrice);
             const exit = parseFloat(exitPrice);
-            
-            if (isNaN(entry) || isNaN(exit)) {
-                return 0;
-            }
-            
-            // JPY絡みの通貨ペアは100倍、それ以外は10000倍
+
+            if (isNaN(entry) || isNaN(exit)) return 0;
+
             const multiplier = pair.includes('JPY') ? 100 : 10000;
-            
-            let pips;
-            if (direction === 'long') {
-                pips = (exit - entry) * multiplier;
-            } else {
-                pips = (entry - exit) * multiplier;
-            }
-            
-            return Math.round(pips * 10) / 10; // 小数点1位まで
+            const pips = direction === 'long' ? (exit - entry) * multiplier : (entry - exit) * multiplier;
+            return Math.round(pips * 10) / 10;
         }
         
         // リスクリワード計算
