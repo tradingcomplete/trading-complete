@@ -110,8 +110,15 @@ class SummaryCalculatorModule {
             ? (summary.trades.totalProfit / summary.trades.totalLoss).toFixed(2)
             : '0.00';
 
-        // 経費集計(フォールバック付き日付取得)
+        // 経費集計 - 計算ロジック検証_要件定義書 CRITICAL #10 対応
+        // taxYear ベースに統一（ExpenseManager・CSVExporter と整合）。
+        // taxYear が未設定の旧データは date から年を取得（フォールバック）。
         const yearExpenses = this.#expenses.filter(expense => {
+            // 優先: taxYear（明示的に指定された税年度）
+            if (expense.taxYear !== undefined && expense.taxYear !== null) {
+                return parseInt(expense.taxYear, 10) === year;
+            }
+            // フォールバック: 支払日 date から年を取得
             const dateStr = expense.date || expense.entryTime || expense.timestamp;
             if (!dateStr) return false;
             const expenseDate = new Date(dateStr);
@@ -223,13 +230,25 @@ class SummaryCalculatorModule {
             ? (summary.trades.totalProfit / summary.trades.totalLoss).toFixed(2)
             : '0.00';
 
-        // 経費集計(フォールバック付き日付取得)
+        // 経費集計 - 計算ロジック検証_要件定義書 CRITICAL #10 対応
+        // 月別集計でも年判定は taxYear を優先（年次集計と整合）。
+        // 月の判定は支払日 (expense.date) で行う（仕訳上は支払月で計上）。
         const monthExpenses = this.#expenses.filter(expense => {
+            // 年: taxYear 優先・フォールバックは支払日
+            let yearMatches;
+            if (expense.taxYear !== undefined && expense.taxYear !== null) {
+                yearMatches = parseInt(expense.taxYear, 10) === year;
+            } else {
+                const dateStr = expense.date || expense.entryTime || expense.timestamp;
+                if (!dateStr) return false;
+                yearMatches = new Date(dateStr).getFullYear() === year;
+            }
+            if (!yearMatches) return false;
+
+            // 月: 支払日 (expense.date) で判定
             const dateStr = expense.date || expense.entryTime || expense.timestamp;
             if (!dateStr) return false;
-            const expenseDate = new Date(dateStr);
-            return expenseDate.getFullYear() === year && 
-                   expenseDate.getMonth() + 1 === month;
+            return new Date(dateStr).getMonth() + 1 === month;
         });
 
         monthExpenses.forEach(expense => {

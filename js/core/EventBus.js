@@ -7,7 +7,11 @@
 class EventBus {
     constructor() {
         this.events = new Map();
-        this.debugMode = true; // 本番環境ではfalseに
+        // 計算ロジック検証_要件定義書 §9.5 確認2 対応
+        // 本番環境では false（コンソール出力削減・パフォーマンス改善）
+        // ローカル開発時にデバッグログを見たい場合は手動で true に変更:
+        //   window.eventBus.debugMode = true
+        this.debugMode = false;
     }
     
     on(event, handler) {

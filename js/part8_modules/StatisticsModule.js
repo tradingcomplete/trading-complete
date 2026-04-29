@@ -1043,7 +1043,12 @@ class StatisticsModule {
             ? (totalProfit / totalLoss).toFixed(2)
             : totalProfit > 0 ? '∞' : '0.00';
         
-        // 期待値（円/トレード）
+        // 期待値（円/トレード） - 計算ロジック検証_要件定義書 Q6=A 準拠
+        // 仕様書 v1.16 の公式: 期待値 = 勝率 × 平均利益 - (1-勝率) × 平均損失
+        // 下式 (totalProfit - totalLoss) / totalTrades は数学的に等価:
+        //   = (wins × avgProfit - losses × avgLoss) / totalTrades
+        //   = (wins/totalTrades) × avgProfit - (losses/totalTrades) × avgLoss
+        //   = winRate × avgProfit - lossRate × avgLoss  ✅ 仕様書通り
         const totalTrades = wins + losses;
         const expectedValue = totalTrades > 0
             ? Math.round((totalProfit - totalLoss) / totalTrades)

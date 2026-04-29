@@ -53,7 +53,11 @@ class ChartModule {
                 const requiredHeight = (isMobileView && window.currentChartView === 'allTime') ? 500 : CHART_HEIGHT;
                 canvas.style.height = requiredHeight + 'px';
 
-                // 内部解像度も同じサイズに設定（高DPI対応なし）
+                // 内部解像度設定
+                // TODO: 計算ロジック検証_要件定義書 WARNING W7 (高DPI対応) は
+                //       canvas.width/height の参照箇所が多数あり、安全に DPR 対応するには
+                //       全描画コードのリファクタが必要。リリース後 v1.1 にて対応予定。
+                //       現状は CSS pixel = 内部 pixel で動作（Retina 等で若干ぼやけるが機能影響なし）。
                 canvas.width = parentWidth;
                 canvas.height = requiredHeight;
                 
