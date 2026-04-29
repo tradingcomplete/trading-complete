@@ -277,7 +277,88 @@ class ClosingManagerModule {
             p => p.type === 'monthly' && p.year === year && p.month === month
         );
     }
-    
+
+    /**
+     * トレードが締め月に含まれるか判定
+     * 計算ロジック検証_要件定義書 CRITICAL #7 対応（FIX-11）
+     * 期間判定は exit_date（最終決済時刻）に統一（FIX-6 と整合）
+     * @param {Object} trade - トレードオブジェクト
+     * @returns {boolean} 締め月に含まれていればtrue
+     */
+    isTradeInClosedMonth(trade) {
+        if (!trade || !trade.exits || trade.exits.length === 0) return false;
+        const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+        if (isNaN(exitDate.getTime())) return false;
+        return this.isMonthClosed(exitDate.getFullYear(), exitDate.getMonth() + 1);
+    }
+
+    /**
+     * 経費が締め月に含まれるか判定
+     * 計算ロジック検証_要件定義書 CRITICAL #7 対応（FIX-11）
+     * 年判定は taxYear（FIX-8 と整合）、月判定は支払日 (expense.date)
+     * @param {Object} expense - 経費オブジェクト
+     * @returns {boolean} 締め月に含まれていればtrue
+     */
+    isExpenseInClosedMonth(expense) {
+        if (!expense) return false;
+
+        // 月の判定は支払日から（年次集計と整合）
+        const dateStr = expense.date || expense.entryTime || expense.timestamp;
+        if (!dateStr) return false;
+        const expDate = new Date(dateStr);
+        if (isNaN(expDate.getTime())) return false;
+
+        // 年判定: taxYear 優先
+        const year = (expense.taxYear !== undefined && expense.taxYear !== null)
+            ? parseInt(expense.taxYear, 10)
+            : expDate.getFullYear();
+        const month = expDate.getMonth() + 1;
+
+        return this.isMonthClosed(year, month);
+    }
+
+    /**
+     * 月次締めを解除
+     * 計算ロジック検証_要件定義書 CRITICAL #7 対応（Q4=B 締め解除機能あり）
+     * @param {number} year - 年
+     * @param {number} month - 月（1-12）
+     * @returns {Object} {success: boolean, message: string}
+     */
+    reopenMonthlyClosing(year, month) {
+        try {
+            const before = this.#closedPeriods.length;
+            this.#closedPeriods = this.#closedPeriods.filter(
+                p => !(p.type === 'monthly' && p.year === year && p.month === month)
+            );
+            const removed = before - this.#closedPeriods.length;
+
+            if (removed === 0) {
+                return {
+                    success: false,
+                    message: `${year}年${month}月は締められていません`
+                };
+            }
+
+            this.#saveClosedPeriods();
+
+            // 監査ログとして console + EventBus
+            const reopenLog = {
+                year, month,
+                reopenedAt: new Date().toISOString()
+            };
+            console.warn('[ClosingManager] 月次締め解除:', reopenLog);
+            this.#eventBus?.emit('closing:reopened', reopenLog);
+
+            return {
+                success: true,
+                message: `${year}年${month}月の締めを解除しました`
+            };
+        } catch (error) {
+            console.error('ClosingManagerModule.reopenMonthlyClosing error:', error);
+            return { success: false, message: 'エラーが発生しました' };
+        }
+    }
+
     /**
      * 全締め期間取得
      * @returns {Array} 締め期間配列のコピー
@@ -338,10 +419,15 @@ class ClosingManagerModule {
         }
         
         const allTrades = this.#tradeManager.getAllTrades();
+        // 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 月別締め対象は exit_date（最終決済時刻）で判定（Q2=B 確定 / 損益確定日基準）
+        // 締めは「その月に確定した損益」に対するものであり exit が正しい
         return allTrades.filter(trade => {
-            const tradeDate = new Date(trade.date);
-            return tradeDate.getFullYear() === year && 
-                   tradeDate.getMonth() + 1 === month;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year &&
+                   exitDate.getMonth() + 1 === month;
         });
     }
     

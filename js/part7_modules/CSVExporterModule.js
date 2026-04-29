@@ -77,12 +77,15 @@ class CSVExporterModule {
 
         const rows = [headers];
 
-        // 年度でフィルタリング
+        // 年度でフィルタリング - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const yearTrades = trades.filter(trade => {
-            const tradeDate = new Date(trade.date);
-            return tradeDate.getFullYear() === year;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year;
         });
-        
+
         console.log(`${year}年のトレード数:`, yearTrades.length);
 
         // データ行を作成
@@ -260,10 +263,13 @@ class CSVExporterModule {
         const headers = ['項目', '金額（円）'];
         const rows = [headers];
 
-        // トレード集計
+        // トレード集計 - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const yearTrades = trades.filter(trade => {
-            const tradeDate = new Date(trade.date);
-            return tradeDate.getFullYear() === year;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year;
         });
 
         const totalProfit = yearTrades.reduce((sum, t) => 
@@ -392,10 +398,13 @@ class CSVExporterModule {
         const monthStr = String(month).padStart(2, '0');
         const filename = `monthly_${year}_${monthStr}`;
         
-        // 該当月のデータをフィルタリング
+        // 該当月のデータをフィルタリング - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const monthTrades = trades.filter(trade => {
-            const tradeDate = new Date(trade.date);
-            return tradeDate.getFullYear() === year && tradeDate.getMonth() + 1 === month;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year && exitDate.getMonth() + 1 === month;
         });
 
         const monthExpenses = expenses.filter(expense => {

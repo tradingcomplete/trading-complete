@@ -68,17 +68,13 @@ class SummaryCalculatorModule {
             taxableIncome: 0
         };
 
-        // トレード集計(フォールバック付き日付取得)
+        // トレード集計 - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const yearTrades = this.#trades.filter(trade => {
-            // 決済済みチェック追加（未決済トレードを除外）
-            if (!trade.exits || trade.exits.length === 0) {
-                return false;
-            }
-            
-            const dateStr = trade.date || trade.entryTime || trade.timestamp;
-            if (!dateStr) return false;
-            const tradeDate = new Date(dateStr);
-            return tradeDate.getFullYear() === year;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year;
         });
 
         yearTrades.forEach(trade => {
@@ -187,18 +183,14 @@ class SummaryCalculatorModule {
             netIncome: 0
         };
 
-        // トレード集計(フォールバック付き日付取得)
+        // トレード集計 - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const monthTrades = this.#trades.filter(trade => {
-            // 決済済みチェック追加（未決済トレードを除外）
-            if (!trade.exits || trade.exits.length === 0) {
-                return false;
-            }
-            
-            const dateStr = trade.date || trade.entryTime || trade.timestamp;
-            if (!dateStr) return false;
-            const tradeDate = new Date(dateStr);
-            return tradeDate.getFullYear() === year && 
-                   tradeDate.getMonth() + 1 === month;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate.getFullYear() === year &&
+                   exitDate.getMonth() + 1 === month;
         });
 
         monthTrades.forEach(trade => {
@@ -308,20 +300,16 @@ class SummaryCalculatorModule {
             netIncome: 0
         };
 
-        // トレード集計(フォールバック付き日付取得)
+        // トレード集計 - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const quarterTrades = this.#trades.filter(trade => {
-            // 決済済みチェック追加（未決済トレードを除外）
-            if (!trade.exits || trade.exits.length === 0) {
-                return false;
-            }
-            
-            const dateStr = trade.date || trade.entryTime || trade.timestamp;
-            if (!dateStr) return false;
-            const tradeDate = new Date(dateStr);
-            const tradeMonth = tradeDate.getMonth() + 1;
-            return tradeDate.getFullYear() === year && 
-                   tradeMonth >= startMonth && 
-                   tradeMonth <= endMonth;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            const exitMonth = exitDate.getMonth() + 1;
+            return exitDate.getFullYear() === year &&
+                   exitMonth >= startMonth &&
+                   exitMonth <= endMonth;
         });
 
         quarterTrades.forEach(trade => {
@@ -429,17 +417,13 @@ class SummaryCalculatorModule {
             netIncome: 0
         };
 
-        // トレード集計(フォールバック付き日付取得)
+        // トレード集計 - 計算ロジック検証_要件定義書 CRITICAL #4 対応（FIX-6）
+        // 期間判定は exit_date（最終決済時刻）に統一（Q2=B 確定 / 損益確定日基準）
         const periodTrades = this.#trades.filter(trade => {
-            // 決済済みチェック追加（未決済トレードを除外）
-            if (!trade.exits || trade.exits.length === 0) {
-                return false;
-            }
-            
-            const dateStr = trade.date || trade.entryTime || trade.timestamp;
-            if (!dateStr) return false;
-            const tradeDate = new Date(dateStr);
-            return tradeDate >= start && tradeDate <= end;
+            if (!trade.exits || trade.exits.length === 0) return false;
+            const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+            if (isNaN(exitDate.getTime())) return false;
+            return exitDate >= start && exitDate <= end;
         });
 
         periodTrades.forEach(trade => {
@@ -599,6 +583,58 @@ class SummaryCalculatorModule {
             this.#trades = [];
             this.#expenses = [];
         }
+    }
+
+    // ================
+    // 利益率計算（単一の真実）
+    // ================
+
+    /**
+     * 利益率を計算（一本化された実装）
+     * 計算ロジック検証_要件定義書 CRITICAL #8/#9 対応（FIX-9）
+     *
+     * 仕様（Q3=A 入金合計）:
+     *   分母 = 入金合計（出金は除外）
+     *   分子 = 純損益（決済済みトレードの yenProfitLoss.netProfit 合計）
+     *   利益率 = (分子 / 分母) × 100
+     *
+     * @param {number|null} year - 対象年（null=全期間 / 2026=年度別）
+     * @returns {number} 利益率（%）
+     */
+    calculateProfitRate(year = null) {
+        // データ最新化
+        this.#loadData();
+
+        // 分母: 入金合計（出金除外）
+        let totalDeposit = 0;
+        if (window.CapitalManagerModule && typeof window.CapitalManagerModule.getTotalDeposit === 'function') {
+            totalDeposit = window.CapitalManagerModule.getTotalDeposit();
+        } else {
+            // フォールバック: localStorage から直接
+            const records = JSON.parse(localStorage.getItem('depositWithdrawals') || '[]');
+            totalDeposit = records
+                .filter(r => r.type === 'deposit')
+                .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+        }
+        if (totalDeposit === 0) return 0;
+
+        // 分子: 純損益（決済済みトレードのみ・期間判定は exit_date / FIX-6 と整合）
+        let netProfit = 0;
+        this.#trades.forEach(trade => {
+            if (!trade.exits || trade.exits.length === 0) return;
+            if (!trade.yenProfitLoss || trade.yenProfitLoss.netProfit === null) return;
+
+            // 年指定時は exit_date でフィルタ
+            if (year !== null) {
+                const exitDate = new Date(trade.exits[trade.exits.length - 1].time);
+                if (isNaN(exitDate.getTime())) return;
+                if (exitDate.getFullYear() !== year) return;
+            }
+
+            netProfit += parseFloat(trade.yenProfitLoss.netProfit);
+        });
+
+        return (netProfit / totalDeposit) * 100;
     }
 
     // ================

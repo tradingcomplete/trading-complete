@@ -168,54 +168,72 @@ class CapitalManagerModule {
     }
     
     /**
-     * 現在の投入資金を取得
-     * @returns {number} 投入資金（円）
+     * 現在の投入資金を取得（残高ベース = 入金 - 出金 + 累積残高）
+     * @returns {number} 残高（円）
      */
     getCurrentBalance() {
         if (this.#records.length === 0) return 0;
-        
+
         // 最新レコードのbalanceを返す
-        const sorted = [...this.#records].sort((a, b) => 
+        const sorted = [...this.#records].sort((a, b) =>
             new Date(a.date) - new Date(b.date)
         );
         return sorted[sorted.length - 1]?.balance || 0;
     }
-    
+
+    /**
+     * 投入資金合計を取得（入金のみ合算・出金は除外）
+     * 計算ロジック検証_要件定義書 CRITICAL #9 対応（Q3=A 確定）
+     * 利益率の分母として使用される「自分が口座に入れた総額」
+     * @returns {number} 入金合計（円）
+     */
+    getTotalDeposit() {
+        if (this.#records.length === 0) return 0;
+        return this.#records
+            .filter(r => r.type === 'deposit')
+            .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+    }
+
     /**
      * 全レコードを取得（日付順）
      * @returns {Array} レコード配列のコピー
      */
     getAllRecords() {
-        return [...this.#records].sort((a, b) => 
+        return [...this.#records].sort((a, b) =>
             new Date(a.date) - new Date(b.date)
         );
     }
-    
+
     /**
      * 利益率を計算
+     * 計算ロジック検証_要件定義書 CRITICAL #8 対応（FIX-9）
+     * SummaryCalculator に一本化（Q3=A 入金合計を分母に使用）
+     * @param {number|null} year - 対象年（null=全期間）
      * @returns {number} 利益率（%）
      */
-    calculateProfitRate() {
-        const balance = this.getCurrentBalance();
-        if (balance === 0) return 0;
-        
-        // TradeManagerから全トレードを取得
+    calculateProfitRate(year = null) {
+        // SummaryCalculator が利用可能なら委譲（推奨パス・単一の真実）
+        if (window.SummaryCalculatorModule && typeof window.SummaryCalculatorModule.calculateProfitRate === 'function') {
+            return window.SummaryCalculatorModule.calculateProfitRate(year);
+        }
+
+        // フォールバック（SummaryCalculator 未ロード時）
+        // ⚠️ 旧実装: 残高ベース → 仕様（Q3=A 入金合計）と不一致
+        console.warn('[CapitalManager] SummaryCalculator 未ロード - フォールバック動作');
+        const totalDeposit = this.getTotalDeposit();
+        if (totalDeposit === 0) return 0;
+
         const trades = window.TradeManager?.getInstance()?.getAllTrades() || [];
-        if (trades.length === 0) return 0;
-        
-        // 純損益を計算（円建て損益の合計）
         let netProfit = 0;
         trades.forEach(trade => {
-            // 🔴 重要: 決済済みトレードのみを対象にする
             if (trade.exits && trade.exits.length > 0) {
                 if (trade.yenProfitLoss && trade.yenProfitLoss.netProfit !== null) {
                     netProfit += parseFloat(trade.yenProfitLoss.netProfit);
                 }
             }
         });
-        
-        // 利益率 = (純損益 ÷ 投入資金) × 100
-        return (netProfit / balance) * 100;
+
+        return (netProfit / totalDeposit) * 100;
     }
     
     // ================

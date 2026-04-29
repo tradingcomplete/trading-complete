@@ -240,34 +240,31 @@ function updateTotalProfitRate() {
     }
     
     if (!displayElem) return;
-    
-    // 投入資金を取得
-    const totalDeposit = window.CapitalManagerModule ? window.CapitalManagerModule.getCurrentBalance() : 0;
-    
+
+    // 計算ロジック検証_要件定義書 CRITICAL #8/#9 対応（FIX-9）
+    // 利益率計算は SummaryCalculatorModule に一本化（Q3=A 入金合計を分母）
+    const totalDeposit = window.CapitalManagerModule ? window.CapitalManagerModule.getTotalDeposit() : 0;
+
     if (!totalDeposit || totalDeposit === 0) {
         displayElem.textContent = '--%';
         displayElem.style.color = 'white';
         return;
     }
-    
-    // 全期間利益を計算
-    let totalProfit = 0;
-    if (window.TradeManager) {
-        const allTrades = window.TradeManager.getInstance().getAllTrades() || [];
-        const closedTrades = allTrades.filter(t => t.exits && t.exits.length > 0);
-        
-        totalProfit = closedTrades.reduce((sum, t) => {
-            const yenProfit = t.yenProfitLoss ? t.yenProfitLoss.netProfit : 0;
-            return sum + (yenProfit || 0);
-        }, 0);
+
+    // 利益率は SummaryCalculator に委譲
+    let profitRateNum = 0;
+    if (window.SummaryCalculatorModule && typeof window.SummaryCalculatorModule.calculateProfitRate === 'function') {
+        profitRateNum = window.SummaryCalculatorModule.calculateProfitRate(null);
+    } else if (window.CapitalManagerModule) {
+        // フォールバック: CapitalManager（同じく一本化された実装に委譲される）
+        profitRateNum = window.CapitalManagerModule.calculateProfitRate();
     }
-    
-    // 利益率計算
-    const profitRate = (totalProfit / totalDeposit * 100).toFixed(1);
+
+    const profitRate = profitRateNum.toFixed(1);
     displayElem.textContent = profitRate + '%';
     displayElem.style.color = parseFloat(profitRate) >= 0 ? '#90EE90' : '#ff6b6b';
-    
-    console.log(`✅ 全期間利益率更新: ${profitRate}% (利益: ¥${totalProfit.toLocaleString()} / 投入: ¥${totalDeposit.toLocaleString()})`);
+
+    console.log(`✅ 全期間利益率更新: ${profitRate}% (投入合計: ¥${totalDeposit.toLocaleString()})`);
 }
 
 /**

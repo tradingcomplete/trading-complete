@@ -97,36 +97,68 @@ class ExpenseManagerModule {
     }
     
     /**
+     * 計算ロジック検証_要件定義書 CRITICAL #7 対応（FIX-11）
+     * 締め月チェック - 締め済み月の経費は編集不可（Q4=B 解除機能あり）
+     * @private
+     */
+    #checkClosedGuard(expense, action, forceUnlocked) {
+        if (forceUnlocked === true) return null;
+        if (!window.ClosingManagerModule || typeof window.ClosingManagerModule.isExpenseInClosedMonth !== 'function') {
+            return null;
+        }
+        if (window.ClosingManagerModule.isExpenseInClosedMonth(expense)) {
+            const dateStr = expense.date || expense.entryTime || expense.timestamp;
+            const expDate = new Date(dateStr);
+            const year = (expense.taxYear !== undefined && expense.taxYear !== null)
+                ? parseInt(expense.taxYear, 10)
+                : expDate.getFullYear();
+            const month = expDate.getMonth() + 1;
+            const msg = `${year}年${month}月は締め済みです。\n編集するには先に締めを解除してください。`;
+            console.warn(`[ExpenseManager] ${action}拒否（締め済み月）:`, expense.id, msg);
+            if (typeof alert === 'function') {
+                try { alert('⚠ ' + msg); } catch (e) { /* alert使用不可環境 */ }
+            }
+            return msg;
+        }
+        return null;
+    }
+
+    /**
      * 経費を追加
      * @param {Object} expense - 経費オブジェクト
+     * @param {Object} [options] - { forceUnlocked: boolean }
      * @returns {boolean} 追加成功/失敗
      */
-    addExpense(expense) {
+    addExpense(expense, options = {}) {
         try {
             // デバッグログ：受け取ったデータを確認
             console.log('addExpense called with:', expense);
-            
+
             if (!this.#validateExpense(expense)) {
                 console.error('Validation failed for expense:', expense);
                 throw new Error('Invalid expense data');
             }
-            
+
+            // 締め月ガード（FIX-11）
+            const blocked = this.#checkClosedGuard(expense, '追加', options.forceUnlocked);
+            if (blocked) return false;
+
             // ID生成（タイムスタンプ）
             expense.id = Date.now().toString();
             expense.createdAt = new Date().toISOString();
-            
+
             // 配列に追加
             this.#expenses.push(expense);
-            
+
             // 保存
             this.saveExpenses();
-            
+
             // イベント発火
             this.#eventBus?.emit('expense:added', expense);
-            
+
             // Supabase同期（バックグラウンド）
             this.#syncExpenseToCloud(expense);
-            
+
             console.log('Expense added:', expense);
             return true;
         } catch (error) {
@@ -134,30 +166,35 @@ class ExpenseManagerModule {
             return false;
         }
     }
-    
+
     /**
      * 経費を削除
      * @param {string} id - 経費ID
+     * @param {Object} [options] - { forceUnlocked: boolean }
      * @returns {boolean} 削除成功/失敗
      */
-    deleteExpense(id) {
+    deleteExpense(id, options = {}) {
         try {
             const index = this.#expenses.findIndex(exp => exp.id === id);
             if (index === -1) {
                 throw new Error(`Expense not found: ${id}`);
             }
-            
+
+            // 締め月ガード（FIX-11）
+            const blocked = this.#checkClosedGuard(this.#expenses[index], '削除', options.forceUnlocked);
+            if (blocked) return false;
+
             const deleted = this.#expenses.splice(index, 1)[0];
-            
+
             // 保存
             this.saveExpenses();
-            
+
             // イベント発火
             this.#eventBus?.emit('expense:deleted', { id, expense: deleted });
-            
+
             // Supabase同期（バックグラウンド）
             this.#deleteExpenseFromCloud(id);
-            
+
             console.log('Expense deleted:', id);
             return true;
         } catch (error) {
