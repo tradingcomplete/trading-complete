@@ -1,5 +1,5 @@
 # TASKS.md - Trading Complete タスク管理
-*更新日: 2026-04-28 | 次回レビュー: リリース時*
+*更新日: 2026-04-30 | 次回レビュー: リリース時*
 
 > **運営**: Studio Compana (屋号 / 個人事業主) — 代表: 成瀬仁文(コンパナ)
 > **価格・プラン制限の正**: `docs/features/決済システム要件定義書_v3_10.md` を最新マスターとする
@@ -98,9 +98,10 @@
 - ✅ 開業届 e-Tax電子提出（2026-03-21完了）
 - ✅ DMMバーチャルオフィス契約・住所確定（2026-03-27完了）
 - ✅ tokutei.html 屋号「Studio Compana」・住所更新（2026-04-09完了）
+- ✅ **計算ロジック検証・修正フェーズ**（CRITICAL12 + WARNING10 全17 FIX完了 / 2026-04-30 検証9/9合格・下記参照）
 - 🔄 YouTube動画シリーズ制作（導入編・機能紹介編）
-- 🔄 **Square Phase 10 残作業**（フロントエンド統合 / 約25h・下記参照）
-- ⚠️ **Phase 11 サーバー側プラン制限**（リリース前必須 / 約12h・下記参照）
+- 🔄 **Square Phase 10 残作業**（フロントエンド本番切替 / 4-14〜4-19・下記参照）
+- ✅ **Phase 11 サーバー側プラン制限**（2026-04-28完了・下記参照）
 - □ PayPal本番APIキー切替（15分）
 - □ Square本番APIキー切替（30分）
 - □ 正式リリース発表
@@ -308,6 +309,87 @@ v3.10 §6 Step 4 / §9-A E2E結果 を参照。
 | script.js 起動時整合性チェック | アプリ起動時にlocalStorage>20かつFree判定 → トースト警告 + アップグレードモーダル自動表示 |
 | 効果 | F12で1関数書換だけでは突破不可・複数同時書換が必要に。攻撃者がアプリ開くたびに警告でUX上「うざい」体験 |
 | 限界 | 100%防御は技術的不可能（クライアントコードは見える/書換可能）。ただしクラウド同期はサーバー側で完全防御済みのため、F12突破による「無料利用の脱法」の実利益は無し |
+
+---
+
+## 🧮 計算ロジック検証・修正フェーズ（2026-04-30 完全完了）
+
+**目的**: リリース前の最終監査。「計算と分析が合っていないとリリースできない」という社長判断のもと、4並列エージェントで計算・統計・収支ロジック全体を監査 → CRITICAL 12件 + WARNING 10件を発見 → 全17 FIX完了。
+
+**詳細**: `docs/features/計算ロジック検証_要件定義書.md` v1.4
+
+### 監査結果（2026-04-29）
+
+| 重要度 | 件数 | 概要 |
+|---|---|---|
+| 🔴 CRITICAL | 12件 | pip計算 / 円換算 / 期間フィルタ / DST / 利益率 / 締め後編集 / 経費フィルタ など |
+| 🟡 WARNING | 10件 | EventBus順序 / 高DPI / CSV検証 / 手数料符号 など |
+| 🟢 OK | 10件 | 既に正しく実装されていたもの |
+| 💡 提案 | 7件 | リリース後対応でOK |
+
+### 確定した仕様判断 Q1〜Q6（v1.2）
+
+| Q | 項目 | 確定方針 |
+|---|---|---|
+| Q1 | quote_currency_rate 取得 | A) ユーザー手動入力 |
+| Q2 | 期間フィルタ基準 | B) exit_date 基準（決済日 = 損益確定日） |
+| Q3 | 投入資金の定義 | A) 入金合計（出金除外） |
+| Q4 | 締め後編集ポリシー | B) 締め解除機能あり |
+| Q5 | 高DPI対応 | A) 即対応 → 描画リファクタ要のため v1.1 へ延期 |
+| Q6 | 期待値計算 | A) 仕様書通り 勝率×平均利益 - (1-勝率)×平均損失 |
+
+### 全17 FIX 完了状況（2026-04-30）
+
+| FIX# | 区分 | 内容 | コミット |
+|---|---|---|---|
+| FIX-1〜3 | CRITICAL #1 | pipUtils.js 新規作成・XAU/メタル対応・TradeCalculator/risk-ui を統一 | ad5658b |
+| FIX-5 | CRITICAL #5 | DST判定式修正（旧式の1週間ズレを解消） | ad5658b |
+| FIX-7 | CRITICAL #6 | 期待値計算の数学的等価性をコメント追記 | 5ad2ff4 |
+| FIX-8 | CRITICAL #10 | SummaryCalculator 経費フィルタ taxYear 統一 | 5ad2ff4 |
+| FIX-12 | WARNING W7 | 高DPI対応は v1.1 へ延期（TODOコメントのみ残置） | 5ad2ff4 |
+| FIX-16 | §9.5 確認2 | EventBus debugMode = false 本番化 | 5ad2ff4 |
+| FIX-13 | WARNING W3 | 手数料符号二重 → **false positive 判定**（修正不要） | - |
+| FIX-15 | WARNING W10 | mergeAllWithCloud 中の個別 emit 抑制 | 7c76138 |
+| FIX-6 | CRITICAL #4 | 期間フィルタ exit_date 統一（4ファイル/8箇所） | cfc98a2 |
+| FIX-9 | CRITICAL #8 | 利益率計算 SummaryCalculator 一本化（Q3=A 入金合計） | cfc98a2 |
+| FIX-11 | CRITICAL #7 | 締め後編集ガード（TradeManager / ExpenseManager） | cfc98a2 |
+| FIX-4 | CRITICAL #2 | 円換算 pipUtils.getYenPerPipPerLot 化 | 68132d6 |
+| FIX-10 | CRITICAL #3 | quote_currency_rate UI 一貫性（未入力警告） | 68132d6 |
+| FIX-14 | WARNING W9 | CSV ラウンドトリップ検証メソッド追加 | 68132d6 |
+| FIX-17 | 検証 | calcLogicVerification.js 統合検証スクリプト | 6f446c5 |
+
+### 仕様変更（数値が変わる）
+
+社長判断 Q1〜Q6 確定に基づく:
+
+- **FIX-9**: 利益率の分母が `getCurrentBalance`（残高）→ `getTotalDeposit`（入金合計のみ・出金除外）
+- **FIX-6**: 月跨ぎトレード（3/31 entry, 4/2 exit）が3月から4月に計上変更
+- **FIX-11**: 締めた月のトレード/経費の追加・編集・削除がブロック（解除には新 API `reopenMonthlyClosing`）
+
+### 検証結果（2026-04-30 / 本番URL でブラウザコンソール実行）
+
+`window.runCalcLogicVerification()` → **9/9 全項目合格**
+
+| 検証項目 | 結果 |
+|---|---|
+| V1 XAU/USD pip 計算（メタル100倍） | 1,000 pips（期待値 1,000）✅ |
+| V2 EUR/USD 円換算（quote_currency_rate 反映） | 1,500円/pip（期待値 1,500）✅ |
+| V3 期間フィルタ exit_date 統一 | 月跨ぎは exit月にマッチ ✅ |
+| V4 DST 判定 | 2026/3/8 第2日曜・2025/3/9 第2日曜 ✅ |
+| V5 利益率計算 SummaryCalculator 一本化 | SummaryCalc 4116.65% / CapitalMgr 4116.65% / 差: 0 ✅ |
+| V6 締め後編集ガード API 存在 | 全API存在 ✅ |
+| V7 AISummaryModule emotionStats 実装確認 | フィールド存在 ✅ |
+| 統合: 全タブ累積損益・総損益が一致 | 直接合計 4,528,315円 / SummaryCalc 4,528,315円 / 差: 0 ✅ |
+| 統合: CSV ラウンドトリップ（直近1年） | 2026年12件 / 期待12件 / mismatches なし ✅ |
+
+### 重要な発見・教訓
+
+- **false positive 判定 2件**: CRITICAL #11（emotionStats）と WARNING W3（手数料符号）は誤検出だった。実コード再確認を必ず最優先する
+- **FIX-12 高DPI**: ChartModule の canvas 参照箇所が12箇所以上あり、DPR scale を入れると描画位置が全部ズレる。安全な対応にはリファクタ必要 → v1.1 へ延期
+- **FIX-7 期待値**: `(totalProfit-totalLoss)/totalTrades` と `winRate×avgWin - lossRate×avgLoss` は数学的に等価。コードは既に正しい
+- **コミット粒度**: 4〜5件ごとに区切る（一気にやり過ぎない・段階的検証可能）
+
+---
 
 ### 完了済みPhase（履歴）
 
