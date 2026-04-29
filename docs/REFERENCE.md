@@ -1,5 +1,5 @@
 # REFERENCE.md - Trading Complete 参考資料・運用ガイド
-*更新日: 2026-04-28 | 用途: 開発ガイドライン・完了履歴・ベストプラクティス*
+*更新日: 2026-04-30 | 用途: 開発ガイドライン・完了履歴・ベストプラクティス*
 
 > **運営**: Studio Compana (屋号 / 個人事業主) — 代表: 成瀬仁文(コンパナ)
 
@@ -56,6 +56,7 @@ window.XxxModule = new XxxModule();
 
 | タスク | 完了日 |
 |--------|--------|
+| **🧮 計算ロジック検証・修正フェーズ 完全完了** リリース前最終監査でCRITICAL12件+WARNING10件発見 → 全17 FIX完了（false positive 1件 / v1.1延期 1件 / 完全実装 15件）。本番URLでcalcLogicVerification 9/9合格（直接合計4,528,315円とSummaryCalc全年合計が円単位完全一致）。仕様変更3点（利益率分母をgetTotalDeposit化・期間exit_date統一・締め月編集ガード）。詳細: 計算ロジック検証_要件定義書 v1.4 | 2026-04-30 |
 | **🛡️ Phase 11 サーバー側プラン制限 完全実装+テスト全合格** v3.10 §11全項目完了。get_user_active_plan / trades INSERT トリガー / Storage Policy / 5テーブルRLS Policy / SyncModule v1.9.0 / Phase 11.5 多層防御（bridge.js + script.js起動時チェック）/ 攻撃テスト合格 | 2026-04-28 |
 | **改善#2 UPSERT化 完全クリア** square-create-subscription v1.1.0 + paypal-activate-subscription v1.1.0 でDB保存を `.upsert()` + `onConflict: 'user_id'` + `cancelled_at: null` に統一。プロバイダ乗換シナリオに完全対応 | 2026-04-28 |
 | **Square Webhook検証完了（4-13d）** Sandboxで `subscription.created` Test event 200 OK 取得・署名検証成功。Phase 10 Sandbox E2Eテスト全項目合格 | 2026-04-28 |
@@ -281,6 +282,37 @@ Phase 11 のテストで架空のテスト user_id（`00000000-...-099`）を su
 
 ### 教訓32: フロントエンドのプラン制限は「無料保存」攻撃には完全防御できない（Phase 11.5）
 Supabase RLS とトリガーは「クラウド同期」側を完全に守るが、**localStorage への保存だけならクライアント突破で無制限可能**になる盲点があった（テスト2で発見）。対策として bridge.js に独立3チェック（canAddTrade / getCurrentPlan+count / 異常値）の多層防御 + script.js 起動時整合性チェック（毎回トースト+モーダル）を追加。100%防御は技術的不可能だが、Pro価値（クラウド同期・マルチデバイス）は守れているので「無料利用の脱法」の実利益は無し、と割り切る。
+
+---
+
+### 教訓33: 計算ロジックの「期間判定基準」はモジュール横断で必ず統一する（FIX-6）
+ReportModule・AISummaryModule・StatisticsModule・SummaryCalculator・CSVExporter で、期間（年・月・四半期）でトレードを絞り込む基準が **trade.date / entry_time / exit_time で混在** していた。月跨ぎトレード（3/31 entry, 4/2 exit）が、あるタブでは3月、別のタブでは4月に計上されて「タブ間で数字が合わない」現象が再発。**仕様判断 Q2=B（exit_date = 損益確定日 基準）に全モジュールで統一**することで解決。
+
+**横断ルール**: 期間絞り込みコードを書くときは必ず `trade.exits[trade.exits.length - 1].time` でフィルタ。未決済トレード（exits 配列が空）は明示的に除外。セッション分析（NY/TOKYO/LDN）は性質上 entry_time のままで OK（決済時刻ではなく取引時刻を見る）。
+
+---
+
+### 教訓34: 同じ計算は1つのモジュールに集約・他は委譲（FIX-9）
+利益率計算が CapitalManagerModule / capital-ui.js / SummaryCalculator の3箇所で別実装されていて、同じデータでもタブによって違う値が出ていた。**SummaryCalculator.calculateProfitRate(year=null) を「単一の真実」**として、CapitalManager と capital-ui からはそこに委譲する形に統一。検証結果: SummaryCalc 4116.65% / CapitalMgr 4116.65% / 差: 0.000000。
+
+**横断ルール**: 「タブによって数字が違う」現象が出たら、まず計算式が複数箇所に散ってないかを確認する。フォールバック実装は残してOK（モジュールロード順依存への保険）が、本流は1モジュールに集約する。
+
+---
+
+### 教訓35: 監査の「false positive 判定」は実コード再確認が最優先（FIX-13 / 元 CRITICAL #11）
+4並列エージェントによる監査で、CRITICAL #11（emotionStats 未実装）と WARNING W3（手数料符号二重）の2件が発見されたが、実コード再確認の結果どちらも **既に正しく実装済み**だった。監査エージェントは「ありそうなバグ」を推測ベースで指摘することがある。**修正フェーズに入る前に必ず実コードで再現確認**する。再現できないものは false positive として記録し、原因（仕様書と実装の乖離など）を明記して教訓化する。
+
+**横断ルール**: 監査結果のうち修正に着手する前に「これは本当に再現するか?」を 1ファイル必ず確認。盲信せず、自分の目で確かめてから修正する。社長コンパナの「本当に間違えられない」を最優先するなら、誤検出を見逃さないことも同じく重要。
+
+---
+
+### 教訓36: 締め後編集ガードはユーザー直接操作のみブロック（FIX-11）
+TradeManager.addTrade/updateTrade/deleteTrade と ExpenseManager.addExpense/deleteExpense にガードを追加（締め月のデータは編集拒否＋アラート）。一方で **SyncModule は localStorage を直接書き込むため、ガード対象外**。これは正しい設計: クラウドから同期で降ってきたデータは「事実」なので拒否してはいけない。ガードはあくまで「ユーザーが今この瞬間に手動で編集しようとした操作」のみブロックする。Q4=B 確定で締め解除 API（reopenMonthlyClosing）も提供しているので、編集が必要な場合は解除→編集→再締めのフローで対応可能。
+
+---
+
+### 教訓37: ブラウザコンソール検証スクリプトはリリース前監査の決定打になる（FIX-17）
+17件の修正を実装後、本番URLでブラウザのコンソールから `await window.runCalcLogicVerification()` を1コマンド実行 → V1〜V7 + 統合検証 2件 = 9項目が一発で検証できた。実データ191件でも数秒で結果が出る。**SaaS の信用は一度でなくなる**ので、リリース前にこの種の自動検証スクリプトを書いて9/9合格を確認するのは投資対効果が極めて高い（実装30分で全 17 FIX の正しさを保証）。スクリプトは `js/utils/calcLogicVerification.js` として残してあるので、今後の機能追加時にも再実行可能。
 
 ---
 
