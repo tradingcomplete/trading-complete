@@ -1,6 +1,6 @@
 # Trading Complete docs フォルダ整理ガイド
 
-**最終更新**: 2026-04-28（v3.0・実態整合版）
+**最終更新**: 2026-04-30（v3.1・Claude活用プロンプト集 追加）
 **運営**: Studio Compana (屋号 / 個人事業主) — 代表: 成瀬仁文(コンパナ)
 **目的**: docsフォルダの「正」を1ファイルで明示する。価格・決済・技術の3つのマスターを混乱させない。
 
@@ -23,6 +23,7 @@
 | 📝 note記事制作 | `trading-articles/.claude/skills/note-article/SKILL.md`（別リポ） |
 | 🔧 技術仕様 | `docs/MODULES.md` |
 | 🎯 ミッション・ビジョン | `docs/marketing/Trading_Complete_ミッションステートメント_v1_3.md` |
+| 🤖 Claude活用プロンプト集 | `docs/Claude活用プロンプト集.md`（A〜F カテゴリ別 30本のテンプレ） |
 
 ---
 
@@ -33,7 +34,8 @@ docs/
 ├── 📄 MODULES.md            技術仕様・モジュール構成
 ├── 📄 OVERVIEW.md           全体構造図（変更禁止・地図役）
 ├── 📄 REFERENCE.md          完了履歴・教訓集
-├── 📄 TASKS.md              タスク管理（Square Phase 10/11）
+├── 📄 TASKS.md              タスク管理（Square Phase 10 本番切替）
+├── 📄 Claude活用プロンプト集.md  🆕 A〜F カテゴリ別 30本のClaudeテンプレ集
 ├── 📄 フォーム制御.md         フォーム関連の挙動ガイド
 ├── 📄 機能一覧.md            UI 解説
 ├── 📄 docs_フォルダ整理ガイド.md     本ファイル
