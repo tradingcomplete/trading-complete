@@ -629,23 +629,35 @@ function trimToCharMax_(text, charMax) {
 /**
  * 今日生成された過去の投稿テキストを取得する
  * 各投稿はgeneratePost成功時にcacheTodayPost_()で保存される
- * 
- * @return {Array} [{type: 'MORNING', text: '...'}, ...]
+ *
+ * ★2026-04-30: 日跨ぎの主題重複回避強化
+ *   背景: 2026-04-30 MORNING で前日(04-29) GOLDEN と同じ「日銀会合」テーマを連投した事故
+ *   対応: TODAY_POST_* に加えて YESTERDAY_POST_* も返却。dayLabel フィールドで識別
+ *
+ * @return {Array} [{type: 'MORNING', text: '...', time: '...', dayLabel: '本日'|'昨日'}, ...]
  */
 function getTodayPreviousPosts_() {
   var props = PropertiesService.getScriptProperties();
   var allProps = props.getProperties();
   var posts = [];
-  
+
   for (var key in allProps) {
     if (key.indexOf('TODAY_POST_') === 0) {
       try {
         var data = JSON.parse(allProps[key]);
+        data.dayLabel = '本日';
         posts.push(data);
+      } catch (e) { console.log('⚠️ 投稿キャッシュパース失敗（続行）: ' + e.message); }
+    } else if (key.indexOf('YESTERDAY_POST_') === 0) {
+      // ★2026-04-30 追加: 前日分の主題も日跨ぎ重複回避用に取得
+      try {
+        var dataY = JSON.parse(allProps[key]);
+        dataY.dayLabel = '昨日';
+        posts.push(dataY);
       } catch (e) { console.log('⚠️ 投稿キャッシュパース失敗（続行）: ' + e.message); }
     }
   }
-  
+
   return posts;
 }
 
@@ -669,24 +681,41 @@ function cacheTodayPost_(postType, postText) {
 
 /**
  * 今日の投稿キャッシュをクリアする（scheduleTodayPosts()の冒頭で呼ぶ）
+ *
+ * ★2026-04-30: 日跨ぎの主題重複回避強化
+ *   旧: TODAY_POST_* を単純に削除
+ *   新: 既存の YESTERDAY_POST_* を削除 → TODAY_POST_* を YESTERDAY_POST_* に退避(rename)
+ *   効果: 翌日の MORNING 等で前日分を参照可能に。連続主題引きずりを防止
  */
 function clearTodayPostCache_() {
   var props = PropertiesService.getScriptProperties();
   var allProps = props.getProperties();
-  var cleared = 0;
-  
-  for (var key in allProps) {
-    if (key.indexOf('TODAY_POST_') === 0) {
-      props.deleteProperty(key);
-      cleared++;
+  var oldYesterdayCleared = 0;
+  var renamed = 0;
+
+  // 1. 既存の YESTERDAY_POST_*(2 日前分)を削除
+  for (var keyY in allProps) {
+    if (keyY.indexOf('YESTERDAY_POST_') === 0) {
+      props.deleteProperty(keyY);
+      oldYesterdayCleared++;
     }
   }
-  
+
+  // 2. TODAY_POST_* を YESTERDAY_POST_* に退避(rename: 値コピー → 元削除)
+  for (var key in allProps) {
+    if (key.indexOf('TODAY_POST_') === 0) {
+      var newKey = 'YESTERDAY_POST_' + key.substring('TODAY_POST_'.length);
+      props.setProperty(newKey, allProps[key]);
+      props.deleteProperty(key);
+      renamed++;
+    }
+  }
+
   // ★v8.16: 問いかけカウントもリセット
   props.deleteProperty('TODAY_QUESTION_COUNT');
-  
-  if (cleared > 0) {
-    console.log('🗑️ 前日の投稿キャッシュをクリア: ' + cleared + '件');
+
+  if (renamed > 0 || oldYesterdayCleared > 0) {
+    console.log('🗑️ 前日の投稿キャッシュを翌日参照用に退避: ' + renamed + '件 (TODAY → YESTERDAY) / 2日前を削除: ' + oldYesterdayCleared + '件');
   }
 }
 

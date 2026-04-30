@@ -347,16 +347,39 @@ function buildPrompt_(postType, typeConfig, context, rates) {
         // 背景: T2-F だけでは selectHotTopic_ にしかヒントが届かず、
         //       投稿生成段階で日銀等の最大材料が再注入され重複が再発した。
         //       本文生成プロンプトにも同じヒント+最優先ルールを直接届ける。
+        // ★2026-04-30 拡張: 日跨ぎ主題重複回避(YESTERDAY ラベル対応)
         try {
           if (_priorPosts && _priorPosts.length > 0) {
-            dynamicPart += '\n【本日の既出投稿(本文の主題重複を避けよ)】\n';
-            for (var ppi = 0; ppi < _priorPosts.length; ppi++) {
-              var pp = _priorPosts[ppi];
-              if (!pp) continue;
-              var ppSummary = String(pp.text || '').substring(0, 120).replace(/\n/g, ' ');
-              dynamicPart += '- ' + (pp.time || '??:??') + ' ' + (pp.type || '?') + ': ' + ppSummary + '\n';
+            // 本日分と昨日分を分けて表示
+            var _todayPP   = [];
+            var _yesterdayPP = [];
+            for (var _ppk = 0; _ppk < _priorPosts.length; _ppk++) {
+              var _ppItem = _priorPosts[_ppk];
+              if (!_ppItem) continue;
+              if (_ppItem.dayLabel === '昨日') _yesterdayPP.push(_ppItem);
+              else                              _todayPP.push(_ppItem);
             }
-            dynamicPart += '\n';
+
+            if (_yesterdayPP.length > 0) {
+              dynamicPart += '\n【昨日の既出投稿(主題引きずり防止のための参考)】\n';
+              for (var _ppy = 0; _ppy < _yesterdayPP.length; _ppy++) {
+                var ppY = _yesterdayPP[_ppy];
+                var ppYSummary = String(ppY.text || '').substring(0, 120).replace(/\n/g, ' ');
+                dynamicPart += '- 昨日 ' + (ppY.time || '??:??') + ' ' + (ppY.type || '?') + ': ' + ppYSummary + '\n';
+              }
+              dynamicPart += '\n';
+            }
+
+            if (_todayPP.length > 0) {
+              dynamicPart += '\n【本日の既出投稿(本文の主題重複を避けよ)】\n';
+              for (var ppi = 0; ppi < _todayPP.length; ppi++) {
+                var pp = _todayPP[ppi];
+                var ppSummary = String(pp.text || '').substring(0, 120).replace(/\n/g, ' ');
+                dynamicPart += '- 本日 ' + (pp.time || '??:??') + ' ' + (pp.type || '?') + ': ' + ppSummary + '\n';
+              }
+              dynamicPart += '\n';
+            }
+
             dynamicPart += '★重要(本文の切り口差別化・3軸モットー):\n';
             dynamicPart += '- 同じ主題でも、別の角度・別の数字・別の通貨ペア・別の時間軸なら OK\n';
             dynamicPart += '- 完全に同じ切り口の繰り返しだけは避けよ(読者の飽き防止)\n';
@@ -368,6 +391,8 @@ function buildPrompt_(postType, typeConfig, context, rates) {
             dynamicPart += '- 続報があるならその続報を最優先(発表前→発表直後→反応・と時系列で深掘り)\n';
             dynamicPart += '- 「タカ派/ハト派」「円買い/円売り」型は既出なら、別フレーミング(具体的な経済指標予想数値・テクニカル水準など)を優先\n';
             dynamicPart += '- 「明日の○○発言、どちらを想定?」型の問いかけが既出なら、別の角度の問いかけを使え\n';
+            dynamicPart += '- ★2026-04-30 追加: 昨日既出の主題は今日の MORNING/LUNCH で軸にするな(続報や新展開がある場合のみ角度を変えて触れる)\n';
+            dynamicPart += '  例: 昨日 GOLDEN で日銀会合タカ派サプライズを論じた → 今日 MORNING は日銀以外(FOMC・米GDP・ポンド等)を軸に\n';
             dynamicPart += '\n';
           }
         } catch (_t2f2Err) {

@@ -103,16 +103,40 @@ function selectHotTopic_(params) {
 
   // ★v14.2 T2-F(2026-04-27 本番観察追加): 日内コンテキスト注入
   // 背景: 同日 4 投稿が同主題(日銀会合)に収束した問題への対策
+  // ★2026-04-30 拡張: 日跨ぎ主題重複回避(YESTERDAY ラベル対応)
+  //   背景: 2026-04-30 MORNING で前日(04-29) GOLDEN と同じ「日銀会合」テーマを連投した事故
   try {
     if (priorPosts && priorPosts.length > 0) {
-      prompt += '【本日の既出投稿(同主題・同切り口の繰り返しを避けるための参考)】\n';
+      // 本日分と昨日分を分けて表示(分かりやすさのため)
+      var todayList   = [];
+      var yesterdayList = [];
       for (var pi = 0; pi < priorPosts.length; pi++) {
         var p = priorPosts[pi];
         if (!p) continue;
-        var summary = String(p.text || '').substring(0, 120).replace(/\n/g, ' ');
-        prompt += '- ' + (p.time || '??:??') + ' ' + (p.type || '?') + ': ' + summary + '\n';
+        if (p.dayLabel === '昨日') yesterdayList.push(p);
+        else                       todayList.push(p);
       }
-      prompt += '\n';
+
+      if (yesterdayList.length > 0) {
+        prompt += '【昨日の既出投稿(主題引きずり防止のための参考)】\n';
+        for (var yi = 0; yi < yesterdayList.length; yi++) {
+          var py = yesterdayList[yi];
+          var summaryY = String(py.text || '').substring(0, 120).replace(/\n/g, ' ');
+          prompt += '- 昨日 ' + (py.time || '??:??') + ' ' + (py.type || '?') + ': ' + summaryY + '\n';
+        }
+        prompt += '\n';
+      }
+
+      if (todayList.length > 0) {
+        prompt += '【本日の既出投稿(同主題・同切り口の繰り返しを避けるための参考)】\n';
+        for (var ti = 0; ti < todayList.length; ti++) {
+          var pt = todayList[ti];
+          var summaryT = String(pt.text || '').substring(0, 120).replace(/\n/g, ' ');
+          prompt += '- 本日 ' + (pt.time || '??:??') + ' ' + (pt.type || '?') + ': ' + summaryT + '\n';
+        }
+        prompt += '\n';
+      }
+
       prompt += '★重要(主題評価の3軸モットー):\n';
       prompt += '   - 同じ主題でも、別の角度・別の数字・別の通貨ペア・別の時間軸なら OK\n';
       prompt += '   - 完全に同じ切り口の繰り返しだけは避けよ(読者の飽き防止)\n';
@@ -126,6 +150,8 @@ function selectHotTopic_(params) {
       prompt += '     昼「発表直前のポジション動向・市場心理」 →\n';
       prompt += '     夕「会見後の値動き反応・次の見方」\n';
       prompt += '   - 既出の二項対立(タカ派/ハト派 等)は、3 投稿目以降では別フレーミング(具体的な指標予想数値・テクニカル水準)を優先\n';
+      prompt += '   - ★2026-04-30 追加: 昨日既出の主題は今日の MORNING/LUNCH で軸にするな(続報や新展開がある場合のみ角度を変えて触れる)\n';
+      prompt += '     例: 昨日 GOLDEN で日銀会合タカ派サプライズを論じた → 今日 MORNING は日銀以外(FOMC・米GDP・ポンド等)を軸に\n';
       prompt += '\n';
     }
   } catch (priorErr) {
@@ -161,6 +187,25 @@ function selectHotTopic_(params) {
   prompt += '2. 今日の値動きの因果を説明できるか?\n';
   prompt += '3. 具体的な通貨ペアに影響があるか?\n';
   prompt += '4. 「次の見方」を示せるか?(このラインを抜けたら転換 など)\n\n';
+
+  // ★2026-04-30 追加: 値動き連動の判断材料優先順位
+  // 背景: 2026-04-30 GOLDEN で「ウォーシュ承認」(政治・人事ニュース)を選定したが、
+  //       実際のホットは片山財務相の円安けん制発言(ドル円1円急落)だった。
+  //       ニュースに表面化する前に値動きが起きていた場合、政治・人事より値動きを優先せよ。
+  prompt += '【★判断材料の優先順位(2026-04-30 追加)】\n';
+  prompt += '1. 本日の値動き(レート方向性・通貨強弱の最大変動)が最優先\n';
+  prompt += '   - 短時間で1円以上動いた通貨ペアがあるか?\n';
+  prompt += '   - 通貨強弱で +/-3%超が出ているか?\n';
+  prompt += '2. 値動きを起こした最新の材料(政治発言・指標・地政学)\n';
+  prompt += '   - 為替介入示唆・円安けん制・要人発言・指標サプライズ等\n';
+  prompt += '3. 値動きが小さい場合のみ、政治・人事ニュース(承認・任命等)を採用\n\n';
+  prompt += '★ニュース TOP5 に表面化していなくても、本日のレート変動が大きい場合は\n';
+  prompt += '  「何が原因でこの値動きになったか」を逆算して材料を推定せよ。\n';
+  prompt += '  例: ドル円が短時間で1円急落 → 為替介入示唆発言・財務相/財務官のけん制発言を疑え\n';
+  prompt += '  例: 円が独歩高 → 日本側の円安けん制発言・介入示唆の可能性を疑え\n';
+  prompt += '  例: ドルが独歩安 → FOMC ハト派サプライズ・米要人のドル安容認発言の可能性を疑え\n';
+  prompt += '★政治・人事ニュース(議長承認・任命等)は派手だが、実際の値動きが小さい場合は\n';
+  prompt += '  ホットトピックに選ぶな。市場が反応していない材料はトレーダーにとって優先度が低い。\n\n';
   
   prompt += '【出力形式(必ずこのJSON形式で返せ・余計な説明は不要・コードブロック記法も不要)】\n';
   prompt += '{\n';
